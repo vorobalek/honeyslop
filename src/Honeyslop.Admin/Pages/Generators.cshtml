@@ -1,0 +1,14 @@
+@page "/generators"
+@model GeneratorsModel
+@{
+    ViewData["Title"] = "Generators";
+}
+
+@if (!Model.Configured)
+{
+    <p class="notice">LLM_URL is not set for the admin, so model servers cannot be discovered. Queue figures come from the database.</p>
+}
+
+<div data-live-panel data-live-topics="entries" data-live-interval="5000">
+    <partial name="_GeneratorsPanel" model="Model"/>
+</div>

@@ -1,0 +1,92 @@
+@page "/entries/{id:long}"
+@model EntryModel
+@{
+    ViewData["Title"] = $"{Model.Entry.Method} {Model.Entry.Host}{Model.Entry.Target}";
+    var entry = Model.Entry;
+}
+
+<p class="back"><a asp-page="/Index">← All entries</a></p>
+
+<div data-live-entry="@entry.Id"></div>
+
+@switch (entry.State)
+{
+    case EntryState.Queued:
+        <p class="notice">Queued for @((Model.Now - entry.CreatedAt).DisplayDuration)@(entry.RequestedAt is { } requestedAt ? $", last requested {(Model.Now - requestedAt).DisplayDuration} ago" : ""). The page updates when a generator takes it.</p>
+        break;
+    case EntryState.Generating:
+        <p class="notice">Generating on <span class="mono">@entry.ClaimedBy</span> for @((Model.Now - (entry.ClaimedAt ?? Model.Now)).DisplayDuration), attempt @(entry.Attempts + 1). The page updates when it is done.</p>
+        break;
+    case EntryState.Failed:
+        <p class="notice">Failed @entry.Attempts @(entry.Attempts == 1 ? "time" : "times")@(entry.Attempts >= 3 ? ", no more retries until it is expired" : ", it will be retried")</p>
+        break;
+}
+
+<h1 class="request-line">
+    <span class="@entry.State.CssClass">@entry.State.Label</span>
+    <span class="mono">@entry.Method</span>
+    <span class="mono host">@entry.Host</span><span class="mono target">@entry.Target</span>
+</h1>
+
+<form method="post" asp-page-handler="Expire" asp-route-id="@entry.Id" data-confirm="Expire this entry? It will be generated again on the next request.">
+    <button type="submit" class="danger">Expire</button>
+</form>
+
+<p><a asp-page="/Requests" asp-route-EntryId="@entry.Id">Every request answered with this entry →</a></p>
+
+<dl class="meta">
+    <dt>Response</dt>
+    <dd class="mono">@(entry.ResponseStatus?.ToString() ?? "—")</dd>
+    <dt>Hits</dt>
+    <dd>@entry.Hits</dd>
+    <dt>Created</dt>
+    <dd>@entry.CreatedAt.Display</dd>
+    <dt>Generated</dt>
+    <dd>@entry.GeneratedAt.Display</dd>
+    <dt>Last hit</dt>
+    <dd>@entry.LastHitAt.Display</dd>
+    <dt>Generation</dt>
+    <dd>@(entry.GenerationMs is { } ms ? $"{ms / 1000d:0.0} s" : "—"), @(entry.CompletionTokens?.ToString() ?? "—") tokens, @(entry.Model ?? "—")</dd>
+    <dt>Attempts</dt>
+    <dd>@entry.Attempts</dd>
+    <dt>Claimed by</dt>
+    <dd class="mono">@(entry.ClaimedBy ?? "—") at @entry.ClaimedAt.Display</dd>
+    <dt>First client</dt>
+    <dd class="mono">@(entry.ClientIp ?? "—")</dd>
+    @if (!string.IsNullOrEmpty(entry.Error))
+    {
+        <dt>Error</dt>
+        <dd class="error">@entry.Error</dd>
+    }
+</dl>
+
+<h2>Request that triggered the generation</h2>
+<pre class="code">@entry.Method @entry.Target HTTP/1.1
+Host: @entry.Host
+@entry.RequestHeaders
+@entry.RequestBody</pre>
+
+@if (entry.ResponseStatus is not null)
+{
+    <h2>Response headers</h2>
+    <table class="headers">
+        <tbody>
+        @foreach (var header in entry.ResponseHeaders)
+        {
+            <tr>
+                <th class="mono">@header.Name</th>
+                <td class="mono">@header.Value</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <h2>Response body</h2>
+    <pre class="code body">@entry.ResponseBody</pre>
+
+    @if (Model.CanPreview)
+    {
+        <h2>Preview</h2>
+        <iframe class="preview" sandbox="" title="Rendered response body" src="@Url.Page("/Entry", "Preview", new { id = entry.Id })"></iframe>
+    }
+}

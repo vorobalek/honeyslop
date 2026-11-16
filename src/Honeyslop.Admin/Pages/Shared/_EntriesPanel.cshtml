@@ -1,0 +1,89 @@
+@model IndexModel
+
+<section class="stats">
+    <div class="stat"><span class="stat-value">@Model.Statistics.Total</span><span class="stat-label">entries</span></div>
+    <div class="stat"><span class="stat-value">@Model.Statistics.Ready</span><span class="stat-label">ready</span></div>
+    <div class="stat"><span class="stat-value">@Model.Statistics.Generating</span><span class="stat-label">generating</span></div>
+    <div class="stat"><span class="stat-value">@Model.Statistics.Queued</span><span class="stat-label">queued</span></div>
+    <div class="stat"><span class="stat-value">@Model.Statistics.Failed</span><span class="stat-label">failed</span></div>
+    <div class="stat"><span class="stat-value">@Model.Statistics.Hits</span><span class="stat-label">served from cache</span></div>
+</section>
+
+<div class="actions">
+    <form id="bulk" method="post" asp-page-handler="ExpireSelected">
+        <input type="hidden" name="Host" value="@Model.Host"/>
+        <input type="hidden" name="Target" value="@Model.Target"/>
+        <input type="hidden" name="State" value="@Model.State"/>
+        <input type="hidden" name="Sort" value="@Model.Sort"/>
+        <input type="hidden" name="p" value="@Model.PageNumber"/>
+        <button type="submit" class="danger" data-requires-selection>Expire selected</button>
+    </form>
+    @if (!Model.Filter.IsEmpty && Model.TotalCount > 0)
+    {
+        <form method="post" asp-page-handler="ExpireFiltered" data-confirm="Expire all @Model.TotalCount entries matching the filter?">
+            <input type="hidden" name="Host" value="@Model.Host"/>
+            <input type="hidden" name="Target" value="@Model.Target"/>
+            <input type="hidden" name="State" value="@Model.State"/>
+            <input type="hidden" name="Sort" value="@Model.Sort"/>
+            <button type="submit" class="danger">Expire @Model.TotalCount matching</button>
+        </form>
+    }
+    <form method="post" asp-page-handler="ExpireAll" data-confirm="Expire every cached entry? All responses will be generated again.">
+        <button type="submit" class="danger">Expire everything</button>
+    </form>
+    <span class="count">@Model.TotalCount matching · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
+</div>
+
+<table class="entries">
+    <thead>
+    <tr>
+        <th class="check"><input type="checkbox" data-select-all aria-label="Select all"/></th>
+        <th>Status</th>
+        <th>Method</th>
+        <th>Host</th>
+        <th>Path</th>
+        <th class="number">Code</th>
+        <th class="number">Size</th>
+        <th class="number">Hits</th>
+        <th>Created</th>
+        <th>Last hit</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var entry in Model.Entries)
+    {
+        <tr>
+            <td class="check"><input type="checkbox" name="ids" value="@entry.Id" form="bulk" aria-label="Select entry @entry.Id"/></td>
+            <td>
+                <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"on {entry.ClaimedBy} since {entry.ClaimedAt.Display} UTC" : entry.Error)">@entry.State.Label</span>
+            </td>
+            <td class="mono">@entry.Method</td>
+            <td class="mono host">@entry.Host</td>
+            <td class="mono target"><a asp-page="/Entry" asp-route-id="@entry.Id">@entry.Target</a></td>
+            <td class="number mono">@entry.ResponseStatus</td>
+            <td class="number">@entry.BodyLength.DisplaySize</td>
+            <td class="number">@entry.Hits</td>
+            <td class="time">@entry.CreatedAt.Display</td>
+            <td class="time">@entry.LastHitAt.Display</td>
+        </tr>
+    }
+    @if (Model.Entries.Length == 0)
+    {
+        <tr>
+            <td colspan="10" class="empty">Nothing here yet.</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<nav class="pager">
+    @if (Model.PageNumber > 0)
+    {
+        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
+    }
+    <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
+    @if (Model.PageNumber + 1 < Model.PageCount)
+    {
+        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
+    }
+</nav>

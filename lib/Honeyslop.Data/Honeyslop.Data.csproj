@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="EFCore.NamingConventions"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Honeyslop.Common\Honeyslop.Common.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="ApplicationDbContext.Entities.cs">
+            <DependentUpon>ApplicationDbContext.cs</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+</Project>

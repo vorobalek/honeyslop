@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "Honeyslop.Trap": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "TRAP_PORT": "8080",
+        "MANAGEMENT_PORT": "8081",
+        "DB_CONNECTION_STRING": "Server=localhost;Port=5432;Database=honeyslop;User Id=honeyslop;Password=honeyslop;Include Error Detail=true",
+        "LLM_URL": "http://localhost:18080"
+      }
+    }
+  }
+}

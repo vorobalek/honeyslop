@@ -1,0 +1,26 @@
+using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Repositories.Internals;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Honeyslop.Data;
+
+public static class WebHostBuilderExtensions
+{
+    extension(IWebHostBuilder builder)
+    {
+        public IWebHostBuilder AddDatabase(string? connectionString = null)
+        {
+            return builder.ConfigureServices((context, services) => services
+                .AddScoped<IEntryRepository, EntryRepository>()
+                .AddScoped<ISettingsRepository, SettingsRepository>()
+                .AddScoped<IRequestRepository, RequestRepository>()
+                .AddDbContext<ApplicationDbContext>(optionsBuilder => optionsBuilder
+                    .UseNpgsql(
+                        connectionString ?? context.Configuration.GetConnectionString("Default"),
+                        options => options.MigrationsAssembly("Honeyslop.Migrator"))));
+        }
+    }
+}

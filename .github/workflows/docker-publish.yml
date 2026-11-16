@@ -1,0 +1,60 @@
+name: Build and Push Docker Images to Docker Hub
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'llm/**'
+      - 'model/**'
+      - '.github/workflows/llm-publish.yml'
+      - '.github/workflows/model-publish.yml'
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test Honeyslop.sln --no-build --configuration Release --verbosity normal
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [migrator, trap, admin]
+    env:
+      IMAGE_REPOSITORY: honeyslop-${{ matrix.service }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build image
+        run: docker build -t "${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:latest" . --pull --target "${{ matrix.service }}"
+
+      - name: Push image
+        run: docker push "${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:latest"

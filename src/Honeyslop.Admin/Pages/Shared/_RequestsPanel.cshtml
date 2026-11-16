@@ -1,0 +1,64 @@
+@model RequestsModel
+
+<div class="actions">
+    <span class="count">@Model.TotalCount requests · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
+</div>
+
+<table class="entries">
+    <thead>
+    <tr>
+        <th>Time</th>
+        <th>Client</th>
+        <th>Method</th>
+        <th>Host</th>
+        <th>Path</th>
+        <th>Outcome</th>
+        <th class="number">Code</th>
+        <th class="number">ms</th>
+        <th>User-Agent</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var request in Model.Requests)
+    {
+        <tr>
+            <td class="time"><a asp-page="/Request" asp-route-id="@request.Id">@request.ReceivedAt.Display</a></td>
+            <td class="mono"><a asp-page="/Requests" asp-route-ClientIp="@request.ClientIp">@request.ClientIp</a></td>
+            <td class="mono">@request.Method</td>
+            <td class="mono host">@request.Host</td>
+            <td class="mono target">
+                @if (request.EntryId is { } entryId)
+                {
+                    <a asp-page="/Entry" asp-route-id="@entryId">@request.Target</a>
+                }
+                else
+                {
+                    @request.Target
+                }
+            </td>
+            <td><span class="@request.Outcome.CssClass">@request.Outcome.ToString().ToLowerInvariant()</span></td>
+            <td class="number mono">@request.ResponseStatus</td>
+            <td class="number">@request.DurationMs</td>
+            <td class="agent">@request.UserAgent</td>
+        </tr>
+    }
+    @if (Model.Requests.Length == 0)
+    {
+        <tr>
+            <td colspan="9" class="empty">No requests recorded yet.</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<nav class="pager">
+    @if (Model.PageNumber > 0)
+    {
+        <a asp-page="/Requests" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
+    }
+    <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
+    @if (Model.PageNumber + 1 < Model.PageCount)
+    {
+        <a asp-page="/Requests" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
+    }
+</nav>

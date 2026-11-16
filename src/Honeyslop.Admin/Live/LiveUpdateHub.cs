@@ -1,0 +1,92 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Threading.Channels;
+
+namespace Honeyslop.Admin.Live;
+
+public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
+{
+    public const string Entries = "entries";
+    public const string Requests = "requests";
+
+    private const int MaxEntryIds = 200;
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(250);
+
+    private readonly ConcurrentDictionary<Guid, Channel<string>> _subscribers = new();
+    private readonly Lock _lock = new();
+    private readonly HashSet<string> _topics = [];
+    private readonly HashSet<long> _entryIds = [];
+
+    public int Subscribers => _subscribers.Count;
+
+    public Subscription Subscribe()
+    {
+        var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(16)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = true
+        });
+        var id = Guid.NewGuid();
+        _subscribers[id] = channel;
+        return new Subscription(channel.Reader, () => _subscribers.TryRemove(id, out _));
+    }
+
+    public void Publish(string topic, long? entryId = null)
+    {
+        lock (_lock)
+        {
+            _topics.Add(topic);
+            if (entryId is { } id && _entryIds.Count < MaxEntryIds)
+                _entryIds.Add(id);
+        }
+    }
+
+    public void PublishEverything()
+    {
+        Publish(Entries);
+        Publish(Requests);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(FlushInterval, timeProvider);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stoppingToken))
+                Flush();
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private void Flush()
+    {
+        string message;
+        lock (_lock)
+        {
+            if (_topics.Count == 0)
+                return;
+            message = JsonSerializer.Serialize(new
+            {
+                topics = _topics.ToArray(),
+                entries = _entryIds.ToArray()
+            });
+            _topics.Clear();
+            _entryIds.Clear();
+        }
+
+        foreach (var channel in _subscribers.Values)
+            channel.Writer.TryWrite(message);
+    }
+
+    public sealed class Subscription(ChannelReader<string> reader, Action unsubscribe) : IDisposable
+    {
+        public ChannelReader<string> Reader => reader;
+
+        public void Dispose()
+        {
+            unsubscribe();
+        }
+    }
+}

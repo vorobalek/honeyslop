@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="MSTest"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\lib\Honeyslop.Tests\Honeyslop.Tests.csproj"/>
+        <ProjectReference Include="..\..\src\Honeyslop.Admin\Honeyslop.Admin.csproj"/>
+    </ItemGroup>
+
+</Project>
