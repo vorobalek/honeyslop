@@ -136,6 +136,15 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         return updated == 1;
     }
 
+    public Task NotifyOutputAsync(GenerationOutput output, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Database
+            .ExecuteSqlAsync(
+                $"select pg_notify('honeyslop_outputs', {output.ToPayload()})",
+                cancellationToken);
+    }
+
     public async Task<bool> CompleteAsync(
         long id,
         string claimedBy,

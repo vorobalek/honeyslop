@@ -31,6 +31,27 @@ public sealed class LiveUpdateHubTests
     }
 
     [TestMethod]
+    public async Task Publish_Outputs_AreKeptApartFromEntryChanges()
+    {
+        using var hub = new LiveUpdateHub(TimeProvider.System);
+        await hub.StartAsync(CancellationToken.None);
+        using var subscription = hub.Subscribe();
+
+        hub.Publish(LiveUpdateHub.Outputs, 7);
+        hub.Publish(LiveUpdateHub.Entries, 1);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var message = JsonDocument.Parse(await subscription.Reader.ReadAsync(timeout.Token)).RootElement;
+        CollectionAssert.AreEqual(
+            new[] { 1L },
+            message.GetProperty("entries").EnumerateArray().Select(x => x.GetInt64()).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { 7L },
+            message.GetProperty("outputs").EnumerateArray().Select(x => x.GetInt64()).ToArray());
+        await hub.StopAsync(CancellationToken.None);
+    }
+
+    [TestMethod]
     public async Task Subscription_AfterDispose_StopsReceiving()
     {
         using var hub = new LiveUpdateHub(TimeProvider.System);

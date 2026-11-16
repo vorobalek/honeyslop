@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const panel = {
             element,
             topics: (element.dataset.liveTopics || "").split(" ").filter(Boolean),
+            output: Number(element.dataset.liveOutput || 0),
             loading: false,
             dirty: false,
             last: 0
@@ -54,7 +55,15 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const response = await fetch(url, { credentials: "same-origin", redirect: "manual" });
                 if (response.ok) {
-                    element.innerHTML = await response.text();
+                    const html = await response.text();
+                    const before = element.querySelector("pre");
+                    const follow = !before || before.scrollTop + before.clientHeight >= before.scrollHeight - 4;
+                    const top = before ? before.scrollTop : 0;
+                    element.innerHTML = html;
+                    const after = element.querySelector("pre");
+                    if (after) {
+                        after.scrollTop = follow ? after.scrollHeight : top;
+                    }
                     refreshSelection();
                 }
             } catch {
@@ -132,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = JSON.parse(event.data);
             panels
                 .filter(panel => panel.topics.some(topic => message.topics.includes(topic)))
+                .filter(panel => !panel.output || message.outputs.includes(panel.output))
                 .forEach(panel => panel.refresh());
             if (entry && message.entries.includes(Number(entry.dataset.liveEntry))) {
                 window.location.reload();

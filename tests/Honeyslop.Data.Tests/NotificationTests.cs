@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
+using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
 using Npgsql;
 
@@ -37,6 +38,25 @@ public sealed class NotificationTests
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains(entry.Id.ToString(CultureInfo.InvariantCulture)))
+            await connection.WaitAsync(timeout.Token);
+    }
+
+    [TestMethod]
+    public async Task GenerationOutput_IsAnnouncedWithItsContent()
+    {
+        await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);
+        await connection.OpenAsync();
+        var received = new List<string>();
+        connection.Notification += (_, notification) => received.Add(notification.Payload);
+        await using (var command = new NpgsqlCommand("listen honeyslop_outputs", connection))
+            await command.ExecuteNonQueryAsync();
+
+        var output = new GenerationOutput(Random.Shared.NextInt64(1, long.MaxValue), 2, "{\"status\":");
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.Repository().NotifyOutputAsync(output, CancellationToken.None);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!received.Select(GenerationOutput.FromPayload).Contains(output))
             await connection.WaitAsync(timeout.Token);
     }
 }

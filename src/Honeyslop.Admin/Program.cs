@@ -22,6 +22,8 @@ await Host
                 .AddSingleton<SecurityHeadersMiddleware>()
                 .AddScoped<ICacheMaintenance, CacheMaintenance>()
                 .AddHostedService<MaintenanceService>()
+                .AddMemoryCache()
+                .AddSingleton<GenerationOutputStore>()
                 .AddSingleton<LiveUpdateHub>()
                 .AddHostedService(serviceProvider => serviceProvider.GetRequiredService<LiveUpdateHub>())
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(

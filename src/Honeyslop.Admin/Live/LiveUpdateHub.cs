@@ -8,6 +8,7 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
 {
     public const string Entries = "entries";
     public const string Requests = "requests";
+    public const string Outputs = "outputs";
 
     private const int MaxEntryIds = 200;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(250);
@@ -15,7 +16,11 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
     private readonly ConcurrentDictionary<Guid, Channel<string>> _subscribers = new();
     private readonly Lock _lock = new();
     private readonly HashSet<string> _topics = [];
-    private readonly HashSet<long> _entryIds = [];
+    private readonly Dictionary<string, HashSet<long>> _ids = new()
+    {
+        [Entries] = [],
+        [Outputs] = []
+    };
 
     public int Subscribers => _subscribers.Count;
 
@@ -36,8 +41,8 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
         lock (_lock)
         {
             _topics.Add(topic);
-            if (entryId is { } id && _entryIds.Count < MaxEntryIds)
-                _entryIds.Add(id);
+            if (entryId is { } id && _ids.TryGetValue(topic, out var ids) && ids.Count < MaxEntryIds)
+                ids.Add(id);
         }
     }
 
@@ -70,10 +75,12 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
             message = JsonSerializer.Serialize(new
             {
                 topics = _topics.ToArray(),
-                entries = _entryIds.ToArray()
+                entries = _ids[Entries].ToArray(),
+                outputs = _ids[Outputs].ToArray()
             });
             _topics.Clear();
-            _entryIds.Clear();
+            foreach (var ids in _ids.Values)
+                ids.Clear();
         }
 
         foreach (var channel in _subscribers.Values)

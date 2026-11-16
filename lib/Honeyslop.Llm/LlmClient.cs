@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Honeyslop.Common;
@@ -93,14 +94,19 @@ internal sealed class LlmClient(
         }
     }
 
-    public async Task<LlmCompletion> CompleteAsync(Uri endpoint, LlmPrompt prompt, TimeSpan timeLimit, CancellationToken cancellationToken)
+    public async Task<LlmCompletion> CompleteAsync(
+        Uri endpoint,
+        LlmPrompt prompt,
+        TimeSpan timeLimit,
+        IProgress<LlmProgress>? progress,
+        CancellationToken cancellationToken)
     {
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (timeLimit > TimeSpan.Zero)
             limit.CancelAfter(timeLimit);
         try
         {
-            return await CompleteWithinAsync(endpoint, prompt, limit.Token);
+            return await CompleteWithinAsync(endpoint, prompt, progress, limit.Token);
         }
         catch (OperationCanceledException) when (limit.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
@@ -108,7 +114,11 @@ internal sealed class LlmClient(
         }
     }
 
-    private async Task<LlmCompletion> CompleteWithinAsync(Uri endpoint, LlmPrompt prompt, CancellationToken cancellationToken)
+    private async Task<LlmCompletion> CompleteWithinAsync(
+        Uri endpoint,
+        LlmPrompt prompt,
+        IProgress<LlmProgress>? progress,
+        CancellationToken cancellationToken)
     {
         var request = new ChatCompletionRequest(
             options.Value.Model,
@@ -121,18 +131,17 @@ internal sealed class LlmClient(
             new ChatResponseFormat(
                 "json_schema",
                 new ChatJsonSchema("http_response", true, ResponseSchema.DeepClone())),
-            false);
+            true,
+            new ChatStreamOptions(true));
 
+        using var message = new HttpRequestMessage(HttpMethod.Post, new Uri(endpoint, "v1/chat/completions"));
+        message.Content = JsonContent.Create(request, options: SerializerOptions);
         HttpResponseMessage response;
         try
         {
             response = await httpClientFactory
                 .CreateClient(HttpClientName)
-                .PostAsJsonAsync(
-                    new Uri(endpoint, "v1/chat/completions"),
-                    request,
-                    SerializerOptions,
-                    cancellationToken);
+                .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
@@ -148,26 +157,55 @@ internal sealed class LlmClient(
             throw new LlmException($"Model server {endpoint.Authority} responded {(int)response.StatusCode}: {error.Truncate(500)}");
         }
 
-        ChatCompletionResponse? completion;
+        var content = new StringBuilder();
+        var tokens = 0;
+        string? model = null;
+        string? finishReason = null;
+        ChatUsage? usage = null;
         try
         {
-            completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(SerializerOptions, cancellationToken);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            while (await reader.ReadLineAsync(cancellationToken) is { } line)
+            {
+                if (line.StartsWith("error:", StringComparison.Ordinal))
+                    throw new LlmException($"Model server {endpoint.Authority} failed the generation: {line[6..].Trim().Truncate(500)}");
+                if (!line.StartsWith("data:", StringComparison.Ordinal))
+                    continue;
+
+                var data = line[5..].Trim();
+                if (data == "[DONE]")
+                    break;
+                var chunk = JsonSerializer.Deserialize<ChatCompletionChunk>(data, SerializerOptions)
+                            ?? throw new LlmException("Model server streamed an empty chunk.");
+                if (chunk.Error is not null)
+                    throw new LlmException($"Model server {endpoint.Authority} failed the generation: {chunk.Error.ToJsonString().Truncate(500)}");
+
+                model ??= chunk.Model;
+                usage = chunk.Usage ?? usage;
+                var choice = chunk.Choices?.FirstOrDefault();
+                finishReason = choice?.FinishReason ?? finishReason;
+                if (string.IsNullOrEmpty(choice?.Delta?.Content))
+                    continue;
+
+                content.Append(choice.Delta.Content);
+                tokens++;
+                progress?.Report(new LlmProgress(content.ToString(), tokens));
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
         {
             throw new LlmUnavailableException($"Model server {endpoint.Authority} dropped the response: {exception.Message}", exception);
         }
 
-        if (completion is null)
-            throw new LlmException("Model server returned an empty body.");
-        var choice = completion.Choices?.FirstOrDefault()
-                     ?? throw new LlmException("Model server returned no choices.");
+        if (finishReason is null)
+            throw new LlmUnavailableException($"Model server {endpoint.Authority} closed the stream before the generation finished.");
         return new LlmCompletion(
-            choice.Message?.Content ?? string.Empty,
-            choice.FinishReason,
-            completion.Model,
-            completion.Usage?.PromptTokens,
-            completion.Usage?.CompletionTokens);
+            content.ToString(),
+            finishReason,
+            model,
+            usage?.PromptTokens,
+            usage?.CompletionTokens ?? tokens);
     }
 
     private static Dictionary<string, double> ParseMetrics(string text)

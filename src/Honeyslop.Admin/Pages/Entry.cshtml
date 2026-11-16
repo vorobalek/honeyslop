@@ -15,7 +15,7 @@
         <p class="notice">Queued for @((Model.Now - entry.CreatedAt).DisplayDuration)@(entry.RequestedAt is { } requestedAt ? $", last requested {(Model.Now - requestedAt).DisplayDuration} ago" : ""). The page updates when a generator takes it.</p>
         break;
     case EntryState.Generating:
-        <p class="notice">Generating on <span class="mono">@entry.ClaimedBy</span> for @((Model.Now - (entry.ClaimedAt ?? Model.Now)).DisplayDuration), attempt @(entry.Attempts + 1). The page updates when it is done.</p>
+        <p class="notice">Generating on <span class="mono">@entry.ClaimedBy</span> for @((Model.Now - (entry.ClaimedAt ?? Model.Now)).DisplayDuration), attempt @(entry.Attempts + 1). The output streams below, the page updates when it is done.</p>
         break;
     case EntryState.Failed:
         <p class="notice">Failed @entry.Attempts @(entry.Attempts == 1 ? "time" : "times")@(entry.Attempts >= 3 ? ", no more retries until it is expired" : ", it will be retried")</p>
@@ -59,6 +59,14 @@
         <dd class="error">@entry.Error</dd>
     }
 </dl>
+
+@if (entry.State == EntryState.Generating)
+{
+    <h2>Output so far</h2>
+    <div data-live-panel data-live-topics="outputs" data-live-output="@entry.Id">
+        <partial name="_OutputPanel" model="Model"/>
+    </div>
+}
 
 <h2>Request that triggered the generation</h2>
 <pre class="code">@entry.Method @entry.Target HTTP/1.1

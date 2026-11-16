@@ -45,6 +45,11 @@ Entries, Requests, Clients, Generators and Settings update live: PostgreSQL trig
 the admin listens and pushes over a WebSocket at `/live`. Generators shows every model server with its slots, speed
 and production, the entries being generated right now and the queue.
 
+The page of an entry being generated shows the model output as it streams. The worker reads the completion as a
+stream and sends what it has so far once a second through `pg_notify('honeyslop_outputs', …)`. The partial output is
+not stored anywhere: the admin keeps the last one in memory for a minute, and only the tail fits when it outgrows
+the 8000-byte notification limit.
+
 ### Configuration
 
 Trap:

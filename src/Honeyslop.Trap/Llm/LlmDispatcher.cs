@@ -16,12 +16,16 @@ internal sealed partial class LlmDispatcher(
     private readonly SemaphoreSlim _acquireLock = new(1, 1);
     private readonly ConcurrentDictionary<Uri, EndpointState> _states = new();
 
-    public async Task<LlmCompletion> CompleteAsync(LlmPrompt prompt, TimeSpan timeLimit, CancellationToken cancellationToken)
+    public async Task<LlmCompletion> CompleteAsync(
+        LlmPrompt prompt,
+        TimeSpan timeLimit,
+        IProgress<LlmProgress>? progress,
+        CancellationToken cancellationToken)
     {
         var (endpoint, lease) = await AcquireAsync(cancellationToken);
         try
         {
-            var completion = await llmClient.CompleteAsync(endpoint, prompt, timeLimit, cancellationToken);
+            var completion = await llmClient.CompleteAsync(endpoint, prompt, timeLimit, progress, cancellationToken);
             return completion with
             {
                 Endpoint = endpoint.Authority

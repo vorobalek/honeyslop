@@ -1,4 +1,5 @@
 using System.Globalization;
+using Honeyslop.Data.Repositories;
 using Npgsql;
 
 namespace Honeyslop.Admin.Live;
@@ -6,6 +7,7 @@ namespace Honeyslop.Admin.Live;
 internal sealed partial class PostgresNotificationListener(
     string connectionString,
     LiveUpdateHub hub,
+    GenerationOutputStore outputStore,
     TimeProvider timeProvider,
     ILogger<PostgresNotificationListener> logger) : BackgroundService
 {
@@ -24,7 +26,7 @@ internal sealed partial class PostgresNotificationListener(
                 await using var connection = new NpgsqlConnection(builder.ConnectionString);
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
-                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests;", connection))
+                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs;", connection))
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 LogListening(logger);
                 hub.PublishEverything();
@@ -45,6 +47,13 @@ internal sealed partial class PostgresNotificationListener(
     {
         if (channel == "honeyslop_requests")
             hub.Publish(LiveUpdateHub.Requests);
+        else if (channel == "honeyslop_outputs")
+        {
+            if (GenerationOutput.FromPayload(payload) is not { } output)
+                return;
+            outputStore.Set(output);
+            hub.Publish(LiveUpdateHub.Outputs, output.EntryId);
+        }
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
             hub.Publish(LiveUpdateHub.Entries, entryId);
         else

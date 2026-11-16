@@ -23,6 +23,7 @@ internal sealed partial class GenerationWorker(
     ILogger<GenerationWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan IdleInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan OutputInterval = TimeSpan.FromSeconds(1);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -87,11 +88,14 @@ internal sealed partial class GenerationWorker(
         var startedAt = timeProvider.GetTimestamp();
         using var heartbeat = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var beating = BeatAsync(entryId, settings.HeartbeatInterval, heartbeat.Token);
+        var progress = new LatestProgress();
+        var streaming = StreamOutputAsync(entryId, progress, heartbeat.Token);
         try
         {
             var completion = await llmDispatcher.CompleteAsync(
                 promptBuilder.Build(entry, settings.AllowRefusals),
                 settings.GenerationTimeLimit,
+                progress,
                 cancellationToken);
             if (completion.FinishReason == "length")
                 throw new LlmException("Model output was cut at the token limit.");
@@ -166,7 +170,35 @@ internal sealed partial class GenerationWorker(
         finally
         {
             await heartbeat.CancelAsync();
-            await beating;
+            await Task.WhenAll(beating, streaming);
+        }
+    }
+
+    private async Task StreamOutputAsync(long entryId, LatestProgress progress, CancellationToken cancellationToken)
+    {
+        try
+        {
+            LlmProgress? published = null;
+            using var timer = new PeriodicTimer(OutputInterval, timeProvider);
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (progress.Value is not { } current || ReferenceEquals(current, published))
+                    continue;
+
+                await using var asyncScope = serviceScopeFactory.CreateAsyncScope();
+                await asyncScope
+                    .ServiceProvider
+                    .GetRequiredService<IEntryRepository>()
+                    .NotifyOutputAsync(new GenerationOutput(entryId, current.Tokens, current.Content), cancellationToken);
+                published = current;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            LogOutputFailed(logger, exception, entryId);
         }
     }
 
@@ -199,6 +231,9 @@ internal sealed partial class GenerationWorker(
 
     [LoggerMessage(LogLevel.Warning, "Heartbeat of entry {entryId} failed")]
     static partial void LogHeartbeatFailed(ILogger<GenerationWorker> logger, Exception exception, long entryId);
+
+    [LoggerMessage(LogLevel.Warning, "Streaming the output of entry {entryId} failed")]
+    static partial void LogOutputFailed(ILogger<GenerationWorker> logger, Exception exception, long entryId);
 
     [LoggerMessage(LogLevel.Error, "Generation loop failed")]
     static partial void LogLoopFailed(ILogger<GenerationWorker> logger, Exception exception);

@@ -1,3 +1,4 @@
+using Honeyslop.Admin.Live;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,12 +8,14 @@ namespace Honeyslop.Admin.Pages;
 
 public sealed class EntryModel(
     IEntryRepository entryRepository,
+    GenerationOutputStore outputStore,
     TimeProvider timeProvider) : PageModel
 {
     private const string PreviewContentSecurityPolicy =
         "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; frame-ancestors 'self'";
 
     public EntryEntity Entry { get; private set; } = null!;
+    public GenerationOutput? Output { get; private set; }
     public DateTimeOffset Now { get; } = timeProvider.GetUtcNow();
 
     public string? ContentType => Entry
@@ -30,7 +33,14 @@ public sealed class EntryModel(
         if (entry is null)
             return NotFound();
         Entry = entry;
+        Output = outputStore.GetOrDefault(id);
         return Page();
+    }
+
+    public IActionResult OnGetPanel(long id)
+    {
+        Output = outputStore.GetOrDefault(id);
+        return Partial("_OutputPanel", this);
     }
 
     public async Task<IActionResult> OnGetPreviewAsync(long id, CancellationToken cancellationToken)
