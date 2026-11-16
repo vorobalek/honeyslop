@@ -6,4 +6,5 @@ public sealed record EntryStatistics(
     int Queued,
     int Generating,
     int Failed,
+    int Expired,
     long Hits);

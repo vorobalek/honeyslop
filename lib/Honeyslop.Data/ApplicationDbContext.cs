@@ -1,4 +1,5 @@
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Honeyslop.Data;
@@ -25,5 +26,10 @@ public sealed partial class ApplicationDbContext(DbContextOptions<ApplicationDbC
         modelBuilder
             .Entity<Entry>()
             .OwnsMany(x => x.ResponseHeaders, builder => builder.ToJson());
+        modelBuilder
+            .Entity<Entry>()
+            .HasIndex(x => x.KeyHash)
+            .IsUnique()
+            .HasFilter($"status <> {(int)EntryStatus.Expired}");
     }
 }

@@ -7,7 +7,6 @@ namespace Honeyslop.Data.Entities;
 
 [Table("entry", Schema = "public")]
 [PrimaryKey(nameof(Id))]
-[Index(nameof(KeyHash), IsUnique = true)]
 [Index(nameof(Status))]
 [Index(nameof(Host))]
 [Index(nameof(CreatedAt))]

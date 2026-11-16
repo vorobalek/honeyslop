@@ -79,8 +79,8 @@ seconds:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| Expire generated responses after | never | A response older than this is removed and generated again on the next request |
-| Remove entries nobody requested for | never | Counted from the last time a response was served |
+| Expire generated responses after | never | A response older than this expires and is generated again on the next request |
+| Expire entries nobody requested for | never | Counted from the last time a response was served |
 | Hold a request open for its new response | 1 minute | After this a client waiting for a new path gets a plain 404 |
 | Let the model refuse | on | Off: every path gets status 200 and invented content |
 | Give one generation at most | 10 minutes | Counted from the moment a model server slot takes it |
@@ -90,6 +90,10 @@ seconds:
 | Generate responses for new requests | on | Off serves only what is cached |
 
 Saving applies the thresholds to everything already stored right away.
+
+Expiring an entry, by hand or by these thresholds, does not delete it. It stops being served, frees its path for a
+new generation and stays viewable from the requests it answered, and it still counts in the generator statistics. It
+is deleted once the request history no longer refers to it and it expired more than a day ago.
 
 The admin UI has no authentication of its own and must sit behind an authenticating proxy.
 

@@ -69,8 +69,9 @@ public interface IEntryRepository
     Task<EntryStatistics> GetStatisticsAsync(CancellationToken cancellationToken);
     Task<QueueStatistics> GetQueueStatisticsAsync(CancellationToken cancellationToken);
     Task<GeneratorStatistics[]> GetGeneratorStatisticsAsync(DateTimeOffset since, CancellationToken cancellationToken);
-    Task<int> DeleteAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken);
-    Task<int> DeleteAsync(EntryFilter filter, CancellationToken cancellationToken);
-    Task<int> DeleteUnusedSinceAsync(DateTimeOffset threshold, CancellationToken cancellationToken);
-    Task<int> DeleteGeneratedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken);
+    Task<int> ExpireAsync(IReadOnlyCollection<long> ids, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<int> ExpireAsync(EntryFilter filter, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<int> ExpireUnusedSinceAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<int> ExpireGeneratedBeforeAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<int> DeleteExpiredUnreferencedAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken);
 }

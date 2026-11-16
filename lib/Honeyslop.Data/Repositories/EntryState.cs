@@ -5,5 +5,6 @@ public enum EntryState
     Queued,
     Generating,
     Ready,
-    Failed
+    Failed,
+    Expired
 }

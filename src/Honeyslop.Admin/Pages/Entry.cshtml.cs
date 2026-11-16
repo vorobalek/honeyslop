@@ -1,4 +1,5 @@
 using Honeyslop.Admin.Live;
+using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -16,6 +17,7 @@ public sealed class EntryModel(
 
     public EntryEntity Entry { get; private set; } = null!;
     public GenerationOutput? Output { get; private set; }
+    public EntryEntity? Current { get; private set; }
     public DateTimeOffset Now { get; } = timeProvider.GetUtcNow();
 
     public string? ContentType => Entry
@@ -34,6 +36,8 @@ public sealed class EntryModel(
             return NotFound();
         Entry = entry;
         Output = outputStore.GetOrDefault(id);
+        if (entry.Status == EntryStatus.Expired)
+            Current = await entryRepository.GetByKeyHashOrDefaultAsync(entry.KeyHash, cancellationToken);
         return Page();
     }
 
@@ -55,7 +59,7 @@ public sealed class EntryModel(
 
     public async Task<IActionResult> OnPostExpireAsync(long id, CancellationToken cancellationToken)
     {
-        var expired = await entryRepository.DeleteAsync([id], cancellationToken);
+        var expired = await entryRepository.ExpireAsync([id], Now, cancellationToken);
         return RedirectToPage("/Index", new
         {
             Expired = expired

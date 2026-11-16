@@ -91,7 +91,7 @@ internal sealed partial class EntryWatcher(
             foreach (var entry in finished)
                 if (entry.Status == EntryStatus.Ready)
                     Complete(entry.Id, CachedResponse.From(entry));
-                else if (entry.Attempts >= options.Value.MaxAttempts)
+                else if (entry.Status == EntryStatus.Expired || entry.Attempts >= options.Value.MaxAttempts)
                     Complete(entry.Id, null);
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)

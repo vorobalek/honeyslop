@@ -5,4 +5,7 @@ public sealed record GeneratorStatistics(
     int Generated,
     double AverageMs,
     double AverageTokens,
-    DateTimeOffset? LastGeneratedAt);
+    DateTimeOffset? LastGeneratedAt)
+{
+    public static readonly TimeSpan Window = TimeSpan.FromHours(24);
+}

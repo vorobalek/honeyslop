@@ -22,6 +22,7 @@ public sealed record EntrySummary(
         EntryStatus.Pending when ClaimedBy is null => EntryState.Queued,
         EntryStatus.Pending => EntryState.Generating,
         EntryStatus.Ready => EntryState.Ready,
+        EntryStatus.Expired => EntryState.Expired,
         _ => EntryState.Failed
     };
 }

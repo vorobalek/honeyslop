@@ -32,7 +32,7 @@ public sealed class IndexModel(
 
     public EntrySummary[] Entries { get; private set; } = [];
     public int TotalCount { get; private set; }
-    public EntryStatistics Statistics { get; private set; } = new(0, 0, 0, 0, 0, 0);
+    public EntryStatistics Statistics { get; private set; } = new(0, 0, 0, 0, 0, 0, 0);
     public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
     public EntryFilter Filter => new(Host, Target, State);
     public DateTimeOffset RenderedAt { get; private set; }
@@ -51,7 +51,7 @@ public sealed class IndexModel(
     public async Task<IActionResult> OnPostExpireSelectedAsync(long[] ids, CancellationToken cancellationToken)
     {
         var expired = ids.Length > 0
-            ? await entryRepository.DeleteAsync(ids, cancellationToken)
+            ? await entryRepository.ExpireAsync(ids, timeProvider.GetUtcNow(), cancellationToken)
             : 0;
         return RedirectToSelf(expired);
     }
@@ -60,13 +60,13 @@ public sealed class IndexModel(
     {
         if (Filter.IsEmpty)
             return BadRequest();
-        var expired = await entryRepository.DeleteAsync(Filter, cancellationToken);
+        var expired = await entryRepository.ExpireAsync(Filter, timeProvider.GetUtcNow(), cancellationToken);
         return RedirectToSelf(expired, 0);
     }
 
     public async Task<IActionResult> OnPostExpireAllAsync(CancellationToken cancellationToken)
     {
-        var expired = await entryRepository.DeleteAsync(new EntryFilter(), cancellationToken);
+        var expired = await entryRepository.ExpireAsync(new EntryFilter(), timeProvider.GetUtcNow(), cancellationToken);
         return RedirectToPage(new
         {
             Expired = expired

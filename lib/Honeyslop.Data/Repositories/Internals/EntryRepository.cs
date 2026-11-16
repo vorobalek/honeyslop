@@ -14,7 +14,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Entries
             .AsNoTracking()
             .SingleOrDefaultAsync(
-                x => x.KeyHash == keyHash,
+                x => x.KeyHash == keyHash && x.Status != EntryStatus.Expired,
                 cancellationToken);
     }
 
@@ -83,7 +83,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Entries
             .Where(x =>
                 x.Id == id &&
-                x.Status != EntryStatus.Ready &&
+                (x.Status == EntryStatus.Pending || x.Status == EntryStatus.Failed) &&
                 (x.RequestedAt == null || x.RequestedAt < throttle))
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(x => x.RequestedAt, now),
@@ -314,12 +314,13 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         }
 
         return new EntryStatistics(
-            groups.Sum(x => x.Count),
+            groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Count),
             CountOf(EntryStatus.Ready),
             CountOf(EntryStatus.Pending, false),
             CountOf(EntryStatus.Pending, true),
             CountOf(EntryStatus.Failed),
-            groups.Sum(x => x.Hits));
+            CountOf(EntryStatus.Expired),
+            groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Hits));
     }
 
     public async Task<QueueStatistics> GetQueueStatisticsAsync(CancellationToken cancellationToken)
@@ -355,7 +356,6 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         return dbContext
             .Entries
             .Where(x =>
-                x.Status == EntryStatus.Ready &&
                 x.Model != null &&
                 x.GeneratedAt >= since)
             .GroupBy(x => x.Model!)
@@ -368,39 +368,50 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<int> DeleteAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken)
+    public Task<int> ExpireAsync(IReadOnlyCollection<long> ids, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .Where(x => ids.Contains(x.Id))
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExpireAsync(now, cancellationToken);
     }
 
-    public Task<int> DeleteAsync(EntryFilter filter, CancellationToken cancellationToken)
+    public Task<int> ExpireAsync(EntryFilter filter, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .FilterBy(filter)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExpireAsync(now, cancellationToken);
     }
 
-    public Task<int> DeleteUnusedSinceAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
+    public Task<int> ExpireUnusedSinceAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .Where(x =>
-                x.Status != EntryStatus.Pending &&
+                (x.Status == EntryStatus.Ready || x.Status == EntryStatus.Failed) &&
                 (x.LastHitAt ?? x.CreatedAt) < threshold)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExpireAsync(now, cancellationToken);
     }
 
-    public Task<int> DeleteGeneratedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
+    public Task<int> ExpireGeneratedBeforeAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .Where(x =>
                 x.Status == EntryStatus.Ready &&
                 x.GeneratedAt < threshold)
+            .ExpireAsync(now, cancellationToken);
+    }
+
+    public Task<int> DeleteExpiredUnreferencedAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Entries
+            .Where(x =>
+                x.Status == EntryStatus.Expired &&
+                x.UpdatedAt < expiredBefore &&
+                !dbContext.Requests.Any(y => y.EntryId == x.Id))
             .ExecuteDeleteAsync(cancellationToken);
     }
 }

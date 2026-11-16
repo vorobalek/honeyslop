@@ -48,6 +48,7 @@ public static class DisplayExtensions
             EntryState.Ready => "badge badge-ready",
             EntryState.Generating => "badge badge-generated",
             EntryState.Queued => "badge badge-pending",
+            EntryState.Expired => "badge badge-static",
             _ => "badge badge-failed"
         };
 
@@ -61,6 +62,7 @@ public static class DisplayExtensions
             EntryStatus.Pending when entry.ClaimedBy is null => EntryState.Queued,
             EntryStatus.Pending => EntryState.Generating,
             EntryStatus.Ready => EntryState.Ready,
+            EntryStatus.Expired => EntryState.Expired,
             _ => EntryState.Failed
         };
     }

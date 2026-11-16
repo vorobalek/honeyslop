@@ -9,8 +9,8 @@
 @if (Model.Saved)
 {
     <p class="notice">
-        Saved and applied to everything already stored: expired @Model.Expired, removed @Model.Removed unused entries, pruned @Model.Pruned request records.
-        Trap instances pick the change up within ten seconds and may serve a removed response from memory for up to a minute.
+        Saved and applied to everything already stored: expired @Model.Expired entries past their time to live and @Model.Unused unused ones, pruned @Model.Pruned request records, deleted @Model.Deleted expired entries no request refers to.
+        Trap instances pick the change up within ten seconds and may serve an expired response from memory for up to a minute.
     </p>
 }
 
@@ -24,11 +24,11 @@
             <select asp-for="CacheTtlUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
         </div>
         <span asp-validation-for="CacheTtlValue" class="error"></span>
-        <p class="hint">A response older than this is removed and generated again on the next request. 0 keeps responses forever.</p>
+        <p class="hint">A response older than this expires and is generated again on the next request. 0 keeps responses forever.</p>
     </div>
 
     <div class="setting">
-        <label for="KeepUnusedValue">Remove entries nobody requested for</label>
+        <label for="KeepUnusedValue">Expire entries nobody requested for</label>
         <div class="duration">
             <input asp-for="KeepUnusedValue" type="number" min="0" step="1"/>
             <select asp-for="KeepUnusedUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -90,7 +90,7 @@
             <select asp-for="RequestRetentionUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
         </div>
         <span asp-validation-for="RequestRetentionValue" class="error"></span>
-        <p class="hint">Every request the trap answers is recorded with its headers and body. 0 keeps the history forever, which grows by roughly 2 GB a month at the current scanner traffic.</p>
+        <p class="hint">Every request the trap answers is recorded with its headers and body. 0 keeps the history forever, which grows by roughly 2 GB a month at the current scanner traffic. An expired entry stays viewable while any recorded request refers to it.</p>
     </div>
 
     <div class="setting">

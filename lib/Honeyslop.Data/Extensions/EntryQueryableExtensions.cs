@@ -31,10 +31,22 @@ internal static class EntryQueryableExtensions
                 EntryState.Generating => query.Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy != null),
                 EntryState.Ready => query.Where(x => x.Status == EntryStatus.Ready),
                 EntryState.Failed => query.Where(x => x.Status == EntryStatus.Failed),
-                _ => query
+                EntryState.Expired => query.Where(x => x.Status == EntryStatus.Expired),
+                _ => query.Where(x => x.Status != EntryStatus.Expired)
             };
 
             return query;
+        }
+
+        public Task<int> ExpireAsync(DateTimeOffset now, CancellationToken cancellationToken)
+        {
+            return query
+                .Where(x => x.Status != EntryStatus.Expired)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, EntryStatus.Expired)
+                        .SetProperty(x => x.UpdatedAt, now),
+                    cancellationToken);
         }
     }
 

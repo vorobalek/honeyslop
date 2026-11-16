@@ -3,6 +3,7 @@ using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Honeyslop.Data.Tests;
 
@@ -233,45 +234,69 @@ public sealed class EntryRepositoryTests
     }
 
     [TestMethod]
-    public async Task DeleteAsync_ByFilter_DeletesOnlyMatchingEntries()
+    public async Task ExpireAsync_ByFilter_ExpiresOnlyMatchingEntries()
     {
         var host = Unique.Host();
         var matching = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/wp-admin/install.php"));
         var otherPath = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/.env"));
         var otherHost = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), target: "/wp-admin/install.php"));
 
-        int deleted;
+        int expired;
         int counted;
         await using (var scope = PostgresDatabase.CreateScope())
         {
             var filter = new EntryFilter(host.ToUpperInvariant(), "WP-ADMIN");
             counted = await scope.Repository().CountAsync(filter, CancellationToken.None);
-            deleted = await scope.Repository().DeleteAsync(filter, CancellationToken.None);
+            expired = await scope.Repository().ExpireAsync(filter, DateTimeOffset.UtcNow, CancellationToken.None);
         }
 
         Assert.AreEqual(1, counted);
-        Assert.AreEqual(1, deleted);
-        Assert.IsNull(await FindAsync(matching.Id));
-        Assert.IsNotNull(await FindAsync(otherPath.Id));
-        Assert.IsNotNull(await FindAsync(otherHost.Id));
+        Assert.AreEqual(1, expired);
+        Assert.AreEqual(EntryStatus.Expired, (await GetAsync(matching.Id)).Status);
+        Assert.AreEqual(EntryStatus.Pending, (await GetAsync(otherPath.Id)).Status);
+        Assert.AreEqual(EntryStatus.Pending, (await GetAsync(otherHost.Id)).Status);
     }
 
     [TestMethod]
-    public async Task DeleteAsync_FilterWithLikeWildcards_MatchesThemLiterally()
+    public async Task ExpireAsync_FilterWithLikeWildcards_MatchesThemLiterally()
     {
         var host = Unique.Host();
         var literal = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/100%_done"));
         var wildcardMatch = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/100xxdone"));
 
         await using (var scope = PostgresDatabase.CreateScope())
-            await scope.Repository().DeleteAsync(new EntryFilter(host, "100%_"), CancellationToken.None);
+            await scope.Repository().ExpireAsync(new EntryFilter(host, "100%_"), DateTimeOffset.UtcNow, CancellationToken.None);
 
-        Assert.IsNull(await FindAsync(literal.Id));
-        Assert.IsNotNull(await FindAsync(wildcardMatch.Id));
+        Assert.AreEqual(EntryStatus.Expired, (await GetAsync(literal.Id)).Status);
+        Assert.AreEqual(EntryStatus.Pending, (await GetAsync(wildcardMatch.Id)).Status);
     }
 
     [TestMethod]
-    public async Task DeleteUnusedSinceAsync_KeepsRecentAndPendingEntries()
+    public async Task ExpireAsync_KeepsTheEntryAndFreesItsPath()
+    {
+        var host = Unique.Host();
+        var keyHash = RandomNumberGenerator.GetBytes(32);
+        var old = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready, host: host));
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            Assert.AreEqual(1, await scope.Repository().ExpireAsync([old.Id], DateTimeOffset.UtcNow, CancellationToken.None));
+        await using (var scope = PostgresDatabase.CreateScope())
+            Assert.IsNull(await scope.Repository().GetByKeyHashOrDefaultAsync(keyHash, CancellationToken.None));
+        var current = await AddAsync(PendingEntry(keyHash, host: host));
+
+        await using var readScope = PostgresDatabase.CreateScope();
+        Assert.AreEqual(current.Id, (await GetByKeyAsync(keyHash)).Id);
+        Assert.AreEqual(EntryStatus.Expired, (await GetAsync(old.Id)).Status);
+        CollectionAssert.AreEqual(
+            new[] { current.Id },
+            (await readScope.Repository().GetPageAsync(new EntryFilter(host), EntrySort.Newest, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { old.Id },
+            (await readScope.Repository().GetPageAsync(new EntryFilter(host, State: EntryState.Expired), EntrySort.Newest, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
+    }
+
+    [TestMethod]
+    public async Task ExpireUnusedSinceAsync_KeepsRecentAndPendingEntries()
     {
         var now = DateTimeOffset.UtcNow;
         var old = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready, createdAt: now.AddDays(-40)));
@@ -280,16 +305,51 @@ public sealed class EntryRepositoryTests
         await using (var scope = PostgresDatabase.CreateScope())
         {
             await scope.Repository().AddHitsAsync(oldButHit.Id, 1, now, CancellationToken.None);
-            await scope.Repository().DeleteUnusedSinceAsync(now.AddDays(-30), CancellationToken.None);
+            await scope.Repository().ExpireUnusedSinceAsync(now.AddDays(-30), now, CancellationToken.None);
         }
 
-        Assert.IsNull(await FindAsync(old.Id));
-        Assert.IsNotNull(await FindAsync(oldButHit.Id));
-        Assert.IsNotNull(await FindAsync(oldPending.Id));
+        Assert.AreEqual(EntryStatus.Expired, (await GetAsync(old.Id)).Status);
+        Assert.AreEqual(EntryStatus.Ready, (await GetAsync(oldButHit.Id)).Status);
+        Assert.AreEqual(EntryStatus.Pending, (await GetAsync(oldPending.Id)).Status);
     }
 
     [TestMethod]
-    public async Task GetGeneratorStatisticsAsync_GroupsReadyEntriesByModelServer()
+    public async Task DeleteExpiredUnreferencedAsync_KeepsEntriesThatRequestsOrStatisticsStillNeed()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var referenced = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        var recent = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        var forgotten = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        await using (var scope = PostgresDatabase.CreateScope())
+        {
+            await scope.Repository().ExpireAsync([referenced.Id, forgotten.Id], now.AddDays(-2), CancellationToken.None);
+            await scope.Repository().ExpireAsync([recent.Id], now, CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<IRequestRepository>().AddRangeAsync(
+                [
+                    new RequestRecord
+                    {
+                        ReceivedAt = now,
+                        ClientIp = "203.0.113.7",
+                        Method = "GET",
+                        Host = referenced.Host,
+                        Target = referenced.Target,
+                        Headers = string.Empty,
+                        Outcome = RequestOutcome.Hit,
+                        EntryId = referenced.Id,
+                        Instance = "test"
+                    }
+                ],
+                CancellationToken.None);
+            await scope.Repository().DeleteExpiredUnreferencedAsync(now.AddDays(-1), CancellationToken.None);
+        }
+
+        Assert.IsNotNull(await FindAsync(referenced.Id));
+        Assert.IsNotNull(await FindAsync(recent.Id));
+        Assert.IsNull(await FindAsync(forgotten.Id));
+    }
+
+    [TestMethod]
+    public async Task GetGeneratorStatisticsAsync_GroupsGeneratedEntriesByModelServerEvenOnceExpired()
     {
         var model = $"honeyslop@{Unique.String(8)}:8080";
         foreach (var (ms, tokens) in new[] { (1000, 100), (3000, 300) })
@@ -297,6 +357,8 @@ public sealed class EntryRepositoryTests
             var entry = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32)));
             await using var scope = PostgresDatabase.CreateScope();
             await scope.Repository().CompleteAsync(entry.Id, "test", new EntryResponse(200, [], "ok", model, 10, tokens, ms), DateTimeOffset.UtcNow, CancellationToken.None);
+            if (ms == 1000)
+                await scope.Repository().ExpireAsync([entry.Id], DateTimeOffset.UtcNow, CancellationToken.None);
         }
 
         await using var readScope = PostgresDatabase.CreateScope();

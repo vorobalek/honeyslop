@@ -13,7 +13,6 @@ public sealed class GeneratorsModel(
     IOptions<LlmOptions> llmOptions,
     TimeProvider timeProvider) : PageModel
 {
-    private static readonly TimeSpan StatisticsWindow = TimeSpan.FromHours(24);
 
     public bool Configured => llmOptions.Value.Urls.Count > 0;
     public GeneratorRow[] Generators { get; private set; } = [];
@@ -41,7 +40,7 @@ public sealed class GeneratorsModel(
         Queue = await entryRepository.GetQueueStatisticsAsync(cancellationToken);
         Generating = await entryRepository.GetGeneratingAsync(50, cancellationToken);
         Queued = await entryRepository.GetQueuedAsync(20, cancellationToken);
-        var statistics = await entryRepository.GetGeneratorStatisticsAsync(RenderedAt - StatisticsWindow, cancellationToken);
+        var statistics = await entryRepository.GetGeneratorStatisticsAsync(RenderedAt - GeneratorStatistics.Window, cancellationToken);
         var endpoints = Configured
             ? await endpointProvider.GetEndpointsAsync(cancellationToken)
             : [];

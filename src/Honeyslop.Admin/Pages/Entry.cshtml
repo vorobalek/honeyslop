@@ -20,6 +20,15 @@
     case EntryState.Failed:
         <p class="notice">Failed @entry.Attempts @(entry.Attempts == 1 ? "time" : "times")@(entry.Attempts >= 3 ? ", no more retries until it is expired" : ", it will be retried")</p>
         break;
+    case EntryState.Expired:
+        <p class="notice">
+            Expired @entry.UpdatedAt.Display UTC. It is no longer served and stays here while recorded requests refer to it.
+            @if (Model.Current is { } current)
+            {
+                <a asp-page="/Entry" asp-route-id="@current.Id">The current entry for this path →</a>
+            }
+        </p>
+        break;
 }
 
 <h1 class="request-line">
@@ -28,9 +37,12 @@
     <span class="mono host">@entry.Host</span><span class="mono target">@entry.Target</span>
 </h1>
 
-<form method="post" asp-page-handler="Expire" asp-route-id="@entry.Id" data-confirm="Expire this entry? It will be generated again on the next request.">
-    <button type="submit" class="danger">Expire</button>
-</form>
+@if (entry.State != EntryState.Expired)
+{
+    <form method="post" asp-page-handler="Expire" asp-route-id="@entry.Id" data-confirm="Expire this entry? It will be generated again on the next request.">
+        <button type="submit" class="danger">Expire</button>
+    </form>
+}
 
 <p><a asp-page="/Requests" asp-route-EntryId="@entry.Id">Every request answered with this entry →</a></p>
 

@@ -17,7 +17,7 @@ namespace Honeyslop.Migrator.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -154,7 +154,8 @@ namespace Honeyslop.Migrator.Migrations
 
                     b.HasIndex("KeyHash")
                         .IsUnique()
-                        .HasDatabaseName("ix_entry_key_hash");
+                        .HasDatabaseName("ix_entry_key_hash")
+                        .HasFilter("status <> 3");
 
                     b.HasIndex("LastHitAt")
                         .HasDatabaseName("ix_entry_last_hit_at");

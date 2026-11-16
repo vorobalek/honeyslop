@@ -65,10 +65,13 @@ public sealed class SettingsModel(
     public int Expired { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int Removed { get; set; }
+    public int Unused { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int Pruned { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int Deleted { get; set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
@@ -119,8 +122,9 @@ public sealed class SettingsModel(
         {
             Saved = true,
             result.Expired,
-            result.Removed,
-            result.Pruned
+            result.Unused,
+            result.Pruned,
+            result.Deleted
         });
     }
 
