@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", () => {
             url.searchParams.delete("Expired");
             try {
                 const response = await fetch(url, { credentials: "same-origin", redirect: "manual" });
+                if (response.type === "opaqueredirect") {
+                    window.location.reload();
+                    return;
+                }
                 if (response.ok) {
                     const html = await response.text();
                     const before = element.querySelector("pre");

@@ -1,3 +1,4 @@
+using Honeyslop.Admin.Access;
 using Honeyslop.Admin.Configuration;
 using Honeyslop.Admin.Live;
 using Honeyslop.Admin.Middleware;
@@ -14,6 +15,7 @@ await Host
         .AddGlobalCancellationToken()
         .AddJsonConsoleLogging()
         .AddDatabase(AppConfiguration.DbConnectionString)
+        .AddAccess()
         .ConfigureKestrel(options => options.AddServerHeader = false)
         .ConfigureServices(services =>
         {
@@ -52,18 +54,26 @@ await Host
         })
         .Configure(app => app
             .UseMiddleware<SecurityHeadersMiddleware>()
+            .UseForwardedHeaders()
             .UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(20)
             })
             .UseStaticFiles()
             .UseRouting()
+            .UseAuthentication()
+            .UseAuthorization()
             .UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
                 endpoints.Map("/live", LiveEndpoint.HandleAsync);
-            })
-            .UseHealthChecks("/health"))
+                endpoints.MapHealthChecks("/health").AllowAnonymous();
+                if (AppConfiguration.SignInEnabled)
+                {
+                    endpoints.MapGet("/signin", AccountEndpoints.SignIn).AllowAnonymous();
+                    endpoints.MapPost("/signout", AccountEndpoints.SignOutAsync).AllowAnonymous();
+                }
+            }))
         .UseUrls($"http://+:{AppConfiguration.Port}"))
     .Build()
     .RunAsync();

@@ -1,4 +1,7 @@
 @model IndexModel
+@{
+    var signIn = User.CanOperate ? null : "Sign in to expire entries";
+}
 
 <section class="stats">
     <div class="stat"><span class="stat-value">@Model.Statistics.Total</span><span class="stat-label">entries</span></div>
@@ -17,7 +20,7 @@
         <input type="hidden" name="State" value="@Model.State"/>
         <input type="hidden" name="Sort" value="@Model.Sort"/>
         <input type="hidden" name="p" value="@Model.PageNumber"/>
-        <button type="submit" class="danger" data-requires-selection>Expire selected</button>
+        <button type="submit" class="danger" data-requires-selection disabled="@(signIn is not null)" title="@signIn">Expire selected</button>
     </form>
     @if (!Model.Filter.IsEmpty && Model.TotalCount > 0)
     {
@@ -26,11 +29,11 @@
             <input type="hidden" name="Target" value="@Model.Target"/>
             <input type="hidden" name="State" value="@Model.State"/>
             <input type="hidden" name="Sort" value="@Model.Sort"/>
-            <button type="submit" class="danger">Expire @Model.TotalCount matching</button>
+            <button type="submit" class="danger" disabled="@(signIn is not null)" title="@signIn">Expire @Model.TotalCount matching</button>
         </form>
     }
     <form method="post" asp-page-handler="ExpireAll" data-confirm="Expire every cached entry? All responses will be generated again.">
-        <button type="submit" class="danger">Expire everything</button>
+        <button type="submit" class="danger" disabled="@(signIn is not null)" title="@signIn">Expire everything</button>
     </form>
     <span class="count">@Model.TotalCount matching · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
 </div>
@@ -38,7 +41,7 @@
 <table class="entries">
     <thead>
     <tr>
-        <th class="check"><input type="checkbox" data-select-all aria-label="Select all"/></th>
+        <th class="check"><input type="checkbox" data-select-all aria-label="Select all" disabled="@(signIn is not null)"/></th>
         <th>Status</th>
         <th>Method</th>
         <th>Host</th>
@@ -54,7 +57,7 @@
     @foreach (var entry in Model.Entries)
     {
         <tr>
-            <td class="check"><input type="checkbox" name="ids" value="@entry.Id" form="bulk" aria-label="Select entry @entry.Id"/></td>
+            <td class="check"><input type="checkbox" name="ids" value="@entry.Id" form="bulk" aria-label="Select entry @entry.Id" disabled="@(signIn is not null)"/></td>
             <td>
                 <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"on {entry.ClaimedBy} since {entry.ClaimedAt.Display} UTC" : entry.Error)">@entry.State.Label</span>
             </td>

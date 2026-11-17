@@ -8,6 +8,17 @@
         "PORT": "8090",
         "DB_CONNECTION_STRING": "Server=localhost;Port=5432;Database=honeyslop;User Id=honeyslop;Password=honeyslop;Include Error Detail=true"
       }
+    },
+    "Honeyslop.Admin.Oidc": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "PORT": "8090",
+        "DB_CONNECTION_STRING": "Server=localhost;Port=5432;Database=honeyslop;User Id=honeyslop;Password=honeyslop;Include Error Detail=true",
+        "OIDC_AUTHORITY": "http://localhost:8099/honeyslop",
+        "OIDC_CLIENT_SECRET": "honeyslop"
+      }
     }
   }
 }

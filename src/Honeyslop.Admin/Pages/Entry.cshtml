@@ -40,7 +40,7 @@
 @if (entry.State != EntryState.Expired)
 {
     <form method="post" asp-page-handler="Expire" asp-route-id="@entry.Id" data-confirm="Expire this entry? It will be generated again on the next request.">
-        <button type="submit" class="danger">Expire</button>
+        <button type="submit" class="danger" disabled="@(!User.CanOperate)" title="@(User.CanOperate ? null : "Sign in to expire entries")">Expire</button>
     </form>
 }
 

@@ -1,3 +1,4 @@
+using Honeyslop.Admin.Access;
 using Honeyslop.Admin.Services;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ namespace Honeyslop.Admin.Pages;
 public sealed class SettingsModel(
     ISettingsRepository settingsRepository,
     ICacheMaintenance cacheMaintenance,
+    IPublicView publicView,
     TimeProvider timeProvider) : PageModel
 {
     [BindProperty]
@@ -58,6 +60,9 @@ public sealed class SettingsModel(
     [BindProperty]
     public DurationUnit RequestRetentionUnit { get; set; }
 
+    [BindProperty]
+    public bool PublicView { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public bool Saved { get; set; }
 
@@ -85,6 +90,7 @@ public sealed class SettingsModel(
         (TimeLimitValue, TimeLimitUnit) = Split(settings.GenerationTimeLimit);
         (RequestRetentionValue, RequestRetentionUnit) = Split(settings.RequestRetention);
         (GenerationWaitValue, GenerationWaitUnit) = Split(settings.GenerationWait);
+        PublicView = settings.PublicView;
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
@@ -115,8 +121,10 @@ public sealed class SettingsModel(
             AllowRefusals,
             Join(ClaimTimeoutValue, ClaimTimeoutUnit),
             Join(RetryFailedValue, RetryFailedUnit),
-            Join(TimeLimitValue, TimeLimitUnit));
+            Join(TimeLimitValue, TimeLimitUnit),
+            PublicView);
         await settingsRepository.SaveAsync(settings, timeProvider.GetUtcNow(), cancellationToken);
+        publicView.Reset();
         var result = await cacheMaintenance.RunAsync(settings, cancellationToken);
         return RedirectToPage(new
         {

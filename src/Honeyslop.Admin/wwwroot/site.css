@@ -94,6 +94,33 @@ a:hover {
     margin-left: auto;
 }
 
+fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.account {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+}
+
+.account-name {
+    color: var(--muted);
+}
+
+button.link {
+    padding: 0;
+    color: var(--accent);
+    background: none;
+    border: 0;
+}
+
 .settings {
     display: flex;
     flex-direction: column;

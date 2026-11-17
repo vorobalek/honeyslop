@@ -12,7 +12,8 @@ internal sealed class SecurityHeadersMiddleware : IMiddleware
         headers.ContentSecurityPolicy = ContentSecurityPolicy;
         headers.XContentTypeOptions = "nosniff";
         headers["Referrer-Policy"] = "no-referrer";
-        headers.CacheControl = "no-store";
+        headers.CacheControl = "no-cache, no-store";
+        headers.Pragma = "no-cache";
         return next(httpContext);
     }
 }

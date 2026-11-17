@@ -14,7 +14,13 @@
     </p>
 }
 
-<form method="post" class="settings">
+@if (!User.CanOperate)
+{
+    <p class="notice">Read-only view. <a href="@Request.SignInUrl">Sign in</a> to change the settings.</p>
+}
+
+<form method="post">
+<fieldset class="settings" disabled="@(!User.CanOperate)">
     <h2>Cache</h2>
 
     <div class="setting">
@@ -103,5 +109,19 @@
         <p class="hint">When off, cached responses are still served and every new path gets a plain 404 without touching the model.</p>
     </div>
 
+    <h2>Access</h2>
+
+    <div class="setting">
+        <label class="checkbox"><input asp-for="PublicView"/> Show everything read-only without signing in</label>
+        <p class="hint">
+            On: anyone can open this admin without signing in and see all of it, the request history with headers, bodies and client addresses included. Saving settings and expiring entries still take signing in. Off: every page asks to sign in.
+            @if (!AppConfiguration.SignInEnabled)
+            {
+                <text>Sign-in is not configured, so this has no effect: the admin relies on the proxy in front of it.</text>
+            }
+        </p>
+    </div>
+
     <button type="submit">Save</button>
+</fieldset>
 </form>

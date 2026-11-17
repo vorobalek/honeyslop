@@ -73,6 +73,9 @@ Admin:
 | `PORT` | `8080` | HTTP port |
 | `MAINTENANCE_INTERVAL_SECONDS` | `60` | How often expiration and pruning run |
 | `LLM_URL` | — | Model servers to show on the Generators page |
+| `OIDC_AUTHORITY` | — | OpenID Connect issuer to sign in with; unset turns sign-in off |
+| `OIDC_CLIENT_ID` | `honeyslop` | Client registered at the issuer |
+| `OIDC_CLIENT_SECRET` | — | Its secret, required with `OIDC_AUTHORITY` |
 
 Runtime settings live in the database and are edited on the admin Settings page; trap instances reload them every ten
 seconds:
@@ -88,6 +91,7 @@ seconds:
 | Retry a failed generation after | 1 minute | Only broken model output counts as a failure |
 | Keep the request history for | 30 days | Every request is recorded with its headers and body |
 | Generate responses for new requests | on | Off serves only what is cached |
+| Show everything read-only without signing in | off | On: anyone may browse the admin, changes still take signing in |
 
 Saving applies the thresholds to everything already stored right away.
 
@@ -95,7 +99,19 @@ Expiring an entry, by hand or by these thresholds, does not delete it. It stops 
 new generation and stays viewable from the requests it answered, and it still counts in the generator statistics. It
 is deleted once the request history no longer refers to it and it expired more than a day ago.
 
-The admin UI has no authentication of its own and must sit behind an authenticating proxy.
+### Access
+
+With `OIDC_AUTHORITY` set, the admin signs users in itself through the authorization code flow with PKCE and keeps
+them signed in with its own cookie for twelve hours since the last visit. Whoever the issuer lets through may do
+everything: the issuer decides who gets in. Without a session every page sends the visitor to sign in, unless the
+read-only setting is on: then anyone may open every page and the live feed, while saving settings and expiring
+entries still send them to sign in. Turning the setting off cuts open live connections of visitors who did not sign
+in. The admin trusts `X-Forwarded-Proto` from anyone, so only the proxy may reach it.
+
+Without `OIDC_AUTHORITY` the admin has no authentication of its own, ignores the setting and must sit behind an
+authenticating proxy.
+
+The cookie keys live in memory, so a restart signs everyone out.
 
 ### Database
 
@@ -119,6 +135,14 @@ dotnet run --project src/Honeyslop.Admin
 ```
 
 `launchSettings.json` expects a model server on `http://localhost:18080`.
+
+To try sign-in, start a mock OpenID Connect issuer that lets anyone in under any name and run the admin with the
+`Honeyslop.Admin.Oidc` profile:
+
+```bash
+docker compose -f docker-compose.oidc.yaml up -d
+dotnet run --project src/Honeyslop.Admin --launch-profile Honeyslop.Admin.Oidc
+```
 
 ### Tests
 

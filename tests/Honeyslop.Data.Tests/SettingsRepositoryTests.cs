@@ -23,7 +23,8 @@ public sealed class SettingsRepositoryTests
             false,
             TimeSpan.FromMinutes(3),
             TimeSpan.FromMinutes(5),
-            TimeSpan.FromMinutes(4));
+            TimeSpan.FromMinutes(4),
+            true);
         await repository.SaveAsync(saved, DateTimeOffset.UtcNow, CancellationToken.None);
         await repository.SaveAsync(saved with { GenerationEnabled = true }, DateTimeOffset.UtcNow, CancellationToken.None);
 

@@ -20,6 +20,23 @@
         <a asp-page="/Generators">Generators</a>
         <a asp-page="/Settings">Settings</a>
     </nav>
+    @if (AppConfiguration.SignInEnabled)
+    {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            <form class="account" method="post" action="/signout" asp-antiforgery="true">
+                <span class="account-name">@User.DisplayName</span>
+                <button type="submit" class="link">Sign out</button>
+            </form>
+        }
+        else
+        {
+            <span class="account">
+                <span class="account-name">read-only</span>
+                <a href="@Context.Request.SignInUrl">Sign in</a>
+            </span>
+        }
+    }
 </header>
 <main class="container">
     @RenderBody()

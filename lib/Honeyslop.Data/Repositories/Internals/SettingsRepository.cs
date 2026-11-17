@@ -15,6 +15,7 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
     private const string ClaimTimeoutSeconds = "claim_timeout_seconds";
     private const string RetryFailedSeconds = "retry_failed_seconds";
     private const string GenerationTimeLimitSeconds = "generation_time_limit_seconds";
+    private const string PublicView = "public_view";
 
     public async Task<HoneyslopSettings> GetAsync(CancellationToken cancellationToken)
     {
@@ -32,7 +33,8 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             ReadFlag(values, AllowRefusals, defaults.AllowRefusals),
             ReadSeconds(values, ClaimTimeoutSeconds, defaults.ClaimTimeout),
             ReadSeconds(values, RetryFailedSeconds, defaults.RetryFailedAfter),
-            ReadSeconds(values, GenerationTimeLimitSeconds, defaults.GenerationTimeLimit));
+            ReadSeconds(values, GenerationTimeLimitSeconds, defaults.GenerationTimeLimit),
+            ReadFlag(values, PublicView, defaults.PublicView));
     }
 
     public async Task SaveAsync(HoneyslopSettings settings, DateTimeOffset now, CancellationToken cancellationToken)
@@ -49,6 +51,7 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
         Set(ClaimTimeoutSeconds, ((long)settings.ClaimTimeout.TotalSeconds).ToString(CultureInfo.InvariantCulture));
         Set(RetryFailedSeconds, ((long)settings.RetryFailedAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture));
         Set(GenerationTimeLimitSeconds, ((long)settings.GenerationTimeLimit.TotalSeconds).ToString(CultureInfo.InvariantCulture));
+        Set(PublicView, settings.PublicView.ToString(CultureInfo.InvariantCulture));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         void Set(string key, string value)

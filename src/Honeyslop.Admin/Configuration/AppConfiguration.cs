@@ -15,4 +15,15 @@ public static class AppConfiguration
 
     public static readonly string? LlmUrl = "LLM_URL"
         .EnvironmentValue;
+
+    public static readonly string? OidcAuthority = "OIDC_AUTHORITY"
+        .EnvironmentValue;
+
+    public static readonly string OidcClientId = "OIDC_CLIENT_ID"
+        .GetEnvironmentValueWithFallback("honeyslop");
+
+    public static readonly string? OidcClientSecret = "OIDC_CLIENT_SECRET"
+        .EnvironmentValue;
+
+    public static bool SignInEnabled => !string.IsNullOrWhiteSpace(OidcAuthority);
 }
