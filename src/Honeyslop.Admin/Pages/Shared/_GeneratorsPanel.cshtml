@@ -13,6 +13,7 @@
     <span class="count">live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC · production figures cover the last 24 hours</span>
 </div>
 
+<div class="table-scroll">
 <table class="entries">
     <thead>
     <tr>
@@ -35,11 +36,11 @@
     {
         var status = generator.Status;
         <tr>
-            <td class="mono">
+            <td class="mono nowrap">
                 @generator.Name
                 @if (generator.Address is { } address && address != generator.Name)
                 {
-                    <span class="muted"> · @address</span>
+                    <span class="sub">@address</span>
                 }
             </td>
             <td>
@@ -56,17 +57,18 @@
                     <span class="badge badge-static">gone</span>
                 }
             </td>
-            <td class="mono">
+            <td class="mono nowrap">
                 @if (status is not null)
                 {
                     @status.Model
-                    @if (status.Parameters is { } parameters)
+                    var details = new[]
                     {
-                        <span class="muted"> · @((parameters / 1e9).ToString("0.0", CultureInfo.InvariantCulture))B</span>
-                    }
-                    @if (status.SizeBytes is { } size)
+                        status.Parameters is { } parameters ? $"{(parameters / 1e9).ToString("0.0", CultureInfo.InvariantCulture)}B" : null,
+                        status.SizeBytes is { } size ? $"{(size / 1024d / 1024d / 1024d).ToString("0.0", CultureInfo.InvariantCulture)} GB" : null
+                    }.OfType<string>().ToArray();
+                    @if (details.Length > 0)
                     {
-                        <span class="muted"> · @((size / 1024d / 1024d / 1024d).ToString("0.0", CultureInfo.InvariantCulture)) GB</span>
+                        <span class="sub">@string.Join(", ", details)</span>
                     }
                 }
                 else
@@ -74,7 +76,7 @@
                     @:—
                 }
             </td>
-            <td class="number">
+            <td class="number nowrap">
                 @if (status is not null)
                 {
                     <span class="slots">
@@ -104,8 +106,10 @@
     }
     </tbody>
 </table>
+</div>
 
 <h2>Generating now</h2>
+<div class="table-scroll">
 <table class="entries">
     <thead>
     <tr>
@@ -113,7 +117,7 @@
         <th>Method</th>
         <th>Host</th>
         <th>Path</th>
-        <th>Trap instance</th>
+        <th>Generator</th>
         <th class="number">Attempt</th>
         <th class="number">Running for</th>
         <th class="number">Waited before</th>
@@ -127,7 +131,16 @@
             <td class="mono">@entry.Method</td>
             <td class="mono host">@entry.Host</td>
             <td class="mono target">@entry.Target</td>
-            <td class="mono">@entry.ClaimedBy</td>
+            <td class="mono nowrap">
+                @if (entry.Generator is { } generator)
+                {
+                    @generator
+                }
+                else
+                {
+                    <span class="muted">waiting for a slot</span>
+                }
+            </td>
             <td class="number">@(entry.Attempts + 1)</td>
             <td class="number">@((Model.RenderedAt - (entry.ClaimedAt ?? Model.RenderedAt)).DisplayDuration)</td>
             <td class="number">@(((entry.ClaimedAt ?? Model.RenderedAt) - entry.CreatedAt).DisplayDuration)</td>
@@ -141,9 +154,11 @@
     }
     </tbody>
 </table>
+</div>
 
 <h2>Queue · @Model.Queue.Queued waiting@(Model.Queue.OldestQueuedAt is { } oldest ? $", the oldest for {(Model.RenderedAt - oldest).DisplayDuration}" : "")</h2>
 <p class="hint">Entries somebody asked for within the wait window go first, newest first; the rest are taken oldest first.</p>
+<div class="table-scroll">
 <table class="entries">
     <thead>
     <tr>
@@ -175,3 +190,4 @@
     }
     </tbody>
 </table>
+</div>

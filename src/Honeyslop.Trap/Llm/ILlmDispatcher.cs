@@ -7,5 +7,6 @@ public interface ILlmDispatcher
         LlmPrompt prompt,
         TimeSpan timeLimit,
         IProgress<LlmProgress>? progress,
+        Func<string, CancellationToken, Task>? dispatched,
         CancellationToken cancellationToken);
 }

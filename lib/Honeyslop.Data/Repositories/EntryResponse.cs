@@ -7,6 +7,7 @@ public sealed record EntryResponse(
     IReadOnlyList<ResponseHeader> Headers,
     string Body,
     string? Model,
+    string? Generator,
     int? PromptTokens,
     int? CompletionTokens,
     int GenerationMs);

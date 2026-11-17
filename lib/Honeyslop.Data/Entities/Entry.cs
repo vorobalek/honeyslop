@@ -21,6 +21,7 @@ public class Entry
     public const int UserAgentMaxLength = 1024;
     public const int ClaimedByMaxLength = 128;
     public const int ModelMaxLength = 128;
+    public const int GeneratorMaxLength = 128;
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
@@ -66,6 +67,9 @@ public class Entry
 
     [MaxLength(ModelMaxLength)]
     public string? Model { get; set; }
+
+    [MaxLength(GeneratorMaxLength)]
+    public string? Generator { get; set; }
 
     public int? PromptTokens { get; set; }
 

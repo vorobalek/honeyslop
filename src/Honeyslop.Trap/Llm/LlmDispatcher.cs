@@ -20,11 +20,14 @@ internal sealed partial class LlmDispatcher(
         LlmPrompt prompt,
         TimeSpan timeLimit,
         IProgress<LlmProgress>? progress,
+        Func<string, CancellationToken, Task>? dispatched,
         CancellationToken cancellationToken)
     {
         var (endpoint, lease) = await AcquireAsync(cancellationToken);
         try
         {
+            if (dispatched is not null)
+                await dispatched(endpoint.Name, cancellationToken);
             var completion = await llmClient.CompleteAsync(endpoint.Url, prompt, timeLimit, progress, cancellationToken);
             return completion with
             {

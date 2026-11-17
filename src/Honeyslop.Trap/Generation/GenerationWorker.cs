@@ -96,6 +96,7 @@ internal sealed partial class GenerationWorker(
                 promptBuilder.Build(entry, settings.AllowRefusals),
                 settings.GenerationTimeLimit,
                 progress,
+                (generator, token) => entryRepository.MarkDispatchedAsync(entryId, instance, generator, token),
                 cancellationToken);
             if (completion.FinishReason == "length")
                 throw new LlmException("Model output was cut at the token limit.");
@@ -109,7 +110,8 @@ internal sealed partial class GenerationWorker(
                     generated.Status,
                     generated.Headers,
                     generated.Body,
-                    completion.Endpoint is null ? completion.Model : $"{completion.Model}@{completion.Endpoint}",
+                    completion.Model,
+                    completion.Endpoint,
                     completion.PromptTokens,
                     completion.CompletionTokens,
                     (int)elapsed.TotalMilliseconds),

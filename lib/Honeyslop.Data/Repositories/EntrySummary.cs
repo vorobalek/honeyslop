@@ -15,7 +15,8 @@ public sealed record EntrySummary(
     DateTimeOffset? LastHitAt,
     string? Error,
     string? ClaimedBy,
-    DateTimeOffset? ClaimedAt)
+    DateTimeOffset? ClaimedAt,
+    string? Generator)
 {
     public EntryState State => Status switch
     {

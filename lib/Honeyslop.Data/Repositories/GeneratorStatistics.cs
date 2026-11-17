@@ -1,7 +1,7 @@
 namespace Honeyslop.Data.Repositories;
 
 public sealed record GeneratorStatistics(
-    string Model,
+    string Generator,
     int Generated,
     double AverageMs,
     double AverageTokens,

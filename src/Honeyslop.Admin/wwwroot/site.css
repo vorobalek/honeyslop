@@ -52,8 +52,9 @@ a:hover {
 
 .topbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 12px;
+    gap: 6px 12px;
     padding: 14px 24px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -254,12 +255,20 @@ button:disabled {
     cursor: default;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.table-scroll {
+    overflow-x: auto;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+tbody tr:last-child > * {
+    border-bottom: 0;
 }
 
 th, td {
@@ -273,6 +282,7 @@ thead th {
     color: var(--muted);
     font-weight: 500;
     font-size: 12px;
+    white-space: nowrap;
 }
 
 .check {
@@ -292,6 +302,14 @@ thead th {
 .entries .target, .entries .host {
     max-width: 420px;
     overflow-wrap: anywhere;
+}
+
+.entries .host {
+    min-width: 190px;
+}
+
+.entries .target {
+    min-width: 220px;
 }
 
 .time {
@@ -337,6 +355,17 @@ thead th {
     color: var(--muted);
 }
 
+.sub {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
 .slots {
     display: inline-flex;
     gap: 3px;
@@ -357,6 +386,7 @@ thead th {
 }
 
 .entries .agent {
+    min-width: 200px;
     max-width: 320px;
     color: var(--muted);
     font-size: 12px;
@@ -401,7 +431,9 @@ h2 {
 }
 
 .meta dd {
+    min-width: 0;
     margin: 0;
+    overflow-wrap: anywhere;
 }
 
 .error {
@@ -430,4 +462,84 @@ pre.code {
     background: #ffffff;
     border: 1px solid var(--border);
     border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+    .topbar {
+        padding: 10px 12px;
+    }
+
+    .subtitle {
+        display: none;
+    }
+
+    .nav {
+        order: 1;
+        width: 100%;
+        margin-left: 0;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .account {
+        margin-left: auto;
+        padding-left: 0;
+        border-left: 0;
+    }
+
+    .container {
+        padding: 12px 12px 32px;
+    }
+
+    .stats {
+        gap: 8px;
+    }
+
+    .stat {
+        flex: 0 1 calc(50% - 4px);
+        min-width: 0;
+        padding: 8px 10px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+
+    .filters label {
+        flex: 1 1 140px;
+    }
+
+    input[type=search], select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .actions .count {
+        flex-basis: 100%;
+    }
+
+    th, td {
+        padding: 6px 8px;
+    }
+
+    .request-line {
+        font-size: 16px;
+    }
+
+    .meta {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .meta dd {
+        margin-bottom: 8px;
+    }
+
+    .headers th {
+        width: auto;
+    }
+
+    .preview {
+        height: 420px;
+    }
 }

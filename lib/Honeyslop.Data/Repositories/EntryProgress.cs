@@ -9,4 +9,5 @@ public sealed record EntryProgress(
     string? ClaimedBy,
     DateTimeOffset? ClaimedAt,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? RequestedAt);
+    DateTimeOffset? RequestedAt,
+    string? Generator);

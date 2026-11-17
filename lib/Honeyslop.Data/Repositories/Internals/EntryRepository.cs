@@ -59,7 +59,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .SqlQuery<long>(
                 $"""
                  update public.entry
-                 set status = {pending}, claimed_by = {claimedBy}, claimed_at = {now}, updated_at = {now}
+                 set status = {pending}, claimed_by = {claimedBy}, claimed_at = {now}, updated_at = {now}, generator = null
                  where id = (
                      select id
                      from public.entry
@@ -97,7 +97,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy != null)
             .OrderBy(x => x.ClaimedAt)
             .Take(limit)
-            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt))
+            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt, x.Generator))
             .ToArrayAsync(cancellationToken);
     }
 
@@ -108,7 +108,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy == null)
             .OrderByDescending(x => x.RequestedAt ?? x.CreatedAt)
             .Take(limit)
-            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt))
+            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt, x.Generator))
             .ToArrayAsync(cancellationToken);
     }
 
@@ -134,6 +134,21 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 setters => setters.SetProperty(x => x.ClaimedAt, now),
                 cancellationToken);
         return updated == 1;
+    }
+
+    public Task MarkDispatchedAsync(
+        long id,
+        string claimedBy,
+        string generator,
+        CancellationToken cancellationToken)
+    {
+        var truncatedGenerator = generator.Truncate(Entry.GeneratorMaxLength);
+        return dbContext
+            .Entries
+            .Where(x => x.Id == id && x.Status == EntryStatus.Pending && x.ClaimedBy == claimedBy)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(x => x.Generator, truncatedGenerator),
+                cancellationToken);
     }
 
     public Task NotifyOutputAsync(GenerationOutput output, CancellationToken cancellationToken)
@@ -173,6 +188,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         ];
         entry.ResponseBody = response.Body;
         entry.Model = response.Model?.Truncate(Entry.ModelMaxLength);
+        entry.Generator = response.Generator?.Truncate(Entry.GeneratorMaxLength);
         entry.PromptTokens = response.PromptTokens;
         entry.CompletionTokens = response.CompletionTokens;
         entry.GenerationMs = response.GenerationMs;
@@ -197,6 +213,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 setters => setters
                     .SetProperty(x => x.ClaimedBy, (string?)null)
                     .SetProperty(x => x.ClaimedAt, (DateTimeOffset?)null)
+                    .SetProperty(x => x.Generator, (string?)null)
                     .SetProperty(x => x.Error, truncatedReason)
                     .SetProperty(x => x.UpdatedAt, now),
                 cancellationToken);
@@ -276,7 +293,8 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 x.LastHitAt,
                 x.Error,
                 x.ClaimedBy,
-                x.ClaimedAt))
+                x.ClaimedAt,
+                x.Generator))
             .ToArrayAsync(cancellationToken);
     }
 
@@ -356,9 +374,9 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         return dbContext
             .Entries
             .Where(x =>
-                x.Model != null &&
+                x.Generator != null &&
                 x.GeneratedAt >= since)
-            .GroupBy(x => x.Model!)
+            .GroupBy(x => x.Generator!)
             .Select(x => new GeneratorStatistics(
                 x.Key,
                 x.Count(),

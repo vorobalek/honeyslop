@@ -4,6 +4,7 @@
     <span class="count">@Model.TotalCount requests · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
 </div>
 
+<div class="table-scroll">
 <table class="entries">
     <thead>
     <tr>
@@ -50,6 +51,7 @@
     }
     </tbody>
 </table>
+</div>
 
 <nav class="pager">
     @if (Model.PageNumber > 0)

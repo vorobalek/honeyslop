@@ -29,6 +29,12 @@ public interface IEntryRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    Task MarkDispatchedAsync(
+        long id,
+        string claimedBy,
+        string generator,
+        CancellationToken cancellationToken);
+
     Task NotifyOutputAsync(GenerationOutput output, CancellationToken cancellationToken);
 
     Task<bool> CompleteAsync(

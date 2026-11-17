@@ -51,7 +51,7 @@ public sealed class GeneratorsModel(
             .ToList();
         var known = rows.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
         rows.AddRange(statistics
-            .Select(x => GeneratorOf(x.Model))
+            .Select(x => x.Generator)
             .Where(x => !known.Contains(x))
             .Distinct(StringComparer.Ordinal)
             .Select(x => Row(x, null, null, false, statistics)));
@@ -66,7 +66,7 @@ public sealed class GeneratorsModel(
         IReadOnlyCollection<GeneratorStatistics> statistics)
     {
         var own = statistics
-            .Where(x => GeneratorOf(x.Model) == name)
+            .Where(x => x.Generator == name)
             .ToArray();
         var generated = own.Sum(x => x.Generated);
         return new GeneratorRow(
@@ -78,12 +78,6 @@ public sealed class GeneratorsModel(
             generated > 0 ? own.Sum(x => x.AverageMs * x.Generated) / generated : 0,
             generated > 0 ? own.Sum(x => x.AverageTokens * x.Generated) / generated : 0,
             own.Max(x => x.LastGeneratedAt));
-    }
-
-    private static string GeneratorOf(string model)
-    {
-        var at = model.LastIndexOf('@');
-        return at >= 0 ? model[(at + 1)..] : model;
     }
 
     public sealed record GeneratorRow(

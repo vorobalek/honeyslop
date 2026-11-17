@@ -38,6 +38,7 @@
     <span class="count">@Model.TotalCount matching · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
 </div>
 
+<div class="table-scroll">
 <table class="entries">
     <thead>
     <tr>
@@ -59,7 +60,7 @@
         <tr>
             <td class="check"><input type="checkbox" name="ids" value="@entry.Id" form="bulk" aria-label="Select entry @entry.Id" disabled="@(signIn is not null)"/></td>
             <td>
-                <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"on {entry.ClaimedBy} since {entry.ClaimedAt.Display} UTC" : entry.Error)">@entry.State.Label</span>
+                <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"{(entry.Generator is { } generator ? $"on {generator}" : "waiting for a slot")} since {entry.ClaimedAt.Display} UTC" : entry.Error)">@entry.State.Label</span>
             </td>
             <td class="mono">@entry.Method</td>
             <td class="mono host">@entry.Host</td>
@@ -79,6 +80,7 @@
     }
     </tbody>
 </table>
+</div>
 
 <nav class="pager">
     @if (Model.PageNumber > 0)

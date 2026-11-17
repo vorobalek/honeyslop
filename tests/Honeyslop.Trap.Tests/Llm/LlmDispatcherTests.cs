@@ -28,9 +28,26 @@ public sealed class LlmDispatcherTests
         sut.Idle[B] = 2;
         sut.Idle[C] = 1;
 
-        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None);
 
         Assert.AreEqual(NameOf(B), completion.Endpoint);
+    }
+
+    [TestMethod]
+    public async Task CompleteAsync_ReportsTheServerBeforeTheGeneration()
+    {
+        var sut = new Sut(A, B);
+        sut.Idle[A] = 0;
+        sut.Idle[B] = 1;
+        string? dispatchedTo = null;
+
+        await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, (name, _) =>
+        {
+            dispatchedTo = name;
+            return Task.CompletedTask;
+        }, CancellationToken.None);
+
+        Assert.AreEqual(NameOf(B), dispatchedTo);
     }
 
     [TestMethod]
@@ -43,7 +60,7 @@ public sealed class LlmDispatcherTests
         sut.Hold = new TaskCompletionSource();
 
         var generations = Enumerable.Range(0, 3)
-            .Select(_ => sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None))
+            .Select(_ => sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None))
             .ToArray();
         await sut.WaitForStartedAsync(3);
         sut.Hold.SetResult();
@@ -61,7 +78,7 @@ public sealed class LlmDispatcherTests
         sut.Idle[A] = 0;
         sut.Idle[B] = 0;
 
-        var generation = sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+        var generation = sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None);
         await Task.Delay(100);
         Assert.IsFalse(generation.IsCompleted);
         sut.Idle[B] = 1;
@@ -77,7 +94,7 @@ public sealed class LlmDispatcherTests
         sut.Idle[A] = null;
         sut.Idle[B] = 1;
 
-        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None);
 
         Assert.AreEqual(NameOf(B), completion.Endpoint);
     }
@@ -89,10 +106,10 @@ public sealed class LlmDispatcherTests
         sut.Idle[A] = 2;
         sut.Idle[B] = 0;
         sut.Failing.Add(A);
-        await Assert.ThrowsExactlyAsync<LlmUnavailableException>(() => sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<LlmUnavailableException>(() => sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None));
 
         sut.Idle[B] = 1;
-        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+        var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, null, CancellationToken.None);
 
         Assert.AreEqual(NameOf(B), completion.Endpoint);
     }

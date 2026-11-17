@@ -70,6 +70,11 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("generation_ms");
 
+                    b.Property<string>("Generator")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("generator");
+
                     b.Property<long>("Hits")
                         .HasColumnType("bigint")
                         .HasColumnName("hits");
