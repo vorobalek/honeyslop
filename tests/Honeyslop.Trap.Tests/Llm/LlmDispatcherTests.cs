@@ -15,6 +15,11 @@ public sealed class LlmDispatcherTests
     private static readonly Uri C = new("http://10.0.0.3:8080/");
     private static readonly LlmPrompt Prompt = new("system", "user");
 
+    private static string NameOf(Uri endpoint)
+    {
+        return $"llm-{endpoint.Host.Split('.')[^1]}";
+    }
+
     [TestMethod]
     public async Task CompleteAsync_PicksTheServerWithMostIdleSlots()
     {
@@ -25,7 +30,7 @@ public sealed class LlmDispatcherTests
 
         var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
 
-        Assert.AreEqual(B.Authority, completion.Endpoint);
+        Assert.AreEqual(NameOf(B), completion.Endpoint);
     }
 
     [TestMethod]
@@ -45,7 +50,7 @@ public sealed class LlmDispatcherTests
         var completions = await Task.WhenAll(generations);
 
         CollectionAssert.AreEquivalent(
-            new[] { A.Authority, B.Authority, C.Authority },
+            new[] { NameOf(A), NameOf(B), NameOf(C) },
             completions.Select(x => x.Endpoint).ToArray());
     }
 
@@ -62,7 +67,7 @@ public sealed class LlmDispatcherTests
         sut.Idle[B] = 1;
         var completion = await generation.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.AreEqual(B.Authority, completion.Endpoint);
+        Assert.AreEqual(NameOf(B), completion.Endpoint);
     }
 
     [TestMethod]
@@ -74,7 +79,7 @@ public sealed class LlmDispatcherTests
 
         var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
 
-        Assert.AreEqual(B.Authority, completion.Endpoint);
+        Assert.AreEqual(NameOf(B), completion.Endpoint);
     }
 
     [TestMethod]
@@ -89,7 +94,7 @@ public sealed class LlmDispatcherTests
         sut.Idle[B] = 1;
         var completion = await sut.Dispatcher.CompleteAsync(Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
 
-        Assert.AreEqual(B.Authority, completion.Endpoint);
+        Assert.AreEqual(NameOf(B), completion.Endpoint);
     }
 
     private sealed class Sut
@@ -101,7 +106,7 @@ public sealed class LlmDispatcherTests
             var endpointProvider = new Mock<ILlmEndpointProvider>();
             endpointProvider
                 .Setup(x => x.GetEndpointsAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(endpoints);
+                .ReturnsAsync([.. endpoints.Select(x => new LlmEndpoint(NameOf(x), x))]);
 
             var client = new Mock<ILlmClient>();
             client

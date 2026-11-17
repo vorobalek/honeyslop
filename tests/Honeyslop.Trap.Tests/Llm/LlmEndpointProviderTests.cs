@@ -24,6 +24,27 @@ public sealed class LlmEndpointProviderTests
 
         CollectionAssert.AreEqual(
             new[] { "10.0.0.1:8080", "10.0.0.1:8081", "10.0.0.2:8080" },
-            endpoints.Select(x => x.Authority).ToArray());
+            endpoints.Select(x => x.Url.Authority).ToArray());
+        CollectionAssert.AreEqual(
+            endpoints.Select(x => x.Url.Authority).ToArray(),
+            endpoints.Select(x => x.Name).ToArray());
+    }
+
+    [TestMethod]
+    public async Task GetEndpointsAsync_HostName_NamesTheServerByReverseLookup()
+    {
+        var provider = new LlmEndpointProvider(
+            new OptionsWrapper<LlmOptions>(new LlmOptions
+            {
+                Urls = [new Uri("http://localhost:8080/")],
+                DiscoveryInterval = TimeSpan.FromMinutes(1)
+            }),
+            TimeProvider.System,
+            NullLogger<LlmEndpointProvider>.Instance);
+
+        var endpoint = (await provider.GetEndpointsAsync(CancellationToken.None)).Single();
+
+        Assert.AreEqual("127.0.0.1:8080", endpoint.Url.Authority);
+        Assert.AreEqual("localhost", endpoint.Name);
     }
 }

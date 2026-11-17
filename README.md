@@ -32,7 +32,9 @@ building a different `model/Dockerfile`; the engine image does not change.
    within the wait window go first, newest first, then the rest oldest first, so nothing starves. A worker keeps a
    heartbeat on the entry it generates; an entry without a heartbeat is taken over by another instance.
 5. Generations go to the model server with a free slot: every instance resolves `LLM_URL` (a headless service or a
-   comma-separated list) to all servers, probes their `/slots` and picks the one with the most idle slots.
+   comma-separated list) to all servers, probes their `/slots` and picks the one with the most idle slots. A server is
+   named by the reverse DNS of its address, so the pods of a StatefulSet keep their names across restarts; without a
+   reverse record the name is the address.
 6. A model server that is down, restarting or answering 5xx puts the entry straight back into the queue without
    spending an attempt. Broken model output counts as a failed attempt; a path that fails three times gets a plain
    404 until it is expired.

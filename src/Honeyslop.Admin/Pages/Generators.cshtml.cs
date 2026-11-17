@@ -44,32 +44,34 @@ public sealed class GeneratorsModel(
         var endpoints = Configured
             ? await endpointProvider.GetEndpointsAsync(cancellationToken)
             : [];
-        var statuses = await Task.WhenAll(endpoints.Select(x => llmClient.GetStatusAsync(x, cancellationToken)));
+        var statuses = await Task.WhenAll(endpoints.Select(x => llmClient.GetStatusAsync(x.Url, cancellationToken)));
 
         var rows = endpoints
-            .Select((endpoint, index) => Row(endpoint.Authority, statuses[index], true, statistics))
+            .Select((endpoint, index) => Row(endpoint.Name, endpoint.Url.Authority, statuses[index], true, statistics))
             .ToList();
-        var known = rows.Select(x => x.Authority).ToHashSet(StringComparer.Ordinal);
+        var known = rows.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
         rows.AddRange(statistics
-            .Select(x => AuthorityOf(x.Model))
+            .Select(x => GeneratorOf(x.Model))
             .Where(x => !known.Contains(x))
             .Distinct(StringComparer.Ordinal)
-            .Select(x => Row(x, null, false, statistics)));
+            .Select(x => Row(x, null, null, false, statistics)));
         Generators = [..rows];
     }
 
     private static GeneratorRow Row(
-        string authority,
+        string name,
+        string? address,
         LlmServerStatus? status,
         bool discovered,
         IReadOnlyCollection<GeneratorStatistics> statistics)
     {
         var own = statistics
-            .Where(x => AuthorityOf(x.Model) == authority)
+            .Where(x => GeneratorOf(x.Model) == name)
             .ToArray();
         var generated = own.Sum(x => x.Generated);
         return new GeneratorRow(
-            authority,
+            name,
+            address,
             status,
             discovered,
             generated,
@@ -78,14 +80,15 @@ public sealed class GeneratorsModel(
             own.Max(x => x.LastGeneratedAt));
     }
 
-    private static string AuthorityOf(string model)
+    private static string GeneratorOf(string model)
     {
         var at = model.LastIndexOf('@');
         return at >= 0 ? model[(at + 1)..] : model;
     }
 
     public sealed record GeneratorRow(
-        string Authority,
+        string Name,
+        string? Address,
         LlmServerStatus? Status,
         bool Discovered,
         int Generated,

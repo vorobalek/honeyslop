@@ -25,10 +25,10 @@ internal sealed partial class LlmDispatcher(
         var (endpoint, lease) = await AcquireAsync(cancellationToken);
         try
         {
-            var completion = await llmClient.CompleteAsync(endpoint, prompt, timeLimit, progress, cancellationToken);
+            var completion = await llmClient.CompleteAsync(endpoint.Url, prompt, timeLimit, progress, cancellationToken);
             return completion with
             {
-                Endpoint = endpoint.Authority
+                Endpoint = endpoint.Name
             };
         }
         catch (LlmUnavailableException exception)
@@ -42,7 +42,7 @@ internal sealed partial class LlmDispatcher(
         }
     }
 
-    private async Task<(Uri Endpoint, Lease Lease)> AcquireAsync(CancellationToken cancellationToken)
+    private async Task<(LlmEndpoint Endpoint, Lease Lease)> AcquireAsync(CancellationToken cancellationToken)
     {
         while (true)
         {
@@ -57,9 +57,9 @@ internal sealed partial class LlmDispatcher(
                     .ToArray();
                 var probes = await Task.WhenAll(endpoints.Select(async x => (
                     Endpoint: x,
-                    Idle: await llmClient.GetIdleSlotsAsync(x, cancellationToken))));
+                    Idle: await llmClient.GetIdleSlotsAsync(x.Url, cancellationToken))));
 
-                Uri? best = null;
+                LlmEndpoint? best = null;
                 var bestScore = 0;
                 var bestInFlight = int.MaxValue;
                 foreach (var (endpoint, idle) in probes.OrderBy(_ => Random.Shared.Next()))
@@ -93,16 +93,16 @@ internal sealed partial class LlmDispatcher(
         }
     }
 
-    private void MarkUnhealthy(Uri endpoint, string reason)
+    private void MarkUnhealthy(LlmEndpoint endpoint, string reason)
     {
         var now = timeProvider.GetUtcNow();
         if (State(endpoint).MarkUnhealthy(now, now + options.Value.UnhealthyCooldown))
-            LogUnhealthy(logger, endpoint.Authority, reason);
+            LogUnhealthy(logger, endpoint.Name, reason);
     }
 
-    private EndpointState State(Uri endpoint)
+    private EndpointState State(LlmEndpoint endpoint)
     {
-        return _states.GetOrAdd(endpoint, static x => new EndpointState(x.Authority));
+        return _states.GetOrAdd(endpoint.Url, static (_, x) => new EndpointState(x.Name), endpoint);
     }
 
     [LoggerMessage(LogLevel.Warning, "Model server {endpoint} is skipped for a while: {reason}")]
@@ -110,7 +110,7 @@ internal sealed partial class LlmDispatcher(
 
     private sealed record Lease(DateTimeOffset StartedAt);
 
-    private sealed class EndpointState(string authority)
+    private sealed class EndpointState(string name)
     {
         private readonly List<Lease> _leases = [];
         private readonly Lock _lock = new();
@@ -152,7 +152,7 @@ internal sealed partial class LlmDispatcher(
             var lease = new Lease(now);
             lock (_lock)
                 _leases.Add(lease);
-            TrapMetrics.LlmInFlight.WithLabels(authority).Inc();
+            TrapMetrics.LlmInFlight.WithLabels(name).Inc();
             return lease;
         }
 
@@ -160,7 +160,7 @@ internal sealed partial class LlmDispatcher(
         {
             lock (_lock)
                 _leases.Remove(lease);
-            TrapMetrics.LlmInFlight.WithLabels(authority).Dec();
+            TrapMetrics.LlmInFlight.WithLabels(name).Dec();
         }
     }
 }
