@@ -31,6 +31,21 @@ public sealed class PromptBuilderTests
     }
 
     [TestMethod]
+    public void Build_LeavesOutAcceptLanguage()
+    {
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/login",
+            RequestHeaders = "User-Agent: Mozilla/5.0\naccept-language: zh-CN,zh;q=0.9\nAccept: text/html\n"
+        }, true);
+
+        Assert.AreEqual("GET /login HTTP/1.1\nHost: a.test\nUser-Agent: Mozilla/5.0\nAccept: text/html\n\n", prompt.User);
+        StringAssert.Contains(prompt.System, "exists only in English");
+    }
+
+    [TestMethod]
     public void Build_WithoutHeadersAndBody_EndsWithEmptyLine()
     {
         var prompt = new PromptBuilder().Build(new Entry
