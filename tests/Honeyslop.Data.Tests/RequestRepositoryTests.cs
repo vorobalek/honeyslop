@@ -40,6 +40,35 @@ public sealed class RequestRepositoryTests
     }
 
     [TestMethod]
+    public async Task GetClientOrDefaultAsync_SummarizesOnlyThatClient()
+    {
+        var clientIp = $"192.0.2.{Random.Shared.Next(1, 254)}-{Unique.String(6)}";
+        var now = DateTimeOffset.UtcNow;
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<IRequestRepository>().AddRangeAsync(
+            [
+                Record(clientIp, "a.example.test", "/.env", now.AddDays(-3), RequestOutcome.Generated),
+                Record(clientIp, "a.example.test", "/.env", now.AddMinutes(-1), RequestOutcome.Hit, "curl/8.4"),
+                Record(clientIp + "-other", "b.example.test", "/", now, RequestOutcome.Static)
+            ],
+            CancellationToken.None);
+
+        await using var readScope = PostgresDatabase.CreateScope();
+        var repository = readScope.ServiceProvider.GetRequiredService<IRequestRepository>();
+        var client = await repository.GetClientOrDefaultAsync(clientIp, CancellationToken.None);
+        var unknown = await repository.GetClientOrDefaultAsync(clientIp + "-unknown", CancellationToken.None);
+
+        Assert.IsNotNull(client);
+        Assert.AreEqual(2, client.Requests);
+        Assert.AreEqual(1, client.Hosts);
+        Assert.AreEqual(1, client.Targets);
+        Assert.AreEqual(now.AddDays(-3).ToUnixTimeMilliseconds(), client.FirstSeenAt.ToUnixTimeMilliseconds());
+        Assert.AreEqual(now.AddMinutes(-1).ToUnixTimeMilliseconds(), client.LastSeenAt.ToUnixTimeMilliseconds());
+        Assert.AreEqual("curl/8.4", client.LastUserAgent);
+        Assert.IsNull(unknown);
+    }
+
+    [TestMethod]
     public async Task DeleteReceivedBeforeAsync_RemovesOnlyOldRecords()
     {
         var clientIp = $"203.0.113.{Random.Shared.Next(1, 254)}-{Unique.String(6)}";

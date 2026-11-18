@@ -23,5 +23,6 @@ public interface IRequestRepository
         CancellationToken cancellationToken);
 
     Task<int> CountClientsAsync(DateTimeOffset since, CancellationToken cancellationToken);
+    Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken);
     Task<int> DeleteReceivedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken);
 }

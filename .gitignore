@@ -7,3 +7,4 @@ Honeyslop.sln.DotSettings.user
 TestResults/
 var/
 .DS_Store
+*.mmdb

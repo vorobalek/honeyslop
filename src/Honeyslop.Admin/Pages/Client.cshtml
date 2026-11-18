@@ -1,0 +1,49 @@
+@page "/clients/{ip}"
+@model ClientModel
+@{
+    ViewData["Title"] = Model.Ip;
+    var summary = Model.Summary;
+}
+
+<p class="back"><a asp-page="/Clients">← All clients</a></p>
+
+<h1 class="request-line">
+    @if (Model.Country is { } country)
+    {
+        <span class="flag" role="img" title="@country.Name" aria-label="@country.Name">@country.Flag</span>
+    }
+    <span class="mono">@Model.Ip</span>
+</h1>
+
+<dl class="meta">
+    <dt>Country</dt>
+    <dd>@(Model.Country is { } located ? $"{located.Name} ({located.Code})" : "unknown")</dd>
+    @if (summary is not null)
+    {
+        <dt>First request</dt>
+        <dd>@summary.FirstSeenAt.Display UTC</dd>
+        <dt>Last request</dt>
+        <dd>@summary.LastSeenAt.Display UTC</dd>
+        <dt>Requests</dt>
+        <dd>@summary.Requests.Of("request") for @summary.Targets.Of("path") on @summary.Hosts.Of("host")</dd>
+        <dt>Last User-Agent</dt>
+        <dd class="agent">@(summary.LastUserAgent ?? "—")</dd>
+    }
+</dl>
+
+@if (summary is null)
+{
+    <p class="notice">The request history no longer has anything from this address: it is known only as the first client of a cached entry.</p>
+}
+
+<h2>Network</h2>
+<div data-load-handler="Whois">
+    <p class="hint">Looking it up in RIPEstat…</p>
+</div>
+
+<h2>Requests</h2>
+<partial name="_RequestFilters" model="Model.FilterForm"/>
+
+<div data-live-panel data-live-topics="requests">
+    <partial name="_RequestsPanel" model="Model"/>
+</div>

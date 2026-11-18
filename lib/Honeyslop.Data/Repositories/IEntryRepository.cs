@@ -8,6 +8,7 @@ public interface IEntryRepository
     Task<Entry?> GetByKeyHashOrDefaultAsync(byte[] keyHash, CancellationToken cancellationToken);
     Task<Entry?> GetByIdOrDefaultAsync(long id, CancellationToken cancellationToken);
     Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken);
+    Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken);
 
     Task<long?> TryClaimNextAsync(
         string claimedBy,

@@ -1,0 +1,72 @@
+@model ClientModel
+@{
+    var whois = Model.Whois;
+    var report = Model.Report;
+}
+
+@if (whois is null)
+{
+    <p class="error">RIPEstat did not answer. <button type="button" data-reload>Try again</button></p>
+}
+else
+{
+    <dl class="meta">
+        <dt>Routed as</dt>
+        <dd>
+            @if (whois.Prefix is null)
+            {
+                @:not announced
+            }
+            else
+            {
+                <span class="mono">@whois.Prefix</span>
+                @foreach (var origin in whois.Origins)
+                {
+                    @: · <a href="https://bgp.he.net/AS@(origin.Asn)" target="_blank" rel="noopener">AS@(origin.Asn)</a> @origin.Holder
+                }
+            }
+        </dd>
+        <dt>Registered network</dt>
+        <dd><span class="mono">@(whois.Network ?? "—")</span>@(whois.NetworkName is null ? "" : $" · {whois.NetworkName}")</dd>
+        <dt>Owner</dt>
+        <dd>@(whois.Owner ?? "—")@(whois.Country is null ? "" : $" · {whois.Country}")</dd>
+        <dt>Abuse contact</dt>
+        <dd>
+            @if (whois.AbuseContacts.Length == 0)
+            {
+                @:none published
+            }
+            @foreach (var email in whois.AbuseContacts)
+            {
+                <a class="mono" href="mailto:@email?subject=@Uri.EscapeDataString(report?.Subject ?? $"HTTP scanning from {Model.Ip}")">@email</a>
+                @:&nbsp;
+            }
+        </dd>
+        <dt>Source</dt>
+        <dd>
+            @(whois.Registry ?? "unknown registry") via
+            <a href="https://stat.ripe.net/resource/@Model.Ip" target="_blank" rel="noopener">RIPEstat</a>,
+            looked up @whois.LookedUpAt.Display UTC
+        </dd>
+    </dl>
+
+    @if (whois.Records.Length > 0)
+    {
+        <details>
+            <summary>Registry records</summary>
+            <pre class="code">@whois.Records</pre>
+        </details>
+    }
+}
+
+@if (report is not null)
+{
+    <details>
+        <summary>Abuse report</summary>
+        <div class="actions">
+            <button type="button" data-copy="abuse-report">Copy</button>
+            <span class="hint">Subject: @report.Subject</span>
+        </div>
+        <pre class="code" id="abuse-report">@report.Body</pre>
+    </details>
+}

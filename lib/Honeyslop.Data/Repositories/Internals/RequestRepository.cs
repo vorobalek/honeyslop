@@ -103,6 +103,27 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .CountAsync(cancellationToken);
     }
 
+    public async Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
+    {
+        var clients = await dbContext
+            .Database
+            .SqlQuery<ClientSummary>(
+                $"""
+                 select client_ip,
+                        count(*)::int as requests,
+                        count(distinct host)::int as hosts,
+                        count(distinct target)::int as targets,
+                        min(received_at) as first_seen_at,
+                        max(received_at) as last_seen_at,
+                        (array_agg(user_agent order by id desc))[1] as last_user_agent
+                 from public.request
+                 where client_ip = {clientIp}
+                 group by client_ip
+                 """)
+            .ToArrayAsync(cancellationToken);
+        return clients.SingleOrDefault();
+    }
+
     public Task<int> DeleteReceivedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
     {
         return dbContext

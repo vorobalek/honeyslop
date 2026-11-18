@@ -73,7 +73,16 @@
     <dt>Claimed by</dt>
     <dd class="mono">@(entry.ClaimedBy ?? "—") at @entry.ClaimedAt.Display</dd>
     <dt>First client</dt>
-    <dd class="mono">@(entry.ClientIp ?? "—")</dd>
+    <dd class="mono">
+        @if (entry.ClientIp is { } clientIp)
+        {
+            <partial name="_ClientIp" model="clientIp"/>
+        }
+        else
+        {
+            @:—
+        }
+    </dd>
     @if (!string.IsNullOrEmpty(entry.Error))
     {
         <dt>Error</dt>

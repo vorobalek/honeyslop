@@ -25,5 +25,11 @@ public static class AppConfiguration
     public static readonly string? OidcClientSecret = "OIDC_CLIENT_SECRET"
         .EnvironmentValue;
 
+    public static readonly string? RedisConnectionString = "REDIS_CONNECTION_STRING"
+        .EnvironmentValue;
+
+    public static readonly string GeoIpDatabase = "GEOIP_DATABASE"
+        .GetEnvironmentValueWithFallback("/app/geoip/country.mmdb");
+
     public static bool SignInEnabled => !string.IsNullOrWhiteSpace(OidcAuthority);
 }

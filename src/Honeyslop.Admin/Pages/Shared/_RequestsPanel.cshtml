@@ -1,4 +1,4 @@
-@model RequestsModel
+@model IRequestList
 
 <div class="actions">
     <span class="count">@Model.TotalCount requests · live, updated @Model.RenderedAt.UtcDateTime.ToString("HH:mm:ss") UTC</span>
@@ -24,7 +24,7 @@
     {
         <tr>
             <td class="time"><a asp-page="/Request" asp-route-id="@request.Id">@request.ReceivedAt.Display</a></td>
-            <td class="mono"><a asp-page="/Requests" asp-route-ClientIp="@request.ClientIp">@request.ClientIp</a></td>
+            <td class="mono"><partial name="_ClientIp" model="request.ClientIp"/></td>
             <td class="mono">@request.Method</td>
             <td class="mono host">@request.Host</td>
             <td class="mono target">
@@ -56,11 +56,11 @@
 <nav class="pager">
     @if (Model.PageNumber > 0)
     {
-        <a asp-page="/Requests" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
+        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
     }
     <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
     @if (Model.PageNumber + 1 < Model.PageCount)
     {
-        <a asp-page="/Requests" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
+        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
     }
 </nav>

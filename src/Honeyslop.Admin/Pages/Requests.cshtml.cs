@@ -8,7 +8,7 @@ namespace Honeyslop.Admin.Pages;
 
 public sealed class RequestsModel(
     IRequestRepository requestRepository,
-    TimeProvider timeProvider) : PageModel
+    TimeProvider timeProvider) : PageModel, IRequestList
 {
     public const int PageSize = 100;
 
@@ -34,7 +34,11 @@ public sealed class RequestsModel(
     public int TotalCount { get; private set; }
     public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
     public DateTimeOffset RenderedAt { get; private set; }
+    public string ListPage => "/Requests";
     public RequestFilter Filter => new(ClientIp, Host, Target, Outcome, EntryId);
+
+    public RequestFilterForm FilterForm =>
+        new(ClientIp, false, Host, Target, Outcome, EntryId, Url.Page("/Requests") ?? string.Empty);
 
     public Task OnGetAsync(CancellationToken cancellationToken)
     {

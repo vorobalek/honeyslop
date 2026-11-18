@@ -86,6 +86,47 @@ document.addEventListener("DOMContentLoaded", () => {
         return panel;
     });
 
+    document.querySelectorAll("[data-load-handler]").forEach(element => {
+        const failed = "<p class=\"error\">The lookup failed. <button type=\"button\" data-reload>Try again</button></p>";
+        const load = async () => {
+            const url = new URL(window.location.href);
+            url.search = "";
+            url.searchParams.set("handler", element.dataset.loadHandler);
+            try {
+                const response = await fetch(url, { credentials: "same-origin", redirect: "manual" });
+                if (response.type === "opaqueredirect") {
+                    window.location.reload();
+                    return;
+                }
+                element.innerHTML = response.ok ? await response.text() : failed;
+            } catch {
+                element.innerHTML = failed;
+            }
+        };
+        element.addEventListener("click", event => {
+            if (event.target.closest("[data-reload]")) {
+                element.innerHTML = "<p class=\"hint\">Looking it up again…</p>";
+                load();
+            }
+        });
+        load();
+    });
+
+    document.addEventListener("click", async event => {
+        const button = event.target.closest("[data-copy]");
+        const source = button && document.getElementById(button.dataset.copy);
+        if (!source) {
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(source.textContent);
+            button.textContent = "Copied";
+        } catch {
+            button.textContent = "Select the text and copy it";
+        }
+        window.setTimeout(() => button.textContent = "Copy", 2000);
+    });
+
     document.querySelectorAll("form[data-auto-filter]").forEach(form => {
         let timer = 0;
         const apply = () => {

@@ -27,6 +27,14 @@ public static class DisplayExtensions
         };
     }
 
+    extension(int count)
+    {
+        public string Of(string noun)
+        {
+            return string.Create(CultureInfo.InvariantCulture, $"{count} {noun}{(count == 1 ? string.Empty : "s")}");
+        }
+    }
+
     extension(RequestOutcome outcome)
     {
         public string CssClass => outcome switch

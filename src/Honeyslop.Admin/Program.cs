@@ -1,4 +1,5 @@
 using Honeyslop.Admin.Access;
+using Honeyslop.Admin.Clients;
 using Honeyslop.Admin.Configuration;
 using Honeyslop.Admin.Live;
 using Honeyslop.Admin.Middleware;
@@ -8,6 +9,8 @@ using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
 
 await Host
     .CreateDefaultBuilder(args)
@@ -31,7 +34,26 @@ await Host
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))
+                .AddSingleton<ICountryLookup>(serviceProvider => new CountryLookup(
+                    AppConfiguration.GeoIpDatabase,
+                    serviceProvider.GetRequiredService<ILogger<CountryLookup>>()))
+                .AddScoped<IWhoisLookup, WhoisLookup>()
                 .AddHealthChecks();
+            services.AddHttpClient<RipeStatClient>(client =>
+            {
+                client.BaseAddress = RipeStatClient.BaseAddress;
+                client.Timeout = TimeSpan.FromSeconds(20);
+            });
+            if (string.IsNullOrWhiteSpace(AppConfiguration.RedisConnectionString))
+                services.AddSingleton<IDistributedCache, NoDistributedCache>();
+            else
+                services.AddStackExchangeRedisCache(x =>
+                {
+                    var options = ConfigurationOptions.Parse(AppConfiguration.RedisConnectionString);
+                    options.AbortOnConnectFail = false;
+                    x.ConfigurationOptions = options;
+                    x.InstanceName = "honeyslop:";
+                });
             services
                 .AddDataProtection()
                 .UseEphemeralDataProtectionProvider();

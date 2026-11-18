@@ -335,6 +335,19 @@ public sealed class EntryRepositoryTests
     }
 
     [TestMethod]
+    public async Task AnyFromClientAsync_FindsEntriesByTheirFirstClient()
+    {
+        var clientIp = $"198.51.100.{Random.Shared.Next(1, 254)}-{Unique.String(6)}";
+        var entry = PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready);
+        entry.ClientIp = clientIp;
+        await AddAsync(entry);
+
+        await using var scope = PostgresDatabase.CreateScope();
+        Assert.IsTrue(await scope.Repository().AnyFromClientAsync(clientIp, CancellationToken.None));
+        Assert.IsFalse(await scope.Repository().AnyFromClientAsync(clientIp + "-unknown", CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task DeleteExpiredUnreferencedAsync_KeepsEntriesThatRequestsOrStatisticsStillNeed()
     {
         var now = DateTimeOffset.UtcNow;

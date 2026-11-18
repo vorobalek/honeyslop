@@ -5,7 +5,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="MaxMind.Db"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect"/>
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis"/>
     </ItemGroup>
 
     <ItemGroup>

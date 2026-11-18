@@ -52,6 +52,18 @@ stream and sends what it has so far once a second through `pg_notify('honeyslop_
 not stored anywhere: the admin keeps the last one in memory for a minute, and only the tail fits when it outgrows
 the 8000-byte notification limit.
 
+Every client address carries the flag of its country and links to the page of that address: country, first and last
+request, its requests with the address filter locked and the other filters free, and what RIPEstat knows about the
+network. That is the routed prefix and origin AS, the registered network and its owner, the abuse contacts, the raw
+registry records and an abuse report ready to copy. The network part loads after the page, since RIPEstat sometimes
+takes seconds; its answers stay in Redis for a week, and without Redis every opening asks RIPEstat again. The page
+opens only for addresses in the request history or recorded as the first client of an entry, so the admin cannot be
+used to look up arbitrary addresses.
+
+Countries come from the [DB-IP](https://db-ip.com) IP to Country Lite database (CC BY 4.0), which the image build
+downloads into the admin image: the current month's file, or the previous month's before the new one is out. Each
+release brings it up to date, and every admin replica reads the same file from its image.
+
 ### Configuration
 
 Trap:
@@ -78,6 +90,8 @@ Admin:
 | `OIDC_AUTHORITY` | — | OpenID Connect issuer to sign in with; unset turns sign-in off |
 | `OIDC_CLIENT_ID` | `honeyslop` | Client registered at the issuer |
 | `OIDC_CLIENT_SECRET` | — | Its secret, required with `OIDC_AUTHORITY` |
+| `REDIS_CONNECTION_STRING` | — | Redis for RIPEstat answers; unset asks RIPEstat on every opening |
+| `GEOIP_DATABASE` | `/app/geoip/country.mmdb` | DB-IP country database; a missing file only hides the flags |
 
 Runtime settings live in the database and are edited on the admin Settings page; trap instances reload them every ten
 seconds:
@@ -137,6 +151,12 @@ dotnet run --project src/Honeyslop.Admin
 ```
 
 `launchSettings.json` expects a model server on `http://localhost:18080`.
+
+Flags need the country database; point `GEOIP_DATABASE` at a downloaded copy:
+
+```bash
+curl -fsSL https://download.db-ip.com/free/dbip-country-lite-$(date -u +%Y-%m).mmdb.gz | gunzip > country.mmdb
+```
 
 To try sign-in, start a mock OpenID Connect issuer that lets anyone in under any name and run the admin with the
 `Honeyslop.Admin.Oidc` profile:

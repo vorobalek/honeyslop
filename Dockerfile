@@ -18,6 +18,13 @@ RUN dotnet publish "src/Honeyslop.Migrator/Honeyslop.Migrator.csproj" -c Release
 RUN dotnet publish "src/Honeyslop.Trap/Honeyslop.Trap.csproj" -c Release -o /app/trap /p:UseAppHost=false --no-build
 RUN dotnet publish "src/Honeyslop.Admin/Honeyslop.Admin.csproj" -c Release -o /app/admin /p:UseAppHost=false --no-build
 
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS geoip
+WORKDIR /geoip
+RUN for month in "$(date -u +%Y-%m)" "$(date -u -d "$(date -u +%Y-%m-01) -1 month" +%Y-%m)"; do \
+        curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-$month.mmdb.gz" -o country.mmdb.gz && break; \
+    done && \
+    gunzip country.mmdb.gz
+
 ### migrator
 FROM base AS migrator
 WORKDIR /app
@@ -34,4 +41,5 @@ ENTRYPOINT ["dotnet", "Honeyslop.Trap.dll"]
 FROM base AS admin
 WORKDIR /app
 COPY --from=publish /app/admin .
+COPY --from=geoip /geoip/country.mmdb /app/geoip/country.mmdb
 ENTRYPOINT ["dotnet", "Honeyslop.Admin.dll"]

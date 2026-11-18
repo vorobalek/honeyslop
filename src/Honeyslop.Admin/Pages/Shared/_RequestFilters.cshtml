@@ -1,0 +1,22 @@
+@model RequestFilterForm
+
+<form class="filters" method="get" data-auto-filter>
+    <label>Client IP <input type="search" name="ClientIp" value="@Model.ClientIp" placeholder="exact" disabled="@Model.ClientIpLocked"/></label>
+    <label>Host <input type="search" name="Host" value="@Model.Host" placeholder="contains"/></label>
+    <label>Path <input type="search" name="Target" value="@Model.Target" placeholder="contains"/></label>
+    <label>
+        Outcome
+        <select name="Outcome">
+            <option value="">any</option>
+            @foreach (var outcome in Enum.GetValues<RequestOutcome>())
+            {
+                <option value="@outcome" selected="@(Model.Outcome == outcome)">@outcome.ToString().ToLowerInvariant()</option>
+            }
+        </select>
+    </label>
+    @if (Model.EntryId is { } entryId)
+    {
+        <input type="hidden" name="EntryId" value="@entryId"/>
+    }
+    <a class="button-link" href="@Model.ResetUrl">Reset</a>
+</form>

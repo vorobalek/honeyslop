@@ -28,6 +28,13 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
+    public Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Entries
+            .AnyAsync(x => x.ClientIp == clientIp, cancellationToken);
+    }
+
     public async Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken)
     {
         await dbContext.Entries.AddAsync(entry, cancellationToken);

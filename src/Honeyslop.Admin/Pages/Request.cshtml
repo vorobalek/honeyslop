@@ -5,7 +5,7 @@
     ViewData["Title"] = $"{record.Method} {record.Host}{record.Target}";
 }
 
-<p class="back"><a asp-page="/Requests">← All requests</a> · <a asp-page="/Requests" asp-route-ClientIp="@record.ClientIp">everything from @record.ClientIp</a></p>
+<p class="back"><a asp-page="/Requests">← All requests</a> · <a asp-page="/Client" asp-route-ip="@record.ClientIp">everything from @record.ClientIp</a></p>
 
 <h1 class="request-line">
     <span class="@record.Outcome.CssClass">@record.Outcome.ToString().ToLowerInvariant()</span>
@@ -17,7 +17,7 @@
     <dt>Received</dt>
     <dd>@record.ReceivedAt.Display UTC</dd>
     <dt>Client</dt>
-    <dd class="mono"><a asp-page="/Requests" asp-route-ClientIp="@record.ClientIp">@record.ClientIp</a></dd>
+    <dd class="mono"><partial name="_ClientIp" model="record.ClientIp"/></dd>
     <dt>Response</dt>
     <dd class="mono">@record.ResponseStatus in @record.DurationMs ms</dd>
     <dt>Cache entry</dt>

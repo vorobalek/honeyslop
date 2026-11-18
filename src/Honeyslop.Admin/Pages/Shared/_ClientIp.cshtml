@@ -1,0 +1,13 @@
+@model string
+@inject ICountryLookup CountryLookup
+@{
+    var country = CountryLookup.Find(Model);
+}
+@if (country is null)
+{
+    <a class="client" asp-page="/Client" asp-route-ip="@Model">@Model</a>
+}
+else
+{
+    <a class="client" asp-page="/Client" asp-route-ip="@Model"><span class="flag" role="img" title="@country.Name" aria-label="@country.Name">@country.Flag</span>@Model</a>
+}
