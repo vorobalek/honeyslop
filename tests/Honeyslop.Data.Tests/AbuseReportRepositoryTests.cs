@@ -104,6 +104,32 @@ public sealed class AbuseReportRepositoryTests
         Assert.Contains("Gave up after 3 attempts", stored.Error!);
     }
 
+    [TestMethod]
+    public async Task CountByStateAsync_TellsQueuedSendingRetryingSentAndFailedApart()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await DrainAsync(now);
+        await using var scope = PostgresDatabase.CreateScope();
+        var repository = scope.Reports();
+        var before = await repository.CountByStateAsync(CancellationToken.None);
+
+        for (var index = 0; index < 4; index++)
+            await AddAsync(Report(UniqueIp(), now));
+        var sending = await repository.TryClaimNextAsync("reporter", now, now.AddMinutes(-2), MaxAttempts, CancellationToken.None);
+        var retrying = await repository.TryClaimNextAsync("reporter", now, now.AddMinutes(-2), MaxAttempts, CancellationToken.None);
+        var sent = await repository.TryClaimNextAsync("reporter", now, now.AddMinutes(-2), MaxAttempts, CancellationToken.None);
+        await repository.RetryAsync(retrying!.Id, "reporter", "421 try later", now.AddMinutes(1), now, CancellationToken.None);
+        await repository.CompleteAsync(sent!.Id, "reporter", "<sent@test>", "security@example.test", 1, 1, now, CancellationToken.None);
+        await AddAsync(Report(UniqueIp(), now));
+        var failed = await repository.TryClaimNextAsync("reporter", now, now.AddMinutes(-2), MaxAttempts, CancellationToken.None);
+        await repository.FailAsync(failed!.Id, "reporter", "550 rejected", now, CancellationToken.None);
+        var after = await repository.CountByStateAsync(CancellationToken.None);
+
+        Assert.IsNotNull(sending);
+        foreach (var state in Enum.GetValues<AbuseReportState>())
+            Assert.AreEqual(1, after[state] - before[state], state.ToString());
+    }
+
     private static async Task DrainAsync(DateTimeOffset now)
     {
         var future = now.AddYears(100);

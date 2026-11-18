@@ -1,4 +1,5 @@
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 
 namespace Honeyslop.Data.Repositories;
 
@@ -9,6 +10,7 @@ public interface IAbuseReportRepository
     Task<AbuseReport[]> GetByClientAsync(string clientIp, CancellationToken cancellationToken);
     Task<AbuseReport[]> GetPageAsync(Sorting<ReportColumn>? sort, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<int> CountAsync(CancellationToken cancellationToken);
+    Task<Dictionary<AbuseReportState, int>> CountByStateAsync(CancellationToken cancellationToken);
 
     Task<AbuseReport?> TryClaimNextAsync(
         string claimedBy,

@@ -75,6 +75,23 @@ internal sealed class AbuseReportRepository(ApplicationDbContext dbContext) : IA
             .CountAsync(cancellationToken);
     }
 
+    public async Task<Dictionary<AbuseReportState, int>> CountByStateAsync(CancellationToken cancellationToken)
+    {
+        var counts = await dbContext
+            .AbuseReports
+            .GroupBy(x =>
+                x.Status == AbuseReportStatus.Sent ? AbuseReportState.Sent :
+                x.Status == AbuseReportStatus.Failed ? AbuseReportState.Failed :
+                x.ClaimedBy != null ? AbuseReportState.Sending :
+                x.RetryAt != null ? AbuseReportState.Retrying :
+                AbuseReportState.Queued)
+            .Select(x => new { State = x.Key, Count = x.Count() })
+            .ToListAsync(cancellationToken);
+        return Enum
+            .GetValues<AbuseReportState>()
+            .ToDictionary(x => x, x => counts.FirstOrDefault(y => y.State == x)?.Count ?? 0);
+    }
+
     public async Task<AbuseReport?> TryClaimNextAsync(
         string claimedBy,
         DateTimeOffset now,

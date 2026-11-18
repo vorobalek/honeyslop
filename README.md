@@ -93,6 +93,10 @@ The button only queues the report in the `abuse_report` table; `honeyslop-report
 A reporter that dies between the SMTP server accepting the letter and the database recording it sends the letter
 again after the takeover. Until `SMTP_PASSWORD` and the rest are set, reporters leave the queue alone.
 
+Reporters export `honeyslop_abuse_reports{state}`, the reports in the table by state (queued, sending, retrying,
+sent, failed), counted from the database on every scrape: every reporter shows the same numbers, so dashboards take
+the `max`. `honeyslop_reporter_configured` is 1 on a reporter with SMTP settings.
+
 ### Configuration
 
 Trap:

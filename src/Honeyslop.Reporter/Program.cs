@@ -3,6 +3,7 @@ using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Reporter.Configuration;
 using Honeyslop.Reporter.Mail;
+using Honeyslop.Reporter.Monitoring;
 using Honeyslop.Reporter.Reports;
 using Honeyslop.Reports;
 using Prometheus;
@@ -24,6 +25,7 @@ await Host
                 .AddSingleton<IMailSender, SmtpMailSender>()
                 .AddRequestArchives()
                 .AddHostedService<ReportWorker>()
+                .AddHostedService<ReportStateMetrics>()
                 .AddHealthChecks();
             services
                 .AddOptions<SmtpOptions>()

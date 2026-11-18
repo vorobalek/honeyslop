@@ -20,7 +20,6 @@ internal sealed partial class ReportWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var configured = smtpOptions.Value.Configured;
-        ReporterMetrics.Initialize();
         ReporterMetrics.Configured.Set(configured ? 1 : 0);
         if (!configured)
         {
@@ -58,7 +57,6 @@ internal sealed partial class ReportWorker(
         var reports = scope.ServiceProvider.GetRequiredService<IAbuseReportRepository>();
         if (await reports.FailExhaustedAsync(settings.MaxAttempts, now - settings.LeaseTimeout, now, stoppingToken) is > 0 and var exhausted)
         {
-            ReporterMetrics.Reports.WithLabels("failed").Inc(exhausted);
             LogExhausted(logger, exhausted);
         }
 
@@ -91,7 +89,6 @@ internal sealed partial class ReportWorker(
         if (archive is null)
         {
             await reports.FailAsync(report.Id, settings.InstanceName, "The request history has nothing left from this address", timeProvider.GetUtcNow(), CancellationToken.None);
-            ReporterMetrics.Reports.WithLabels("failed").Inc();
             return;
         }
 
@@ -108,7 +105,6 @@ internal sealed partial class ReportWorker(
         }
 
         await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, timeProvider.GetUtcNow(), CancellationToken.None);
-        ReporterMetrics.Reports.WithLabels("sent").Inc();
         LogSent(logger, report.Id, report.ClientIp, string.Join(", ", report.Recipients), archive.Requests);
     }
 
@@ -125,14 +121,12 @@ internal sealed partial class ReportWorker(
         if (rejected || report.Attempts >= settings.MaxAttempts)
         {
             await reports.FailAsync(report.Id, settings.InstanceName, error, now, CancellationToken.None);
-            ReporterMetrics.Reports.WithLabels("failed").Inc();
             LogFailed(logger, report.Id, report.ClientIp, exception);
             return;
         }
 
         var delay = settings.RetryDelays[Math.Min(report.Attempts, settings.RetryDelays.Length) - 1];
         await reports.RetryAsync(report.Id, settings.InstanceName, error, now + delay, now, CancellationToken.None);
-        ReporterMetrics.Reports.WithLabels("retried").Inc();
         LogRetrying(logger, report.Id, report.ClientIp, delay, exception);
     }
 
