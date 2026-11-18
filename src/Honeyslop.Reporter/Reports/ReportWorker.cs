@@ -20,6 +20,7 @@ internal sealed partial class ReportWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var configured = smtpOptions.Value.Configured;
+        ReporterMetrics.Initialize();
         ReporterMetrics.Configured.Set(configured ? 1 : 0);
         if (!configured)
         {

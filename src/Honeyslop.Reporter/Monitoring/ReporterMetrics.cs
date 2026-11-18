@@ -13,4 +13,10 @@ internal static class ReporterMetrics
     public static readonly Gauge Configured = Metrics.CreateGauge(
         Constants.MetricsPrefix + "reporter_configured",
         "1 when SMTP is configured and the reporter takes reports from the queue.");
+
+    public static void Initialize()
+    {
+        foreach (var result in new[] { "sent", "retried", "failed" })
+            Reports.WithLabels(result);
+    }
 }
