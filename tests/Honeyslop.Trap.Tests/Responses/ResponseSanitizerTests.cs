@@ -1,5 +1,6 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Trap.Responses;
+using Honeyslop.Trap.Responses.Internals;
 
 namespace Honeyslop.Trap.Tests.Responses;
 

@@ -247,11 +247,13 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnName("prompt_tokens");
 
                     b.Property<string>("RequestBody")
-                        .HasColumnType("text")
+                        .HasMaxLength(65536)
+                        .HasColumnType("character varying(65536)")
                         .HasColumnName("request_body");
 
                     b.Property<string>("RequestHeaders")
-                        .HasColumnType("text")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)")
                         .HasColumnName("request_headers");
 
                     b.Property<DateTimeOffset?>("RequestedAt")
@@ -259,7 +261,8 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnName("requested_at");
 
                     b.Property<string>("ResponseBody")
-                        .HasColumnType("text")
+                        .HasMaxLength(65536)
+                        .HasColumnType("character varying(65536)")
                         .HasColumnName("response_body");
 
                     b.Property<int?>("ResponseStatus")
@@ -318,7 +321,8 @@ namespace Honeyslop.Migrator.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Body")
-                        .HasColumnType("text")
+                        .HasMaxLength(65536)
+                        .HasColumnType("character varying(65536)")
                         .HasColumnName("body");
 
                     b.Property<string>("ClientIp")
@@ -336,7 +340,8 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnName("entry_id");
 
                     b.Property<string>("Headers")
-                        .HasColumnType("text")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)")
                         .HasColumnName("headers");
 
                     b.Property<string>("Host")
@@ -455,10 +460,12 @@ namespace Honeyslop.Migrator.Migrations
                                 .ValueGeneratedOnAdd();
 
                             b1.Property<string>("Name")
-                                .IsRequired();
+                                .IsRequired()
+                                .HasMaxLength(256);
 
                             b1.Property<string>("Value")
-                                .IsRequired();
+                                .IsRequired()
+                                .HasMaxLength(1024);
 
                             b1.HasKey("EntryId", "__synthesizedOrdinal");
 

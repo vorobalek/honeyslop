@@ -22,6 +22,10 @@ public class Entry
     public const int ClaimedByMaxLength = 128;
     public const int ModelMaxLength = 128;
     public const int GeneratorMaxLength = 128;
+    public const int RequestHeadersMaxLength = 8192;
+    public const int RequestBodyMaxLength = 65536;
+    public const int ResponseBodyMaxLength = 65536;
+    public const int ResponseHeadersMaxCount = 30;
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
@@ -55,14 +59,17 @@ public class Entry
     [MaxLength(UserAgentMaxLength)]
     public string? UserAgent { get; set; }
 
+    [MaxLength(RequestHeadersMaxLength)]
     public string? RequestHeaders { get; set; }
 
+    [MaxLength(RequestBodyMaxLength)]
     public string? RequestBody { get; set; }
 
     public int? ResponseStatus { get; set; }
 
     public List<ResponseHeader> ResponseHeaders { get; set; } = [];
 
+    [MaxLength(ResponseBodyMaxLength)]
     public string? ResponseBody { get; set; }
 
     [MaxLength(ModelMaxLength)]

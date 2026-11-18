@@ -3,6 +3,7 @@ using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Reporter.Configuration;
 using Honeyslop.Reporter.Mail;
+using Honeyslop.Reporter.Mail.Internals;
 using Honeyslop.Reporter.Monitoring;
 using Honeyslop.Reporter.Reports;
 using Honeyslop.Reports;

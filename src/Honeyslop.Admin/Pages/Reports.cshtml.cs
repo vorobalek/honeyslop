@@ -1,19 +1,20 @@
-using Honeyslop.Data.Entities;
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Enums;
+using Honeyslop.Admin.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class ReportsModel(IAbuseReportRepository abuseReportRepository) : SortedListModel<ReportColumn>
+public sealed class ReportsModel(IReportsService reportsService) : SortedListModel<ReportColumn>
 {
-    public const int PageSize = 50;
-
     [BindProperty(SupportsGet = true, Name = "p")]
     public int PageNumber { get; set; }
 
-    public AbuseReport[] Reports { get; private set; } = [];
-    public int TotalCount { get; private set; }
-    public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
+    public ReportsPageDto View { get; private set; } = null!;
+    public ReportDto[] Reports => View.Reports.Items;
+    public IReadOnlyDictionary<string, CountryDto> Countries => View.Countries;
+    public int TotalCount => View.Reports.Total;
+    public int PageCount => View.Reports.PageCount;
 
     public Task OnGetAsync(CancellationToken cancellationToken)
     {
@@ -28,9 +29,8 @@ public sealed class ReportsModel(IAbuseReportRepository abuseReportRepository) :
 
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        PageNumber = Math.Max(0, PageNumber);
-        TotalCount = await abuseReportRepository.CountAsync(cancellationToken);
-        Reports = await abuseReportRepository.GetPageAsync(Sorting, PageNumber, PageSize, cancellationToken);
+        View = await reportsService.GetPageAsync(new ReportsQuery(Sorting, PageNumber), cancellationToken);
+        PageNumber = View.Reports.Page;
     }
 
     public override string ListPage => "/Reports";

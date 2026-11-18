@@ -1,7 +1,10 @@
+using Honeyslop.Data.Contracts;
+
 namespace Honeyslop.Data.Repositories;
 
 public interface ISettingsRepository
 {
-    Task<HoneyslopSettings> GetAsync(CancellationToken cancellationToken);
+    Task<Settings> GetAsync(string? userId, CancellationToken cancellationToken);
     Task SaveAsync(HoneyslopSettings settings, DateTimeOffset now, CancellationToken cancellationToken);
+    Task SaveAsync(UserSettings settings, DateTimeOffset now, CancellationToken cancellationToken);
 }

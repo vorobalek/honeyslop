@@ -17,7 +17,7 @@
     <dt>Received</dt>
     <dd>@record.ReceivedAt.Display UTC</dd>
     <dt>Client</dt>
-    <dd class="mono"><partial name="_ClientIp" model="record.ClientIp"/></dd>
+    <dd class="mono"><partial name="_ClientIp" model="new ClientIpLink(record.ClientIp, Model.Details.Country)"/></dd>
     <dt>Response</dt>
     <dd class="mono">@record.ResponseStatus in @record.DurationMs ms</dd>
     <dt>Cache entry</dt>

@@ -1,3 +1,5 @@
+using Honeyslop.Llm.Contracts;
+
 namespace Honeyslop.Llm;
 
 public interface ILlmClient

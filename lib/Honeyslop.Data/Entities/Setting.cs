@@ -1,12 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Honeyslop.Data.Entities.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Honeyslop.Data.Entities;
 
 [Table("setting", Schema = "public")]
 [PrimaryKey(nameof(Key))]
-public class Setting
+public class Setting : ISettingRow
 {
     [MaxLength(64)]
     public string Key { get; set; } = null!;

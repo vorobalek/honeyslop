@@ -1,20 +1,22 @@
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Services;
 using Honeyslop.Data.Entities;
-using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class RequestModel(IRequestRepository requestRepository) : PageModel
+public sealed class RequestModel(IRequestsService requestsService) : PageModel
 {
-    public RequestRecord Record { get; private set; } = null!;
+    public RequestDetailsDto Details { get; private set; } = null!;
+    public RequestRecord Record => Details.Request;
 
     public async Task<IActionResult> OnGetAsync(long id, CancellationToken cancellationToken)
     {
-        var record = await requestRepository.GetByIdOrDefaultAsync(id, cancellationToken);
+        var record = await requestsService.GetAsync(id, cancellationToken);
         if (record is null)
             return NotFound();
-        Record = record;
+        Details = record;
         return Page();
     }
 }

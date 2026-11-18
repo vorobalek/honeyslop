@@ -1,6 +1,6 @@
-using Honeyslop.Llm;
 using System.Text.Json;
 using Honeyslop.Data.Entities;
+using Honeyslop.Llm.Exceptions;
 using Honeyslop.Trap.Responses;
 
 namespace Honeyslop.Trap.Llm;

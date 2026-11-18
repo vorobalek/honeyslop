@@ -37,5 +37,10 @@ public static class AppConfiguration
     public static readonly string GeoIpDatabase = "GEOIP_DATABASE"
         .GetEnvironmentValueWithFallback("/app/geoip/country.mmdb");
 
+    public static readonly string? McpResource = "MCP_RESOURCE"
+        .EnvironmentValue;
+
     public static bool SignInEnabled => !string.IsNullOrWhiteSpace(OidcAuthority);
+
+    public static bool McpEnabled => SignInEnabled && !string.IsNullOrWhiteSpace(McpResource);
 }

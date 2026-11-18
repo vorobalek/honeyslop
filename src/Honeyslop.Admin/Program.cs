@@ -1,14 +1,17 @@
 using Honeyslop.Admin.Access;
-using Honeyslop.Admin.Clients;
+using Honeyslop.Admin.Access.Internals;
 using Honeyslop.Admin.Configuration;
+using Honeyslop.Admin.Core;
+using Honeyslop.Admin.Core.Access;
+using Honeyslop.Admin.Core.Options;
+using Honeyslop.Admin.Core.Text;
 using Honeyslop.Admin.Live;
+using Honeyslop.Admin.Mcp;
+using Honeyslop.Admin.Live.Internals;
 using Honeyslop.Admin.Middleware;
-using Honeyslop.Admin.Options;
-using Honeyslop.Admin.Services;
 using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
-using Honeyslop.Reports;
 using Microsoft.AspNetCore.DataProtection;
 
 await Host
@@ -18,32 +21,28 @@ await Host
         .AddJsonConsoleLogging()
         .AddDatabase(AppConfiguration.DbConnectionString)
         .AddAccess()
+        .AddMcp()
         .ConfigureKestrel(options => options.AddServerHeader = false)
         .ConfigureServices(services =>
         {
             services
                 .AddSingleton(TimeProvider.System)
                 .AddSingleton<SecurityHeadersMiddleware>()
-                .AddScoped<ICacheMaintenance, CacheMaintenance>()
-                .AddHostedService<MaintenanceService>()
-                .AddMemoryCache()
-                .AddSingleton<IGenerationOutputStore, GenerationOutputStore>()
+                .AddAdminCore()
+                .AddHttpContextAccessor()
+                .AddScoped<IViewerContext, HttpViewerContext>()
                 .AddSingleton<ILiveUpdateHub, LiveUpdateHub>()
                 .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<ILiveUpdateHub>())
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))
-                .AddSingleton<ICountryLookup>(serviceProvider => new CountryLookup(
-                    AppConfiguration.GeoIpDatabase,
-                    serviceProvider.GetRequiredService<ILogger<CountryLookup>>()))
-                .AddScoped<IWhoisLookup, WhoisLookup>()
-                .AddScoped<IUserAgentProvider, UserAgentProvider>()
-                .AddRequestArchives()
                 .AddHealthChecks();
-            services.AddHttpClient<IRipeStatClient, RipeStatClient>(RipeStatClient.Configure);
             services
                 .AddDataProtection()
                 .UseEphemeralDataProtectionProvider();
+            services
+                .AddOptions<CountryOptions>()
+                .Configure(x => x.DatabasePath = AppConfiguration.GeoIpDatabase);
             services
                 .AddOptions<UserAgentOptions>()
                 .Configure(x => x.Default = AppConfiguration.UserAgent);
@@ -86,6 +85,7 @@ await Host
             {
                 endpoints.MapRazorPages();
                 endpoints.Map("/live", LiveEndpoint.HandleAsync);
+                endpoints.MapHoneyslopMcp();
                 endpoints.MapHealthChecks("/health").AllowAnonymous();
                 if (AppConfiguration.SignInEnabled)
                 {

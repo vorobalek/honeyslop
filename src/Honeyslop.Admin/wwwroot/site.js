@@ -79,6 +79,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("table[data-sortable]").forEach(applyTableSort);
 
     const dialog = document.querySelector("[data-confirm-dialog]");
+    dialog?.addEventListener("click", event => {
+        const button = event.target.closest("button[value]");
+        if (button) {
+            dialog.close(button.value);
+        }
+    });
     document.addEventListener("submit", event => {
         const form = event.target;
         const message = form.dataset.confirm;

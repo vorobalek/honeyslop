@@ -4,7 +4,7 @@
     <span class="count">@Model.TotalCount abuse reports, newest first</span>
 </div>
 
-<partial name="_ReportsTable" model="new ReportsTable(Model.Reports, true, User.CanOperate, Model)"/>
+<partial name="_ReportsTable" model="new ReportsTable(Model.Reports, Model.Countries, true, User.CanOperate, Model)"/>
 
 <nav class="pager">
     @if (Model.PageNumber > 0)

@@ -1,8 +1,9 @@
+using System.Linq.Expressions;
 using Honeyslop.Common;
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Extensions;
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -41,6 +42,8 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
 
     public async Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken)
     {
+        entry.RequestHeaders = entry.RequestHeaders?.Truncate(Entry.RequestHeadersMaxLength);
+        entry.RequestBody = entry.RequestBody?.Truncate(Entry.RequestBodyMaxLength);
         await dbContext.Entries.AddAsync(entry, cancellationToken);
         try
         {
@@ -111,25 +114,25 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
-    public Task<EntryProgress[]> GetGeneratingAsync(int limit, CancellationToken cancellationToken)
+    public Task<Entry[]> GetGeneratingAsync(int limit, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy != null)
             .OrderBy(x => x.ClaimedAt)
             .Take(limit)
-            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt, x.Generator))
+
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<EntryProgress[]> GetQueuedAsync(int limit, CancellationToken cancellationToken)
+    public Task<Entry[]> GetQueuedAsync(int limit, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy == null)
             .OrderByDescending(x => x.RequestedAt ?? x.CreatedAt)
             .Take(limit)
-            .Select(x => new EntryProgress(x.Id, x.Method, x.Host, x.Target, x.Attempts, x.ClaimedBy, x.ClaimedAt, x.CreatedAt, x.RequestedAt, x.Generator))
+
             .ToArrayAsync(cancellationToken);
     }
 
@@ -172,48 +175,49 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
-    public Task NotifyOutputAsync(GenerationOutput output, CancellationToken cancellationToken)
+    public Task NotifyOutputAsync(string payload, CancellationToken cancellationToken)
     {
         return dbContext
             .Database
             .ExecuteSqlRawAsync(
                 "select pg_notify(@channel, @payload)",
-                [new NpgsqlParameter("channel", "honeyslop_outputs"), new NpgsqlParameter("payload", output.ToPayload())],
+                [new NpgsqlParameter("channel", "honeyslop_outputs"), new NpgsqlParameter("payload", payload)],
                 cancellationToken);
     }
 
     public async Task<bool> CompleteAsync(
-        long id,
+        Entry completed,
         string claimedBy,
-        EntryResponse response,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var entry = await dbContext
             .Entries
             .SingleOrDefaultAsync(
-                x => x.Id == id && x.Status == EntryStatus.Pending && x.ClaimedBy == claimedBy,
+                x => x.Id == completed.Id && x.Status == EntryStatus.Pending && x.ClaimedBy == claimedBy,
                 cancellationToken);
         if (entry is null)
             return false;
 
         entry.Status = EntryStatus.Ready;
         entry.Error = null;
-        entry.ResponseStatus = response.Status;
+        entry.ResponseStatus = completed.ResponseStatus;
         entry.ResponseHeaders =
         [
-            ..response.Headers.Select(x => new ResponseHeader
-            {
-                Name = x.Name,
-                Value = x.Value
-            })
+            .. completed.ResponseHeaders
+                .Take(Entry.ResponseHeadersMaxCount)
+                .Select(x => new ResponseHeader
+                {
+                    Name = x.Name.Truncate(ResponseHeader.NameMaxLength),
+                    Value = x.Value.Truncate(ResponseHeader.ValueMaxLength)
+                })
         ];
-        entry.ResponseBody = response.Body;
-        entry.Model = response.Model?.Truncate(Entry.ModelMaxLength);
-        entry.Generator = response.Generator?.Truncate(Entry.GeneratorMaxLength);
-        entry.PromptTokens = response.PromptTokens;
-        entry.CompletionTokens = response.CompletionTokens;
-        entry.GenerationMs = response.GenerationMs;
+        entry.ResponseBody = completed.ResponseBody?.Truncate(Entry.ResponseBodyMaxLength);
+        entry.Model = completed.Model?.Truncate(Entry.ModelMaxLength);
+        entry.Generator = completed.Generator?.Truncate(Entry.GeneratorMaxLength);
+        entry.PromptTokens = completed.PromptTokens;
+        entry.CompletionTokens = completed.CompletionTokens;
+        entry.GenerationMs = completed.GenerationMs;
         entry.GeneratedAt = now;
         entry.UpdatedAt = now;
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -277,9 +281,12 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
-    public Task<EntrySummary[]> GetPageAsync(
-        EntryFilter filter,
-        Sorting<EntryColumn>? sort,
+    public Task<Entry[]> GetPageAsync(
+        string? host,
+        string? target,
+        EntryState? state,
+        EntryOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
@@ -287,50 +294,34 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         var query = dbContext
             .Entries
             .AsNoTracking()
-            .FilterBy(filter);
-        query = sort switch
+            .FilterBy(host, target, state);
+        query = order switch
         {
-            null => query.OrderByDescending(x => x.Id),
-            { Column: EntryColumn.Status } s => query.SortBy(x => x.Status, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Method } s => query.SortBy(x => x.Method, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Host } s => query.SortBy(x => x.Host, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Path } s => query.SortBy(x => x.Target, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Code } s => query.SortBy(x => x.ResponseStatus ?? 0, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Size } s => query.SortBy(x => x.ResponseBody == null ? 0 : x.ResponseBody.Length, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.Hits } s => query.SortBy(x => x.Hits, s.Direction).ThenByDescending(x => x.Id),
-            { Column: EntryColumn.LastHit } s => query.SortBy(x => x.LastHitAt ?? x.CreatedAt, s.Direction).ThenByDescending(x => x.Id),
-            { Direction: var direction } => query.SortBy(x => x.Id, direction)
+            EntryOrder.Status => query.SortBy(x => x.Status, direction).ThenByDescending(x => x.Id),
+            EntryOrder.Method => query.SortBy(x => x.Method, direction).ThenByDescending(x => x.Id),
+            EntryOrder.Host => query.SortBy(x => x.Host, direction).ThenByDescending(x => x.Id),
+            EntryOrder.Target => query.SortBy(x => x.Target, direction).ThenByDescending(x => x.Id),
+            EntryOrder.ResponseStatus => query.SortBy(x => x.ResponseStatus ?? 0, direction).ThenByDescending(x => x.Id),
+            EntryOrder.ResponseSize => query.SortBy(x => x.ResponseBody == null ? 0 : x.ResponseBody.Length, direction).ThenByDescending(x => x.Id),
+            EntryOrder.Hits => query.SortBy(x => x.Hits, direction).ThenByDescending(x => x.Id),
+            EntryOrder.LastHitAt => query.SortBy(x => x.LastHitAt ?? x.CreatedAt, direction).ThenByDescending(x => x.Id),
+            _ => query.SortBy(x => x.Id, direction)
         };
         return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
-            .Select(x => new EntrySummary(
-                x.Id,
-                x.Status,
-                x.Method,
-                x.Host,
-                x.Target,
-                x.ResponseStatus,
-                x.ResponseBody == null ? 0 : x.ResponseBody.Length,
-                x.Hits,
-                x.CreatedAt,
-                x.LastHitAt,
-                x.Error,
-                x.ClaimedBy,
-                x.ClaimedAt,
-                x.Generator))
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(EntryFilter filter, CancellationToken cancellationToken)
+    public Task<int> CountAsync(string? host, string? target, EntryState? state, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
-            .FilterBy(filter)
+            .FilterBy(host, target, state)
             .CountAsync(cancellationToken);
     }
 
-    public async Task<EntryStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
+    public async Task<EntryTotals> GetTotalsAsync(CancellationToken cancellationToken)
     {
         var groups = await dbContext
             .Entries
@@ -355,45 +346,27 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 .Sum(x => x.Count);
         }
 
-        return new EntryStatistics(
-            groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Count),
-            CountOf(EntryStatus.Ready),
-            CountOf(EntryStatus.Pending, false),
-            CountOf(EntryStatus.Pending, true),
-            CountOf(EntryStatus.Failed),
-            CountOf(EntryStatus.Expired),
-            groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Hits));
+        return new EntryTotals
+        {
+            Total = groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Count),
+            Ready = CountOf(EntryStatus.Ready),
+            Queued = CountOf(EntryStatus.Pending, false),
+            Generating = CountOf(EntryStatus.Pending, true),
+            Failed = CountOf(EntryStatus.Failed),
+            Expired = CountOf(EntryStatus.Expired),
+            Hits = groups.Where(x => x.Status != EntryStatus.Expired).Sum(x => x.Hits)
+        };
     }
 
-    public async Task<QueueStatistics> GetQueueStatisticsAsync(CancellationToken cancellationToken)
+    public Task<DateTimeOffset?> GetOldestQueuedAtAsync(CancellationToken cancellationToken)
     {
-        var pending = await dbContext
-            .Entries
-            .Where(x => x.Status == EntryStatus.Pending)
-            .GroupBy(x => x.ClaimedBy)
-            .Select(x => new
-            {
-                Instance = x.Key,
-                Count = x.Count()
-            })
-            .ToArrayAsync(cancellationToken);
-        var failed = await dbContext
-            .Entries
-            .CountAsync(x => x.Status == EntryStatus.Failed, cancellationToken);
-        var oldestQueuedAt = await dbContext
+        return dbContext
             .Entries
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy == null)
             .MinAsync(x => (DateTimeOffset?)x.CreatedAt, cancellationToken);
-        return new QueueStatistics(
-            pending.Where(x => x.Instance == null).Sum(x => x.Count),
-            failed,
-            oldestQueuedAt,
-            pending
-                .Where(x => x.Instance != null)
-                .ToDictionary(x => x.Instance!, x => x.Count));
     }
 
-    public Task<GeneratorStatistics[]> GetGeneratorStatisticsAsync(DateTimeOffset since, CancellationToken cancellationToken)
+    public Task<GeneratorActivity[]> GetGeneratorActivityAsync(DateTimeOffset since, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
@@ -401,12 +374,14 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 x.Generator != null &&
                 x.GeneratedAt >= since)
             .GroupBy(x => x.Generator!)
-            .Select(x => new GeneratorStatistics(
-                x.Key,
-                x.Count(),
-                x.Average(y => (double?)y.GenerationMs) ?? 0,
-                x.Average(y => (double?)y.CompletionTokens) ?? 0,
-                x.Max(y => y.GeneratedAt)))
+            .Select(x => new GeneratorActivity
+            {
+                Generator = x.Key,
+                Generated = x.Count(),
+                AverageMs = x.Average(y => (double?)y.GenerationMs) ?? 0,
+                AverageTokens = x.Average(y => (double?)y.CompletionTokens) ?? 0,
+                LastGeneratedAt = x.Max(y => y.GeneratedAt)
+            })
             .ToArrayAsync(cancellationToken);
     }
 
@@ -418,11 +393,11 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .ExpireAsync(now, cancellationToken);
     }
 
-    public Task<int> ExpireAsync(EntryFilter filter, DateTimeOffset now, CancellationToken cancellationToken)
+    public Task<int> ExpireMatchingAsync(string? host, string? target, EntryState? state, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
-            .FilterBy(filter)
+            .FilterBy(host, target, state)
             .ExpireAsync(now, cancellationToken);
     }
 

@@ -1,4 +1,6 @@
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 
 namespace Honeyslop.Data.Repositories;
 
@@ -8,24 +10,59 @@ public interface IRequestRepository
     Task UpdateRangeAsync(IReadOnlyCollection<RequestRecord> records, CancellationToken cancellationToken);
     Task<RequestRecord?> GetByIdOrDefaultAsync(long id, CancellationToken cancellationToken);
 
-    Task<RequestSummary[]> GetPageAsync(
-        RequestFilter filter,
-        Sorting<RequestColumn>? sort,
+    Task<RequestRecord[]> GetPageAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        RequestOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
 
-    Task<int> CountAsync(RequestFilter filter, CancellationToken cancellationToken);
+    Task<int> CountAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        long? afterId,
+        CancellationToken cancellationToken);
 
-    Task<ClientSummary[]> GetClientsAsync(
+    Task<RequestBucket[]> GetBreakdownAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        RequestDimension dimension,
+        int top,
+        CancellationToken cancellationToken);
+
+    Task<ClientActivity[]> GetClientsAsync(
         DateTimeOffset since,
-        Sorting<ClientColumn>? sort,
+        ClientOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
 
     Task<int> CountClientsAsync(DateTimeOffset since, CancellationToken cancellationToken);
-    Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken);
+    Task<ClientActivity?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken);
     Task<long?> GetLogStartAsync(string clientIp, int latest, CancellationToken cancellationToken);
     Task<RequestRecord[]> GetLogAsync(string clientIp, long fromId, int limit, CancellationToken cancellationToken);
     Task<int> DeleteReceivedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken);

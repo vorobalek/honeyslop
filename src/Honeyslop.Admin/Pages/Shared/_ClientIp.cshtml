@@ -1,13 +1,9 @@
-@model string
-@inject ICountryLookup CountryLookup
-@{
-    var country = CountryLookup.Find(Model);
-}
-@if (country is null)
+@model ClientIpLink
+@if (Model.Country is not { } country)
 {
-    <a class="client" asp-page="/Client" asp-route-ip="@Model">@Model</a>
+    <a class="client" asp-page="/Client" asp-route-ip="@Model.Ip">@Model.Ip</a>
 }
 else
 {
-    <a class="client" asp-page="/Client" asp-route-ip="@Model"><span class="flag" role="img" title="@country.Name" aria-label="@country.Name">@country.Flag</span>@Model</a>
+    <a class="client" asp-page="/Client" asp-route-ip="@Model.Ip"><span class="flag" role="img" title="@country.Name" aria-label="@country.Name">@country.Flag</span>@Model.Ip</a>
 }

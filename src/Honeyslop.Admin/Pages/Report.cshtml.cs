@@ -1,25 +1,15 @@
-using Honeyslop.Admin.Clients;
-using Honeyslop.Admin.Extensions;
-using Honeyslop.Data.Entities;
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Admin.Core.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Options;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class ReportModel(
-    IAbuseReportRepository abuseReportRepository,
-    IOptions<AbuseReportOptions> reportOptions) : PageModel
+public sealed class ReportModel(IReportsService reportsService) : PageModel
 {
-    public AbuseReport Report { get; private set; } = null!;
-
-    public bool FromIsExpected => Report.SentFrom is null;
-
-    public string From => Report.SentFrom ??
-                          reportOptions.Value.ExpectedFrom(Report.SenderName) ??
-                          Report.SenderName ??
-                          "the address only";
+    public ReportDetailsDto Details { get; private set; } = null!;
+    public ReportDto Report => Details.Report;
 
     public string Attachment => Report.AttachedRequests is { } attached
         ? $"{attached.Of("request")} from this address, zipped; built when sending and not kept"
@@ -27,10 +17,10 @@ public sealed class ReportModel(
 
     public async Task<IActionResult> OnGetAsync(long id, CancellationToken cancellationToken)
     {
-        var report = await abuseReportRepository.GetByIdOrDefaultAsync(id, cancellationToken);
-        if (report is null)
+        var details = await reportsService.GetAsync(id, cancellationToken);
+        if (details is null)
             return NotFound();
-        Report = report;
+        Details = details;
         return Page();
     }
 }

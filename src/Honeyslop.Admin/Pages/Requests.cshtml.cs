@@ -1,16 +1,15 @@
 using System.Globalization;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Enums;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
-using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class RequestsModel(
-    IRequestRepository requestRepository,
-    TimeProvider timeProvider) : SortedListModel<RequestColumn>, IRequestList
+public sealed class RequestsModel(IRequestsService requestsService) : SortedListModel<RequestColumn>, IRequestList
 {
-    public const int PageSize = 100;
-
     [BindProperty(SupportsGet = true)]
     public string? ClientIp { get; set; }
 
@@ -29,10 +28,12 @@ public sealed class RequestsModel(
     [BindProperty(SupportsGet = true, Name = "p")]
     public int PageNumber { get; set; }
 
-    public RequestSummary[] Requests { get; private set; } = [];
-    public int TotalCount { get; private set; }
-    public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
-    public DateTimeOffset RenderedAt { get; private set; }
+    public RequestsPageDto View { get; private set; } = null!;
+    public RequestRecord[] Requests => View.Requests.Items;
+    public IReadOnlyDictionary<string, CountryDto> Countries => View.Countries;
+    public int TotalCount => View.Requests.Total;
+    public int PageCount => View.Requests.PageCount;
+    public DateTimeOffset RenderedAt => View.AsOf;
     public override string ListPage => "/Requests";
     public RequestFilter Filter => new(ClientIp, Host, Target, Outcome, EntryId);
 
@@ -68,9 +69,7 @@ public sealed class RequestsModel(
 
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        PageNumber = Math.Max(0, PageNumber);
-        RenderedAt = timeProvider.GetUtcNow();
-        TotalCount = await requestRepository.CountAsync(Filter, cancellationToken);
-        Requests = await requestRepository.GetPageAsync(Filter, Sorting, PageNumber, PageSize, cancellationToken);
+        View = await requestsService.GetPageAsync(new RequestsQuery(Filter, Sorting, PageNumber), cancellationToken);
+        PageNumber = View.Requests.Page;
     }
 }

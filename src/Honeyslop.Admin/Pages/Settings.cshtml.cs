@@ -1,21 +1,13 @@
 using Honeyslop.Admin.Access;
-using Honeyslop.Admin.Clients;
-using Honeyslop.Admin.Services;
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Data.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Options;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class SettingsModel(
-    ISettingsRepository settingsRepository,
-    IUserSettingsRepository userSettingsRepository,
-    ICacheMaintenance cacheMaintenance,
-    IPublicView publicView,
-    IOptions<AbuseReportOptions> reportOptions,
-    IOptions<UserAgentOptions> userAgentOptions,
-    TimeProvider timeProvider) : PageModel
+public sealed class SettingsModel(ISettingsService settingsService) : PageModel
 {
     [BindProperty]
     public long CacheTtlValue { get; set; }
@@ -80,8 +72,8 @@ public sealed class SettingsModel(
     [BindProperty(SupportsGet = true)]
     public bool PersonalSaved { get; set; }
 
-    public string? DefaultSenderName => reportOptions.Value.DefaultSenderName;
-    public string DefaultUserAgent => userAgentOptions.Value.Default;
+    public string? DefaultSenderName { get; private set; }
+    public string DefaultUserAgent { get; private set; } = string.Empty;
     public string DefaultSenderNameHint => DefaultSenderName is null ? "the address alone" : $"\"{DefaultSenderName}\"";
 
     [BindProperty(SupportsGet = true)]
@@ -98,7 +90,8 @@ public sealed class SettingsModel(
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        var settings = await settingsRepository.GetAsync(cancellationToken);
+        var view = await LoadAsync(cancellationToken);
+        var settings = view.Settings;
         (CacheTtlValue, CacheTtlUnit) = Split(settings.CacheTtl);
         (KeepUnusedValue, KeepUnusedUnit) = Split(settings.KeepUnused);
         GenerationEnabled = settings.GenerationEnabled;
@@ -110,59 +103,43 @@ public sealed class SettingsModel(
         (GenerationWaitValue, GenerationWaitUnit) = Split(settings.GenerationWait);
         PublicView = settings.PublicView;
         UserAgent = settings.UserAgent;
-        if (User.UserId is { } userId)
-            PersonalSenderName = (await userSettingsRepository.GetAsync(userId, cancellationToken)).SenderName;
+        PersonalSenderName = view.PersonalSenderName;
     }
 
     public async Task<IActionResult> OnPostPersonalAsync(CancellationToken cancellationToken)
     {
-        if (User.UserId is not { } userId)
+        if (User.UserId is null)
             return Forbid();
-        await userSettingsRepository.SaveAsync(
-            userId,
-            new UserSettings(SenderName.Clean(PersonalSenderName)),
-            timeProvider.GetUtcNow(),
-            cancellationToken);
+        await settingsService.SavePersonalAsync(PersonalSenderName, cancellationToken);
         return RedirectToPage(new { PersonalSaved = true });
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
-        if (CacheTtlValue < 0)
-            ModelState.AddModelError(nameof(CacheTtlValue), "Must be zero or positive.");
-        if (KeepUnusedValue < 0)
-            ModelState.AddModelError(nameof(KeepUnusedValue), "Must be zero or positive.");
-        if (Join(ClaimTimeoutValue, ClaimTimeoutUnit) < TimeSpan.FromSeconds(20))
-            ModelState.AddModelError(nameof(ClaimTimeoutValue), "Must be at least 20 seconds.");
-        if (RetryFailedValue < 0)
-            ModelState.AddModelError(nameof(RetryFailedValue), "Must be zero or positive.");
-        if (Join(TimeLimitValue, TimeLimitUnit) < TimeSpan.FromSeconds(10))
-            ModelState.AddModelError(nameof(TimeLimitValue), "Must be at least 10 seconds.");
-        if (GenerationWaitValue < 0)
-            ModelState.AddModelError(nameof(GenerationWaitValue), "Must be zero or positive.");
-        if (RequestRetentionValue < 0)
-            ModelState.AddModelError(nameof(RequestRetentionValue), "Must be zero or positive.");
         UserAgent = string.IsNullOrWhiteSpace(UserAgent) ? null : UserAgent.Trim();
-        if (UserAgent is not null && !UserAgentHeader.IsValid(UserAgent))
-            ModelState.AddModelError(nameof(UserAgent), "Must be a valid User-Agent header of at most 512 characters.");
-        if (!ModelState.IsValid)
+        var settings = new HoneyslopSettings
+        {
+            CacheTtl = Join(CacheTtlValue, CacheTtlUnit),
+            KeepUnused = Join(KeepUnusedValue, KeepUnusedUnit),
+            GenerationEnabled = GenerationEnabled,
+            RequestRetention = Join(RequestRetentionValue, RequestRetentionUnit),
+            GenerationWait = Join(GenerationWaitValue, GenerationWaitUnit),
+            AllowRefusals = AllowRefusals,
+            ClaimTimeout = Join(ClaimTimeoutValue, ClaimTimeoutUnit),
+            RetryFailedAfter = Join(RetryFailedValue, RetryFailedUnit),
+            GenerationTimeLimit = Join(TimeLimitValue, TimeLimitUnit),
+            PublicView = PublicView,
+            UserAgent = UserAgent
+        };
+        var save = await settingsService.SaveAsync(settings, cancellationToken);
+        if (save.Maintenance is not { } result)
+        {
+            foreach (var (field, error) in save.Errors)
+                ModelState.AddModelError(Fields.GetValueOrDefault(field, field), error);
+            await LoadAsync(cancellationToken);
             return Page();
+        }
 
-        var settings = new HoneyslopSettings(
-            Join(CacheTtlValue, CacheTtlUnit),
-            Join(KeepUnusedValue, KeepUnusedUnit),
-            GenerationEnabled,
-            Join(RequestRetentionValue, RequestRetentionUnit),
-            Join(GenerationWaitValue, GenerationWaitUnit),
-            AllowRefusals,
-            Join(ClaimTimeoutValue, ClaimTimeoutUnit),
-            Join(RetryFailedValue, RetryFailedUnit),
-            Join(TimeLimitValue, TimeLimitUnit),
-            PublicView,
-            UserAgent);
-        await settingsRepository.SaveAsync(settings, timeProvider.GetUtcNow(), cancellationToken);
-        publicView.Reset();
-        var result = await cacheMaintenance.RunAsync(settings, cancellationToken);
         return RedirectToPage(new
         {
             Saved = true,
@@ -171,6 +148,26 @@ public sealed class SettingsModel(
             result.Pruned,
             result.Deleted
         });
+    }
+
+    private static readonly Dictionary<string, string> Fields = new(StringComparer.Ordinal)
+    {
+        [nameof(HoneyslopSettings.CacheTtl)] = nameof(CacheTtlValue),
+        [nameof(HoneyslopSettings.KeepUnused)] = nameof(KeepUnusedValue),
+        [nameof(HoneyslopSettings.ClaimTimeout)] = nameof(ClaimTimeoutValue),
+        [nameof(HoneyslopSettings.RetryFailedAfter)] = nameof(RetryFailedValue),
+        [nameof(HoneyslopSettings.GenerationTimeLimit)] = nameof(TimeLimitValue),
+        [nameof(HoneyslopSettings.GenerationWait)] = nameof(GenerationWaitValue),
+        [nameof(HoneyslopSettings.RequestRetention)] = nameof(RequestRetentionValue),
+        [nameof(HoneyslopSettings.UserAgent)] = nameof(UserAgent)
+    };
+
+    private async Task<SettingsDto> LoadAsync(CancellationToken cancellationToken)
+    {
+        var view = await settingsService.GetAsync(cancellationToken);
+        DefaultSenderName = view.DefaultSenderName;
+        DefaultUserAgent = view.DefaultUserAgent;
+        return view;
     }
 
     private static (long Value, DurationUnit Unit) Split(TimeSpan duration)

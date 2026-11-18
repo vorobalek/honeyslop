@@ -1,6 +1,5 @@
-using Honeyslop.Llm;
 using Honeyslop.Data.Entities;
-using Honeyslop.Trap.Llm;
+using Honeyslop.Trap.Llm.Internals;
 
 namespace Honeyslop.Trap.Tests.Llm;
 

@@ -1,3 +1,7 @@
+using Honeyslop.Common.Serializers;
+using Honeyslop.Llm.Contracts;
+using Honeyslop.Llm.Internals;
+using Honeyslop.Llm.Serializers.Internals;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -19,7 +23,8 @@ public static class ServiceCollectionExtensions
                     .Timeout);
             return services
                 .AddSingleton<ILlmEndpointProvider, LlmEndpointProvider>()
-                .AddSingleton<ILlmClient, LlmClient>();
+                .AddSingleton<ILlmClient, LlmClient>()
+                .AddSingleton<IJsonSerializer<GenerationOutputDto>, GenerationOutputSerializer>();
         }
     }
 }

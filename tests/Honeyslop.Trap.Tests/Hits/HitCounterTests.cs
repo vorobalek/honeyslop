@@ -1,4 +1,5 @@
 using Honeyslop.Trap.Hits;
+using Honeyslop.Trap.Hits.Internals;
 
 namespace Honeyslop.Trap.Tests.Hits;
 

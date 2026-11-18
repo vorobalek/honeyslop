@@ -62,7 +62,7 @@
         <tr>
             <td class="check"><input type="checkbox" name="ids" value="@entry.Id" form="bulk" aria-label="Select entry @entry.Id" disabled="@(signIn is not null)"/></td>
             <td>
-                <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"{(entry.Generator is { } generator ? $"on {generator}" : "waiting for a slot")} since {entry.ClaimedAt.Display} UTC" : entry.Error)">@entry.State.Label</span>
+                <span class="@entry.State.CssClass" title="@(entry.State == EntryState.Generating ? $"{(entry.Generator is { } generator ? $"on {generator}" : "waiting for a slot")} since {entry.ClaimedAt.DisplayOrDash()} UTC" : entry.Error)">@entry.State.Label</span>
             </td>
             <td class="mono">@entry.Method</td>
             <td class="mono host">@entry.Host</td>
@@ -71,7 +71,7 @@
             <td class="number">@entry.BodyLength.DisplaySize</td>
             <td class="number">@entry.Hits</td>
             <td class="time">@entry.CreatedAt.Display</td>
-            <td class="time">@entry.LastHitAt.Display</td>
+            <td class="time">@entry.LastHitAt.DisplayOrDash()</td>
         </tr>
     }
     @if (Model.Entries.Length == 0)

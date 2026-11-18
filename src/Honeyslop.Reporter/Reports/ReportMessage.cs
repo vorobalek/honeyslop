@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using Honeyslop.Data.Entities;
-using Honeyslop.Reports;
+using Honeyslop.Reports.Contracts;
 using MimeKit;
 
 namespace Honeyslop.Reporter.Reports;

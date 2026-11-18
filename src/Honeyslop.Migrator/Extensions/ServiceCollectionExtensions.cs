@@ -1,3 +1,5 @@
+using Honeyslop.Migrator.Internals;
+
 namespace Honeyslop.Migrator.Extensions;
 
 internal static class ServiceCollectionExtensions
@@ -6,7 +8,7 @@ internal static class ServiceCollectionExtensions
     {
         public IServiceCollection AddMigrator()
         {
-            return services.AddScoped<IMigrator, Migrator>();
+            return services.AddScoped<IMigrator, DatabaseMigrator>();
         }
     }
 }

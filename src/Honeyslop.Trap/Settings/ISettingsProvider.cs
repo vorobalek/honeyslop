@@ -1,4 +1,4 @@
-using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Contracts;
 
 namespace Honeyslop.Trap.Settings;
 

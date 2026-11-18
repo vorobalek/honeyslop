@@ -1,3 +1,9 @@
 [*.cs]
 dotnet_diagnostic.CA1873.severity = warning
 dotnet_diagnostic.IDE0305.severity = warning
+
+[{lib,src}/**/Contracts/*.cs]
+resharper_not_accessed_positional_property_global_highlighting = none
+
+[lib/Honeyslop.Data/Repositories/*.cs]
+resharper_not_accessed_positional_property_global_highlighting = none

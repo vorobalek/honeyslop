@@ -1,7 +1,7 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
-using Honeyslop.Trap.Generation;
+using Honeyslop.Trap.Generation.Internals;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

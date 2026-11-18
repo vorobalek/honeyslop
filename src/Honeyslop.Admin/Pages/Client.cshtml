@@ -9,13 +9,13 @@
 
 @switch (Model.Report)
 {
-    case ClientModel.ReportNotice.AlreadyQueued:
+    case ReportOutcome.AlreadyQueued:
         <p class="notice">A report about this address is already on its way, so no second one was queued.</p>
         break;
-    case ClientModel.ReportNotice.AlreadyReported:
+    case ReportOutcome.AlreadyReported:
         <p class="notice">This address was already reported and has sent nothing new since, so no second report was queued.</p>
         break;
-    case ClientModel.ReportNotice.NoContact:
+    case ReportOutcome.NoContact:
         <p class="notice">The registry publishes no abuse contact for this network, so there is nobody to send the report to.</p>
         break;
 }

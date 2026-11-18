@@ -1,6 +1,8 @@
-using Honeyslop.Llm;
 using System.Collections.Concurrent;
-using Honeyslop.Trap.Llm;
+using Honeyslop.Llm;
+using Honeyslop.Llm.Contracts;
+using Honeyslop.Llm.Exceptions;
+using Honeyslop.Trap.Llm.Internals;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

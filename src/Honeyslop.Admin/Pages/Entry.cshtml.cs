@@ -1,65 +1,51 @@
-using Honeyslop.Admin.Live;
-using Honeyslop.Data.Enums;
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Data.Entities;
+using Honeyslop.Llm.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using EntryEntity = Honeyslop.Data.Entities.Entry;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class EntryModel(
-    IEntryRepository entryRepository,
-    IGenerationOutputStore outputStore,
-    TimeProvider timeProvider) : PageModel
+public sealed class EntryModel(IEntriesService entriesService) : PageModel
 {
     private const string PreviewContentSecurityPolicy =
         "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; frame-ancestors 'self'";
 
-    public EntryEntity Entry { get; private set; } = null!;
-    public GenerationOutput? Output { get; private set; }
-    public EntryEntity? Current { get; private set; }
-    public DateTimeOffset Now { get; } = timeProvider.GetUtcNow();
-
-    public string? ContentType => Entry
-        .ResponseHeaders
-        .FirstOrDefault(x => x.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?
-        .Value;
-
-    public bool CanPreview =>
-        !string.IsNullOrEmpty(Entry.ResponseBody) &&
-        ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true;
+    public EntryDetailsDto Details { get; private set; } = null!;
+    public Entry Entry => Details.Entry;
+    public GenerationOutputDto? Output { get; private set; }
+    public DateTimeOffset Now => Details.AsOf;
 
     public async Task<IActionResult> OnGetAsync(long id, CancellationToken cancellationToken)
     {
-        var entry = await entryRepository.GetByIdOrDefaultAsync(id, cancellationToken);
+        var entry = await entriesService.GetAsync(id, cancellationToken);
         if (entry is null)
             return NotFound();
-        Entry = entry;
-        Output = outputStore.GetOrDefault(id);
-        if (entry.Status == EntryStatus.Expired)
-            Current = await entryRepository.GetByKeyHashOrDefaultAsync(entry.KeyHash, cancellationToken);
+        Details = entry;
+        Output = entry.Output;
         return Page();
     }
 
-    public IActionResult OnGetPanel(long id)
+    public async Task<IActionResult> OnGetPanelAsync(long id, CancellationToken cancellationToken)
     {
-        Output = outputStore.GetOrDefault(id);
+        Output = await entriesService.GetOutputAsync(id, cancellationToken);
         return Partial("_OutputPanel", this);
     }
 
     public async Task<IActionResult> OnGetPreviewAsync(long id, CancellationToken cancellationToken)
     {
-        var entry = await entryRepository.GetByIdOrDefaultAsync(id, cancellationToken);
-        if (entry?.ResponseBody is null)
+        var body = await entriesService.GetPreviewAsync(id, cancellationToken);
+        if (body is null)
             return NotFound();
 
         Response.Headers.ContentSecurityPolicy = PreviewContentSecurityPolicy;
-        return Content(entry.ResponseBody, "text/html; charset=utf-8");
+        return Content(body, "text/html; charset=utf-8");
     }
 
     public async Task<IActionResult> OnPostExpireAsync(long id, CancellationToken cancellationToken)
     {
-        var expired = await entryRepository.ExpireAsync([id], Now, cancellationToken);
+        var expired = await entriesService.ExpireAsync([id], cancellationToken);
         return RedirectToPage("/Index", new
         {
             Expired = expired

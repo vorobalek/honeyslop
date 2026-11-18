@@ -1,5 +1,5 @@
 using Honeyslop.Llm;
-using Honeyslop.Trap.Llm;
+using Honeyslop.Llm.Internals;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 

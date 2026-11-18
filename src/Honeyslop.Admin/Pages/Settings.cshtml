@@ -31,8 +31,8 @@
         <h2>Personal <span class="hint">only for @User.DisplayName</span></h2>
 
         <div class="setting">
-            <label for="PersonalSenderName">Sign abuse reports as</label>
-            <input asp-for="PersonalSenderName" type="text" maxlength="@Honeyslop.Data.Entities.AbuseReport.SenderNameMaxLength" placeholder="@(Model.DefaultSenderName ?? "the address only")"/>
+            <label asp-for="PersonalSenderName">Sign abuse reports as</label>
+            <input asp-for="PersonalSenderName" type="text" maxlength="@SenderName.MaxLength" placeholder="@(Model.DefaultSenderName ?? "the address only")"/>
             <p class="hint">The sender name on the reports you send; it never goes into the letter itself. Empty uses @Model.DefaultSenderNameHint.</p>
         </div>
 
@@ -46,7 +46,7 @@
     <h2>Cache</h2>
 
     <div class="setting">
-        <label for="CacheTtlValue">Expire generated responses after</label>
+        <label asp-for="CacheTtlValue">Expire generated responses after</label>
         <div class="duration">
             <input asp-for="CacheTtlValue" type="number" min="0" step="1"/>
             <select asp-for="CacheTtlUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -56,7 +56,7 @@
     </div>
 
     <div class="setting">
-        <label for="KeepUnusedValue">Expire entries nobody requested for</label>
+        <label asp-for="KeepUnusedValue">Expire entries nobody requested for</label>
         <div class="duration">
             <input asp-for="KeepUnusedValue" type="number" min="0" step="1"/>
             <select asp-for="KeepUnusedUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -68,7 +68,7 @@
     <h2>Generation</h2>
 
     <div class="setting">
-        <label for="GenerationWaitValue">Hold a request open for its new response up to</label>
+        <label asp-for="GenerationWaitValue">Hold a request open for its new response up to</label>
         <div class="duration">
             <input asp-for="GenerationWaitValue" type="number" min="0" step="1"/>
             <select asp-for="GenerationWaitUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -80,7 +80,7 @@
     <h2>Timeouts</h2>
 
     <div class="setting">
-        <label for="TimeLimitValue">Give one generation at most</label>
+        <label asp-for="TimeLimitValue">Give one generation at most</label>
         <div class="duration">
             <input asp-for="TimeLimitValue" type="number" min="0" step="1"/>
             <select asp-for="TimeLimitUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -90,7 +90,7 @@
     </div>
 
     <div class="setting">
-        <label for="ClaimTimeoutValue">Treat a generation as abandoned after silence of</label>
+        <label asp-for="ClaimTimeoutValue">Treat a generation as abandoned after silence of</label>
         <div class="duration">
             <input asp-for="ClaimTimeoutValue" type="number" min="0" step="1"/>
             <select asp-for="ClaimTimeoutUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -100,7 +100,7 @@
     </div>
 
     <div class="setting">
-        <label for="RetryFailedValue">Retry a failed generation after</label>
+        <label asp-for="RetryFailedValue">Retry a failed generation after</label>
         <div class="duration">
             <input asp-for="RetryFailedValue" type="number" min="0" step="1"/>
             <select asp-for="RetryFailedUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -112,7 +112,7 @@
     <h2>History</h2>
 
     <div class="setting">
-        <label for="RequestRetentionValue">Keep the request history for</label>
+        <label asp-for="RequestRetentionValue">Keep the request history for</label>
         <div class="duration">
             <input asp-for="RequestRetentionValue" type="number" min="0" step="1"/>
             <select asp-for="RequestRetentionUnit" asp-items="Html.GetEnumSelectList<SettingsModel.DurationUnit>()"></select>
@@ -147,7 +147,7 @@
     <h2>Outbound requests</h2>
 
     <div class="setting">
-        <label for="UserAgent">User-Agent</label>
+        <label asp-for="UserAgent">User-Agent</label>
         <input asp-for="UserAgent" type="text" maxlength="@UserAgentHeader.MaxLength" placeholder="@Model.DefaultUserAgent"/>
         <span asp-validation-for="UserAgent" class="error"></span>
         <p class="hint">Sent with every WHOIS lookup at RIPEstat, so they know who asks and how to reach us. Empty uses "@Model.DefaultUserAgent" from the USER_AGENT variable.</p>

@@ -1,3 +1,5 @@
+using Honeyslop.Reports.Contracts;
+
 namespace Honeyslop.Reports;
 
 public interface IRequestArchiveBuilder

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
-using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
 using Npgsql;
 
@@ -51,12 +50,12 @@ public sealed class NotificationTests
         await using (var command = new NpgsqlCommand("listen honeyslop_outputs", connection))
             await command.ExecuteNonQueryAsync();
 
-        var output = new GenerationOutput(Random.Shared.NextInt64(1, long.MaxValue), 2, "{\"status\":");
-        await using (var scope = PostgresDatabase.CreateScope())
-            await scope.Repository().NotifyOutputAsync(output, CancellationToken.None);
+        var output = $"{{\"entryId\":{Random.Shared.NextInt64(1, long.MaxValue)},\"tokens\":2}}";
+        await using var scope = PostgresDatabase.CreateScope();
+        await scope.Repository().NotifyOutputAsync(output, CancellationToken.None);
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (!received.Select(GenerationOutput.FromPayload).Contains(output))
+        while (!received.Contains(output))
             await connection.WaitAsync(timeout.Token);
     }
 }

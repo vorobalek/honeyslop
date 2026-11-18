@@ -37,7 +37,7 @@
     @foreach (var client in Model.Clients)
     {
         <tr>
-            <td class="mono"><partial name="_ClientIp" model="client.ClientIp"/></td>
+            <td class="mono"><partial name="_ClientIp" model="ClientIpLink.From(client.ClientIp, Model.Countries)"/></td>
             <td class="number">@client.Requests</td>
             <td class="number">@client.Hosts</td>
             <td class="number">@client.Targets</td>

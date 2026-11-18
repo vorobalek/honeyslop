@@ -12,6 +12,9 @@ namespace Honeyslop.Data.Entities;
 [Index(nameof(EntryId))]
 public class RequestRecord
 {
+    public const int HeadersMaxLength = 8192;
+    public const int BodyMaxLength = 65536;
+
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
 
@@ -32,8 +35,10 @@ public class RequestRecord
     [MaxLength(Entry.UserAgentMaxLength)]
     public string? UserAgent { get; set; }
 
+    [MaxLength(HeadersMaxLength)]
     public string? Headers { get; set; }
 
+    [MaxLength(BodyMaxLength)]
     public string? Body { get; set; }
 
     public RequestOutcome Outcome { get; set; }

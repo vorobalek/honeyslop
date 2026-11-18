@@ -1,22 +1,10 @@
 using System.Globalization;
-using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
-using Honeyslop.Data.Repositories;
 
 namespace Honeyslop.Admin.Extensions;
 
 public static class DisplayExtensions
 {
-    extension(DateTimeOffset? value)
-    {
-        public string Display => value?.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "—";
-    }
-
-    extension(DateTimeOffset value)
-    {
-        public string Display => value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-    }
-
     extension(int bytes)
     {
         public string DisplaySize => bytes switch
@@ -25,14 +13,6 @@ public static class DisplayExtensions
             < 1024 * 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024d:0.#} KB"),
             _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024d / 1024d:0.#} MB")
         };
-    }
-
-    extension(int count)
-    {
-        public string Of(string noun)
-        {
-            return string.Create(CultureInfo.InvariantCulture, $"{count} {noun}{(count == 1 ? string.Empty : "s")}");
-        }
     }
 
     extension(RequestOutcome outcome)
@@ -63,36 +43,17 @@ public static class DisplayExtensions
         public string Label => state.ToString().ToLowerInvariant();
     }
 
-    extension(Entry entry)
+    extension(AbuseReportState state)
     {
-        public EntryState State => entry.Status switch
+        public string CssClass => state switch
         {
-            EntryStatus.Pending when entry.ClaimedBy is null => EntryState.Queued,
-            EntryStatus.Pending => EntryState.Generating,
-            EntryStatus.Ready => EntryState.Ready,
-            EntryStatus.Expired => EntryState.Expired,
-            _ => EntryState.Failed
-        };
-    }
-
-    extension(AbuseReport report)
-    {
-        public string CssClass => report.Status switch
-        {
-            AbuseReportStatus.Sent => "badge badge-ready",
-            AbuseReportStatus.Failed => "badge badge-failed",
-            _ when report.ClaimedBy is not null => "badge badge-generated",
+            AbuseReportState.Sent => "badge badge-ready",
+            AbuseReportState.Failed => "badge badge-failed",
+            AbuseReportState.Sending => "badge badge-generated",
             _ => "badge badge-pending"
         };
 
-        public string Label => report.Status switch
-        {
-            AbuseReportStatus.Sent => "sent",
-            AbuseReportStatus.Failed => "failed",
-            _ when report.ClaimedBy is not null => "sending",
-            _ when report.RetryAt is not null => "retrying",
-            _ => "queued"
-        };
+        public string Label => state.ToString().ToLowerInvariant();
     }
 
     extension(TimeSpan duration)

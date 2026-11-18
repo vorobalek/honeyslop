@@ -4,9 +4,9 @@
 <section class="stats">
     <div class="stat"><span class="stat-value">@Model.Generators.Count(x => x.Status is not null)</span><span class="stat-label">generators up</span></div>
     <div class="stat"><span class="stat-value">@Model.BusySlots / @Model.TotalSlots</span><span class="stat-label">slots busy</span></div>
-    <div class="stat"><span class="stat-value">@Model.Queue.Generating</span><span class="stat-label">generating</span></div>
-    <div class="stat"><span class="stat-value">@Model.Queue.Queued</span><span class="stat-label">queued</span></div>
-    <div class="stat"><span class="stat-value">@Model.Queue.Failed</span><span class="stat-label">failed</span></div>
+    <div class="stat"><span class="stat-value">@Model.Totals.Generating</span><span class="stat-label">generating</span></div>
+    <div class="stat"><span class="stat-value">@Model.Totals.Queued</span><span class="stat-label">queued</span></div>
+    <div class="stat"><span class="stat-value">@Model.Totals.Failed</span><span class="stat-label">failed</span></div>
 </section>
 
 <div class="actions">
@@ -95,7 +95,7 @@
             <td class="number">@generator.Generated</td>
             <td class="number">@(generator.Generated > 0 ? (generator.AverageMs / 1000).ToString("0.0", CultureInfo.InvariantCulture) + " s" : "—")</td>
             <td class="number">@(generator.Generated > 0 ? generator.AverageTokens.ToString("0", CultureInfo.InvariantCulture) : "—")</td>
-            <td class="time">@generator.LastGeneratedAt.Display</td>
+            <td class="time">@generator.LastGeneratedAt.DisplayOrDash()</td>
         </tr>
     }
     @if (Model.Generators.Length == 0)
@@ -156,7 +156,7 @@
 </table>
 </div>
 
-<h2>Queue · @Model.Queue.Queued waiting@(Model.Queue.OldestQueuedAt is { } oldest ? $", the oldest for {(Model.RenderedAt - oldest).DisplayDuration}" : "")</h2>
+<h2>Queue · @Model.Totals.Queued waiting@(Model.OldestQueuedAt is { } oldest ? $", the oldest for {(Model.RenderedAt - oldest).DisplayDuration}" : "")</h2>
 <p class="hint">Entries somebody asked for within the wait window go first, newest first; the rest are taken oldest first.</p>
 <div class="table-scroll">
 <table class="entries" data-sortable="queued">

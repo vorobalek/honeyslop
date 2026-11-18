@@ -24,7 +24,7 @@
     {
         <tr>
             <td class="time"><a asp-page="/Request" asp-route-id="@request.Id">@request.ReceivedAt.Display</a></td>
-            <td class="mono"><partial name="_ClientIp" model="request.ClientIp"/></td>
+            <td class="mono"><partial name="_ClientIp" model="ClientIpLink.From(request.ClientIp, Model.Countries)"/></td>
             <td class="mono">@request.Method</td>
             <td class="mono host">@request.Host</td>
             <td class="mono target">

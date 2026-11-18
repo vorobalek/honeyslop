@@ -1,4 +1,4 @@
-using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Enums;
 
 namespace Honeyslop.Admin.Pages;
 

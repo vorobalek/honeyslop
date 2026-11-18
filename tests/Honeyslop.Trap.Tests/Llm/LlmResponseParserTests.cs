@@ -1,4 +1,4 @@
-using Honeyslop.Llm;
+using Honeyslop.Llm.Exceptions;
 using Honeyslop.Trap.Llm;
 
 namespace Honeyslop.Trap.Tests.Llm;

@@ -1,16 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Honeyslop.Data.Entities.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Honeyslop.Data.Entities;
 
 [Table("user_setting", Schema = "public")]
 [PrimaryKey(nameof(UserId), nameof(Key))]
-public class UserSetting
+public class UserSetting : ISettingRow
 {
-    public const int UserIdMaxLength = 256;
-
-    [MaxLength(UserIdMaxLength)]
+    [MaxLength(256)]
     public string UserId { get; set; } = null!;
 
     [MaxLength(64)]

@@ -52,9 +52,9 @@ internal sealed partial class ReportWorker(
     private async Task<bool> RunOnceAsync(CancellationToken stoppingToken)
     {
         var settings = options.Value;
-        var now = timeProvider.GetUtcNow();
         await using var scope = scopeFactory.CreateAsyncScope();
         var reports = scope.ServiceProvider.GetRequiredService<IAbuseReportRepository>();
+        var now = await scope.ServiceProvider.GetRequiredService<IServerTimeRepository>().GetNowAsync(stoppingToken);
         if (await reports.FailExhaustedAsync(settings.MaxAttempts, now - settings.LeaseTimeout, now, stoppingToken) is > 0 and var exhausted)
         {
             LogExhausted(logger, exhausted);
@@ -83,35 +83,36 @@ internal sealed partial class ReportWorker(
     {
         var settings = options.Value;
         var reports = services.GetRequiredService<IAbuseReportRepository>();
+        var serverTime = services.GetRequiredService<IServerTimeRepository>();
         var archive = await services
             .GetRequiredService<IRequestArchiveBuilder>()
             .BuildAsync(report.ClientIp, settings.MaxAttachedRequests, cancellationToken);
         if (archive is null)
         {
-            await reports.FailAsync(report.Id, settings.InstanceName, "The request history has nothing left from this address", timeProvider.GetUtcNow(), CancellationToken.None);
+            await reports.FailAsync(report.Id, settings.InstanceName, "The request history has nothing left from this address", await serverTime.GetNowAsync(CancellationToken.None), CancellationToken.None);
             return;
         }
 
         var sender = new MailboxAddress(report.SenderName ?? string.Empty, smtpOptions.Value.From!);
-        var message = ReportMessage.Create(report, sender, archive.Content, timeProvider.GetUtcNow());
+        var message = ReportMessage.Create(report, sender, archive.Content, await serverTime.GetNowAsync(cancellationToken));
         try
         {
             await mailSender.SendAsync(message, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            await HandleFailureAsync(reports, report, exception);
+            await HandleFailureAsync(reports, serverTime, report, exception);
             return;
         }
 
-        await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, timeProvider.GetUtcNow(), CancellationToken.None);
+        await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, await serverTime.GetNowAsync(CancellationToken.None), CancellationToken.None);
         LogSent(logger, report.Id, report.ClientIp, string.Join(", ", report.Recipients), archive.Requests);
     }
 
-    private async Task HandleFailureAsync(IAbuseReportRepository reports, AbuseReport report, Exception exception)
+    private async Task HandleFailureAsync(IAbuseReportRepository reports, IServerTimeRepository serverTime, AbuseReport report, Exception exception)
     {
         var settings = options.Value;
-        var now = timeProvider.GetUtcNow();
+        var now = await serverTime.GetNowAsync(CancellationToken.None);
         var error = $"{exception.GetType().Name}: {exception.Message}";
         var rejected = exception is SmtpCommandException
         {
@@ -139,9 +140,10 @@ internal sealed partial class ReportWorker(
             {
                 await Task.Delay(settings.HeartbeatInterval, timeProvider, lease.Token);
                 await using var scope = scopeFactory.CreateAsyncScope();
+                var now = await scope.ServiceProvider.GetRequiredService<IServerTimeRepository>().GetNowAsync(lease.Token);
                 var kept = await scope.ServiceProvider
                     .GetRequiredService<IAbuseReportRepository>()
-                    .HeartbeatAsync(id, settings.InstanceName, timeProvider.GetUtcNow(), lease.Token);
+                    .HeartbeatAsync(id, settings.InstanceName, now, lease.Token);
                 if (kept)
                     continue;
                 LogClaimLost(logger, id);

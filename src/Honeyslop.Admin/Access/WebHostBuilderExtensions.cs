@@ -1,3 +1,4 @@
+using Honeyslop.Admin.Access.Internals;
 using Honeyslop.Admin.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -19,7 +20,6 @@ public static class WebHostBuilderExtensions
             return builder.ConfigureServices(services =>
             {
                 services
-                    .AddSingleton<IPublicView, PublicView>()
                     .AddSingleton<IAuthorizationHandler, AccessHandler>()
                     .Configure<ForwardedHeadersOptions>(options =>
                     {
@@ -37,7 +37,7 @@ public static class WebHostBuilderExtensions
 
                 var authority = AppConfiguration.OidcAuthority!;
                 var clientSecret = AppConfiguration.OidcClientSecret ??
-                                   throw new ArgumentNullException("OIDC_CLIENT_SECRET", "Environment variable 'OIDC_CLIENT_SECRET' is not defined.");
+                                   throw new InvalidOperationException("Environment variable 'OIDC_CLIENT_SECRET' is not defined.");
                 services
                     .AddAuthentication(options =>
                     {

@@ -1,15 +1,16 @@
 using System.Net;
 using System.Text;
 using Honeyslop.Common;
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
-using Honeyslop.Trap.Caching;
-using Honeyslop.Trap.Generation;
-using Honeyslop.Trap.Handlers;
-using Honeyslop.Trap.Hits;
-using Honeyslop.Trap.Options;
+using Honeyslop.Trap.Caching.Internals;
+using Honeyslop.Trap.Generation.Internals;
+using Honeyslop.Trap.Handlers.Internals;
+using Honeyslop.Trap.Hits.Internals;
 using Honeyslop.Trap.Requests;
+using Honeyslop.Trap.Requests.Internals;
 using Honeyslop.Trap.Responses;
 using Honeyslop.Trap.Settings;
 using Microsoft.AspNetCore.Http;
@@ -90,6 +91,7 @@ public sealed class TrapHandlerTests
 
         await handling;
         Assert.IsTrue(sut.Log.TryRead(out var answered));
+        Assert.IsNotNull(answered);
         Assert.IsTrue(answered.IsUpdate);
         Assert.AreSame(waiting.Record, answered.Record);
         Assert.AreEqual(RequestOutcome.Generated, answered.Record.Outcome);
@@ -388,10 +390,13 @@ public sealed class TrapHandlerTests
                 options,
                 TimeProvider.System,
                 NullLogger<EntryWatcher>.Instance);
+            var serverTime = new Mock<IServerTimeRepository>();
+            serverTime.Setup(x => x.GetNowAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => DateTimeOffset.UtcNow);
             Handler = new TrapHandler(
                 new RequestClassifier(options),
                 Cache,
                 Repository.Object,
+                serverTime.Object,
                 new GenerationSignal(options),
                 Watcher,
                 Hits,
@@ -426,6 +431,7 @@ public sealed class TrapHandlerTests
         public RequestRecord LoggedRecord()
         {
             Assert.IsTrue(Log.TryRead(out var item));
+            Assert.IsNotNull(item);
             return item.Record;
         }
 

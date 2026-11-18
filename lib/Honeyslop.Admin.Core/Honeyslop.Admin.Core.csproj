@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Honeyslop.Admin.Core.Tests"/>
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.Extensions.DependencyInjection"/>
+        <Using Include="Microsoft.Extensions.Hosting"/>
+        <Using Include="Microsoft.Extensions.Logging"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MaxMind.Db"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Honeyslop.Data\Honeyslop.Data.csproj"/>
+        <ProjectReference Include="..\Honeyslop.Reports\Honeyslop.Reports.csproj"/>
+        <ProjectReference Include="..\Honeyslop.Llm\Honeyslop.Llm.csproj"/>
+    </ItemGroup>
+
+</Project>

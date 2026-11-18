@@ -30,9 +30,9 @@
     case EntryState.Expired:
         <p class="notice">
             Expired @entry.UpdatedAt.Display UTC. It is no longer served and stays here while recorded requests refer to it.
-            @if (Model.Current is { } current)
+            @if (Model.Details.CurrentId is { } currentId)
             {
-                <a asp-page="/Entry" asp-route-id="@current.Id">The current entry for this path →</a>
+                <a asp-page="/Entry" asp-route-id="@currentId">The current entry for this path →</a>
             }
         </p>
         break;
@@ -61,9 +61,9 @@
     <dt>Created</dt>
     <dd>@entry.CreatedAt.Display</dd>
     <dt>Generated</dt>
-    <dd>@entry.GeneratedAt.Display</dd>
+    <dd>@entry.GeneratedAt.DisplayOrDash()</dd>
     <dt>Last hit</dt>
-    <dd>@entry.LastHitAt.Display</dd>
+    <dd>@entry.LastHitAt.DisplayOrDash()</dd>
     <dt>Generation</dt>
     <dd>@(entry.GenerationMs is { } ms ? $"{ms / 1000d:0.0} s" : "—"), @(entry.CompletionTokens?.ToString() ?? "—") tokens, @(entry.Model ?? "—")</dd>
     <dt>Generator</dt>
@@ -71,12 +71,12 @@
     <dt>Attempts</dt>
     <dd>@entry.Attempts</dd>
     <dt>Claimed by</dt>
-    <dd class="mono">@(entry.ClaimedBy ?? "—") at @entry.ClaimedAt.Display</dd>
+    <dd class="mono">@(entry.ClaimedBy ?? "—") at @entry.ClaimedAt.DisplayOrDash()</dd>
     <dt>First client</dt>
     <dd class="mono">
         @if (entry.ClientIp is { } clientIp)
         {
-            <partial name="_ClientIp" model="clientIp"/>
+            <partial name="_ClientIp" model="new ClientIpLink(clientIp, Model.Details.Country)"/>
         }
         else
         {
@@ -124,7 +124,7 @@ Host: @entry.Host
     <h2>Response body</h2>
     <pre class="code body">@entry.ResponseBody</pre>
 
-    @if (Model.CanPreview)
+    @if (entry.CanPreview)
     {
         <h2>Preview</h2>
         <iframe class="preview" sandbox="" title="Rendered response body" src="@Url.Page("/Entry", "Preview", new { id = entry.Id })"></iframe>

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Reports.Internals;
 using Moq;
 
 namespace Honeyslop.Reports.Tests;
@@ -61,7 +62,7 @@ public sealed class RequestArchiveTests
     {
         var repository = new Mock<IRequestRepository>();
         repository
-            .Setup(x => x.CountAsync(It.IsAny<RequestFilter>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(requests.Length);
         repository
             .Setup(x => x.GetLogStartAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))

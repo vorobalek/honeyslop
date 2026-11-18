@@ -49,15 +49,15 @@
                 <td class="time"><a asp-page="/Report" asp-route-id="@report.Id">@report.CreatedAt.Display</a></td>
                 @if (Model.ShowClient)
                 {
-                    <td class="mono"><partial name="_ClientIp" model="report.ClientIp"/></td>
+                    <td class="mono"><partial name="_ClientIp" model="ClientIpLink.From(report.ClientIp, Model.Countries)"/></td>
                 }
                 @if (Model.ShowRequester)
                 {
                     <td>@report.RequestedBy</td>
                 }
                 <td class="mono">@string.Join(", ", report.Recipients)</td>
-                <td><span class="@report.CssClass">@report.Label</span></td>
-                <td class="time">@report.SentAt.Display</td>
+                <td><span class="@report.State.CssClass">@report.State.Label</span></td>
+                <td class="time">@report.SentAt.DisplayOrDash()</td>
                 <td class="number">@(report.AttachedRequests?.ToString() ?? "—")</td>
                 <td class="number">@report.Attempts</td>
                 <td class="error">@report.Error</td>

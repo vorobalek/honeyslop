@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text;
 using Honeyslop.Llm;
+using Honeyslop.Llm.Contracts;
+using Honeyslop.Llm.Exceptions;
+using Honeyslop.Llm.Internals;
 using Microsoft.Extensions.Options;
 using Moq;
 

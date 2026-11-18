@@ -1,15 +1,15 @@
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Enums;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Data.Contracts;
+using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class IndexModel(
-    IEntryRepository entryRepository,
-    TimeProvider timeProvider) : SortedListModel<EntryColumn>
+public sealed class IndexModel(IEntriesService entriesService) : SortedListModel<EntryColumn>
 {
-    public const int PageSize = 50;
-
     [BindProperty(SupportsGet = true)]
     public string? Host { get; set; }
 
@@ -25,12 +25,13 @@ public sealed class IndexModel(
     [BindProperty(SupportsGet = true)]
     public int? Expired { get; set; }
 
-    public EntrySummary[] Entries { get; private set; } = [];
-    public int TotalCount { get; private set; }
-    public EntryStatistics Statistics { get; private set; } = new(0, 0, 0, 0, 0, 0, 0);
-    public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
+    public EntriesPageDto View { get; private set; } = null!;
+    public Entry[] Entries => View.Entries.Items;
+    public int TotalCount => View.Entries.Total;
+    public EntryTotals Statistics => View.Totals;
+    public int PageCount => View.Entries.PageCount;
     public EntryFilter Filter => new(Host, Target, State);
-    public DateTimeOffset RenderedAt { get; private set; }
+    public DateTimeOffset RenderedAt => View.AsOf;
 
     public Task OnGetAsync(CancellationToken cancellationToken)
     {
@@ -45,9 +46,7 @@ public sealed class IndexModel(
 
     public async Task<IActionResult> OnPostExpireSelectedAsync(long[] ids, CancellationToken cancellationToken)
     {
-        var expired = ids.Length > 0
-            ? await entryRepository.ExpireAsync(ids, timeProvider.GetUtcNow(), cancellationToken)
-            : 0;
+        var expired = await entriesService.ExpireAsync(ids, cancellationToken);
         return RedirectToSelf(expired);
     }
 
@@ -55,13 +54,13 @@ public sealed class IndexModel(
     {
         if (Filter.IsEmpty)
             return BadRequest();
-        var expired = await entryRepository.ExpireAsync(Filter, timeProvider.GetUtcNow(), cancellationToken);
+        var expired = await entriesService.ExpireMatchingAsync(Filter, cancellationToken);
         return RedirectToSelf(expired, 0);
     }
 
     public async Task<IActionResult> OnPostExpireAllAsync(CancellationToken cancellationToken)
     {
-        var expired = await entryRepository.ExpireAsync(new EntryFilter(), timeProvider.GetUtcNow(), cancellationToken);
+        var expired = await entriesService.ExpireMatchingAsync(new EntryFilter(), cancellationToken);
         return RedirectToPage(new
         {
             Expired = expired
@@ -84,11 +83,8 @@ public sealed class IndexModel(
 
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        PageNumber = Math.Max(0, PageNumber);
-        RenderedAt = timeProvider.GetUtcNow();
-        Statistics = await entryRepository.GetStatisticsAsync(cancellationToken);
-        TotalCount = await entryRepository.CountAsync(Filter, cancellationToken);
-        Entries = await entryRepository.GetPageAsync(Filter, Sorting, PageNumber, PageSize, cancellationToken);
+        View = await entriesService.GetPageAsync(new EntriesQuery(Filter, Sorting, PageNumber), cancellationToken);
+        PageNumber = View.Entries.Page;
     }
 
     private RedirectToPageResult RedirectToSelf(int expired, int? pageNumber = null)

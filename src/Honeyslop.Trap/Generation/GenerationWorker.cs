@@ -1,6 +1,10 @@
-using Honeyslop.Llm;
+using Honeyslop.Common.Serializers;
+using Honeyslop.Data.Contracts;
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Llm.Contracts;
+using Honeyslop.Llm.Exceptions;
 using Honeyslop.Trap.Llm;
 using Honeyslop.Trap.Monitoring;
 using Honeyslop.Trap.Options;
@@ -16,6 +20,7 @@ internal sealed partial class GenerationWorker(
     ISettingsProvider settingsProvider,
     IServiceScopeFactory serviceScopeFactory,
     ILlmDispatcher llmDispatcher,
+    IJsonSerializer<GenerationOutputDto> outputSerializer,
     IPromptBuilder promptBuilder,
     IResponseSanitizer responseSanitizer,
     IOptions<TrapOptions> options,
@@ -59,8 +64,8 @@ internal sealed partial class GenerationWorker(
         if (!settings.GenerationEnabled)
             return (null, settings);
 
-        var now = timeProvider.GetUtcNow();
         await using var asyncScope = serviceScopeFactory.CreateAsyncScope();
+        var now = await asyncScope.ServiceProvider.GetRequiredService<IServerTimeRepository>().GetNowAsync(cancellationToken);
         var entryId = await asyncScope
             .ServiceProvider
             .GetRequiredService<IEntryRepository>()
@@ -79,6 +84,7 @@ internal sealed partial class GenerationWorker(
     {
         await using var asyncScope = serviceScopeFactory.CreateAsyncScope();
         var entryRepository = asyncScope.ServiceProvider.GetRequiredService<IEntryRepository>();
+        var serverTime = asyncScope.ServiceProvider.GetRequiredService<IServerTimeRepository>();
 
         var entry = await entryRepository.GetByIdOrDefaultAsync(entryId, cancellationToken);
         if (entry is not { Status: EntryStatus.Pending })
@@ -86,10 +92,11 @@ internal sealed partial class GenerationWorker(
 
         var instance = options.Value.InstanceName;
         var startedAt = timeProvider.GetTimestamp();
-        using var heartbeat = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var beating = BeatAsync(entryId, settings.HeartbeatInterval, heartbeat.Token);
         var progress = new LatestProgress();
-        var streaming = StreamOutputAsync(entryId, progress, heartbeat.Token);
+        await using var background = BackgroundWork.Start(
+            cancellationToken,
+            token => BeatAsync(entryId, settings.HeartbeatInterval, token),
+            token => StreamOutputAsync(entryId, progress, token));
         try
         {
             var completion = await llmDispatcher.CompleteAsync(
@@ -103,20 +110,19 @@ internal sealed partial class GenerationWorker(
 
             var generated = responseSanitizer.Sanitize(LlmResponseParser.Parse(completion.Content), entry.Host);
             var elapsed = timeProvider.GetElapsedTime(startedAt);
-            var stored = await entryRepository.CompleteAsync(
-                entryId,
-                instance,
-                new EntryResponse(
-                    generated.Status,
-                    generated.Headers,
-                    generated.Body,
-                    completion.Model,
-                    completion.Endpoint,
-                    completion.PromptTokens,
-                    completion.CompletionTokens,
-                    (int)elapsed.TotalMilliseconds),
-                timeProvider.GetUtcNow(),
-                cancellationToken);
+            var completed = new Entry
+            {
+                Id = entryId,
+                ResponseStatus = generated.Status,
+                ResponseHeaders = [.. generated.Headers],
+                ResponseBody = generated.Body,
+                Model = completion.Model,
+                Generator = completion.Endpoint,
+                PromptTokens = completion.PromptTokens,
+                CompletionTokens = completion.CompletionTokens,
+                GenerationMs = (int)elapsed.TotalMilliseconds
+            };
+            var stored = await entryRepository.CompleteAsync(completed, instance, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
             if (!stored)
                 LogLostOwnership(logger, entryId);
 
@@ -137,12 +143,12 @@ internal sealed partial class GenerationWorker(
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await entryRepository.RequeueAsync(entryId, instance, "Trap instance stopped during the generation.", timeProvider.GetUtcNow(), shutdown.Token);
+            await entryRepository.RequeueAsync(entryId, instance, "Trap instance stopped during the generation.", await serverTime.GetNowAsync(shutdown.Token), shutdown.Token);
             throw;
         }
         catch (LlmUnavailableException exception)
         {
-            await entryRepository.RequeueAsync(entryId, instance, exception.Message, timeProvider.GetUtcNow(), cancellationToken);
+            await entryRepository.RequeueAsync(entryId, instance, exception.Message, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
             generationSignal.Notify();
             TrapMetrics.Generations.WithLabels("requeued").Inc();
             LogRequeued(logger, entryId, entry.Method, entry.Host, entry.Target, exception.Message);
@@ -154,7 +160,7 @@ internal sealed partial class GenerationWorker(
                 entryId,
                 instance,
                 exception.Message,
-                timeProvider.GetUtcNow(),
+                await serverTime.GetNowAsync(cancellationToken),
                 cancellationToken);
 
             TrapMetrics.Generations.WithLabels("failed").Inc();
@@ -168,11 +174,6 @@ internal sealed partial class GenerationWorker(
                 (int)timeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
                 exception.Message);
             return null;
-        }
-        finally
-        {
-            await heartbeat.CancelAsync();
-            await Task.WhenAll(beating, streaming);
         }
     }
 
@@ -191,7 +192,7 @@ internal sealed partial class GenerationWorker(
                 await asyncScope
                     .ServiceProvider
                     .GetRequiredService<IEntryRepository>()
-                    .NotifyOutputAsync(new GenerationOutput(entryId, current.Tokens, current.Content), cancellationToken);
+                    .NotifyOutputAsync(outputSerializer.Serialize(new GenerationOutputDto(entryId, current.Tokens, current.Content)), cancellationToken);
                 published = current;
             }
         }
@@ -212,10 +213,11 @@ internal sealed partial class GenerationWorker(
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 await using var asyncScope = serviceScopeFactory.CreateAsyncScope();
+                var now = await asyncScope.ServiceProvider.GetRequiredService<IServerTimeRepository>().GetNowAsync(cancellationToken);
                 if (!await asyncScope
                         .ServiceProvider
                         .GetRequiredService<IEntryRepository>()
-                        .HeartbeatAsync(entryId, options.Value.InstanceName, timeProvider.GetUtcNow(), cancellationToken))
+                        .HeartbeatAsync(entryId, options.Value.InstanceName, now, cancellationToken))
                     return;
             }
         }

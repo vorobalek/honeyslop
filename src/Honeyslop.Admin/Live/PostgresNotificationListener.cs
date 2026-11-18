@@ -1,5 +1,7 @@
 using System.Globalization;
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Services;
+using Honeyslop.Common.Serializers;
+using Honeyslop.Llm.Contracts;
 using Npgsql;
 
 namespace Honeyslop.Admin.Live;
@@ -7,6 +9,7 @@ namespace Honeyslop.Admin.Live;
 internal sealed partial class PostgresNotificationListener(
     string connectionString,
     ILiveUpdateHub hub,
+    IJsonSerializer<GenerationOutputDto> outputSerializer,
     IGenerationOutputStore outputStore,
     TimeProvider timeProvider,
     ILogger<PostgresNotificationListener> logger) : BackgroundService
@@ -51,7 +54,7 @@ internal sealed partial class PostgresNotificationListener(
             hub.Publish(LiveTopics.Reports);
         else if (channel == "honeyslop_outputs")
         {
-            if (GenerationOutput.FromPayload(payload) is not { } output)
+            if (outputSerializer.Deserialize(payload) is not { } output)
                 return;
             outputStore.Set(output);
             hub.Publish(LiveTopics.Outputs, output.EntryId);

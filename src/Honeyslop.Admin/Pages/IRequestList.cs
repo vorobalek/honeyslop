@@ -1,11 +1,14 @@
-using Honeyslop.Data.Repositories;
+using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Admin.Core.Enums;
+using Honeyslop.Data.Entities;
 
 namespace Honeyslop.Admin.Pages;
 
 public interface IRequestList
 {
     string ListPage { get; }
-    RequestSummary[] Requests { get; }
+    RequestRecord[] Requests { get; }
+    IReadOnlyDictionary<string, CountryDto> Countries { get; }
     int TotalCount { get; }
     int PageNumber { get; }
     int PageCount { get; }

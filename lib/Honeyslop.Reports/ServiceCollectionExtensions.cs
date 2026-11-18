@@ -1,3 +1,4 @@
+using Honeyslop.Reports.Internals;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Honeyslop.Reports;

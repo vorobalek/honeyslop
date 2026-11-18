@@ -1,4 +1,4 @@
-using Honeyslop.Llm;
+using Honeyslop.Llm.Contracts;
 namespace Honeyslop.Trap.Llm;
 
 public interface ILlmDispatcher

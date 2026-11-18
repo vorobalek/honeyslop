@@ -1,3 +1,4 @@
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 
@@ -21,8 +22,8 @@ public interface IEntryRepository
 
     Task<Entry[]> GetFinishedAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken);
     Task TouchRequestedAsync(long id, DateTimeOffset now, CancellationToken cancellationToken);
-    Task<EntryProgress[]> GetGeneratingAsync(int limit, CancellationToken cancellationToken);
-    Task<EntryProgress[]> GetQueuedAsync(int limit, CancellationToken cancellationToken);
+    Task<Entry[]> GetGeneratingAsync(int limit, CancellationToken cancellationToken);
+    Task<Entry[]> GetQueuedAsync(int limit, CancellationToken cancellationToken);
 
     Task<bool> HeartbeatAsync(
         long id,
@@ -36,12 +37,11 @@ public interface IEntryRepository
         string generator,
         CancellationToken cancellationToken);
 
-    Task NotifyOutputAsync(GenerationOutput output, CancellationToken cancellationToken);
+    Task NotifyOutputAsync(string payload, CancellationToken cancellationToken);
 
     Task<bool> CompleteAsync(
-        long id,
+        Entry completed,
         string claimedBy,
-        EntryResponse response,
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
@@ -65,19 +65,22 @@ public interface IEntryRepository
         DateTimeOffset lastHitAt,
         CancellationToken cancellationToken);
 
-    Task<EntrySummary[]> GetPageAsync(
-        EntryFilter filter,
-        Sorting<EntryColumn>? sort,
+    Task<Entry[]> GetPageAsync(
+        string? host,
+        string? target,
+        EntryState? state,
+        EntryOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
 
-    Task<int> CountAsync(EntryFilter filter, CancellationToken cancellationToken);
-    Task<EntryStatistics> GetStatisticsAsync(CancellationToken cancellationToken);
-    Task<QueueStatistics> GetQueueStatisticsAsync(CancellationToken cancellationToken);
-    Task<GeneratorStatistics[]> GetGeneratorStatisticsAsync(DateTimeOffset since, CancellationToken cancellationToken);
+    Task<int> CountAsync(string? host, string? target, EntryState? state, CancellationToken cancellationToken);
+    Task<EntryTotals> GetTotalsAsync(CancellationToken cancellationToken);
+    Task<DateTimeOffset?> GetOldestQueuedAtAsync(CancellationToken cancellationToken);
+    Task<GeneratorActivity[]> GetGeneratorActivityAsync(DateTimeOffset since, CancellationToken cancellationToken);
     Task<int> ExpireAsync(IReadOnlyCollection<long> ids, DateTimeOffset now, CancellationToken cancellationToken);
-    Task<int> ExpireAsync(EntryFilter filter, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<int> ExpireMatchingAsync(string? host, string? target, EntryState? state, DateTimeOffset now, CancellationToken cancellationToken);
     Task<int> ExpireUnusedSinceAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken);
     Task<int> ExpireGeneratedBeforeAsync(DateTimeOffset threshold, DateTimeOffset now, CancellationToken cancellationToken);
     Task<int> DeleteExpiredUnreferencedAsync(DateTimeOffset expiredBefore, CancellationToken cancellationToken);

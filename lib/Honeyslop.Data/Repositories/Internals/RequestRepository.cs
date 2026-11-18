@@ -1,5 +1,9 @@
+using System.Globalization;
 using System.Linq.Expressions;
+using Honeyslop.Common;
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 using Honeyslop.Data.Extensions;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,25 +11,17 @@ namespace Honeyslop.Data.Repositories.Internals;
 
 internal sealed class RequestRepository(ApplicationDbContext dbContext) : IRequestRepository
 {
-    private static readonly Expression<Func<ClientRow, ClientSummary>> ToSummary = x => new ClientSummary(
-        x.ClientIp,
-        x.Requests,
-        x.Hosts,
-        x.Targets,
-        x.FirstSeenAt,
-        x.LastSeenAt,
-        x.LastUserAgent);
 
     public async Task AddRangeAsync(IReadOnlyCollection<RequestRecord> records, CancellationToken cancellationToken)
     {
-        await dbContext.Requests.AddRangeAsync(records, cancellationToken);
+        await dbContext.Requests.AddRangeAsync(records.Select(Fit), cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         dbContext.ChangeTracker.Clear();
     }
 
     public async Task UpdateRangeAsync(IReadOnlyCollection<RequestRecord> records, CancellationToken cancellationToken)
     {
-        dbContext.Requests.UpdateRange(records);
+        dbContext.Requests.UpdateRange(records.Select(Fit));
         await dbContext.SaveChangesAsync(cancellationToken);
         dbContext.ChangeTracker.Clear();
     }
@@ -40,9 +36,18 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
                 cancellationToken);
     }
 
-    public Task<RequestSummary[]> GetPageAsync(
-        RequestFilter filter,
-        Sorting<RequestColumn>? sort,
+    public Task<RequestRecord[]> GetPageAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        RequestOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
@@ -50,69 +55,108 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
         var query = dbContext
             .Requests
             .AsNoTracking()
-            .FilterBy(filter);
-        query = sort switch
+            .FilterBy(clientIp, host, target, outcome, entryId, null, method, userAgent, since, until);
+        query = order switch
         {
-            null => query.OrderByDescending(x => x.Id),
-            { Column: RequestColumn.Client } s => query.SortBy(x => x.ClientIp, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Method } s => query.SortBy(x => x.Method, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Host } s => query.SortBy(x => x.Host, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Path } s => query.SortBy(x => x.Target, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Outcome } s => query.SortBy(x => x.Outcome, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Code } s => query.SortBy(x => x.ResponseStatus, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.Duration } s => query.SortBy(x => x.DurationMs, s.Direction).ThenByDescending(x => x.Id),
-            { Column: RequestColumn.UserAgent } s => query.SortBy(x => x.UserAgent ?? string.Empty, s.Direction).ThenByDescending(x => x.Id),
-            { Direction: var direction } => query.SortBy(x => x.Id, direction)
+            RequestOrder.ClientIp => query.SortBy(x => x.ClientIp, direction).ThenByDescending(x => x.Id),
+            RequestOrder.Method => query.SortBy(x => x.Method, direction).ThenByDescending(x => x.Id),
+            RequestOrder.Host => query.SortBy(x => x.Host, direction).ThenByDescending(x => x.Id),
+            RequestOrder.Target => query.SortBy(x => x.Target, direction).ThenByDescending(x => x.Id),
+            RequestOrder.Outcome => query.SortBy(x => x.Outcome, direction).ThenByDescending(x => x.Id),
+            RequestOrder.ResponseStatus => query.SortBy(x => x.ResponseStatus, direction).ThenByDescending(x => x.Id),
+            RequestOrder.DurationMs => query.SortBy(x => x.DurationMs, direction).ThenByDescending(x => x.Id),
+            RequestOrder.UserAgent => query.SortBy(x => x.UserAgent ?? string.Empty, direction).ThenByDescending(x => x.Id),
+            _ => query.SortBy(x => x.Id, direction)
         };
         return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
-            .Select(x => new RequestSummary(
-                x.Id,
-                x.ReceivedAt,
-                x.ClientIp,
-                x.Method,
-                x.Host,
-                x.Target,
-                x.UserAgent,
-                x.Outcome,
-                x.ResponseStatus,
-                x.EntryId,
-                x.DurationMs))
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(RequestFilter filter, CancellationToken cancellationToken)
+    public Task<int> CountAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        long? afterId,
+        CancellationToken cancellationToken)
     {
         return dbContext
             .Requests
-            .FilterBy(filter)
+            .FilterBy(clientIp, host, target, outcome, entryId, afterId, method, userAgent, since, until)
             .CountAsync(cancellationToken);
     }
 
-    public Task<ClientSummary[]> GetClientsAsync(
+    public Task<RequestBucket[]> GetBreakdownAsync(
+        string? clientIp,
+        string? host,
+        string? target,
+        RequestOutcome? outcome,
+        long? entryId,
+        string? method,
+        string? userAgent,
+        DateTimeOffset? since,
+        DateTimeOffset? until,
+        RequestDimension dimension,
+        int top,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext
+            .Requests
+            .AsNoTracking()
+            .FilterBy(clientIp, host, target, outcome, entryId, null, method, userAgent, since, until);
+        return dimension switch
+        {
+            RequestDimension.Client => ByCountAsync(query, x => x.ClientIp, x => x, top, cancellationToken),
+            RequestDimension.Host => ByCountAsync(query, x => x.Host, x => x, top, cancellationToken),
+            RequestDimension.Path => ByCountAsync(query, x => x.Target, x => x, top, cancellationToken),
+            RequestDimension.Method => ByCountAsync(query, x => x.Method, x => x, top, cancellationToken),
+            RequestDimension.UserAgent => ByCountAsync(query, x => x.UserAgent ?? string.Empty, x => x, top, cancellationToken),
+            RequestDimension.Outcome => ByCountAsync(query, x => x.Outcome, x => x.ToString().ToLowerInvariant(), top, cancellationToken),
+            RequestDimension.Status => ByCountAsync(query, x => x.ResponseStatus, x => x.ToString(CultureInfo.InvariantCulture), top, cancellationToken),
+            RequestDimension.Hour => ByTimeAsync(
+                query,
+                x => new { x.ReceivedAt.Year, x.ReceivedAt.Month, x.ReceivedAt.Day, x.ReceivedAt.Hour },
+                x => new DateTimeOffset(x.Year, x.Month, x.Day, x.Hour, 0, 0, TimeSpan.Zero),
+                top,
+                cancellationToken),
+            _ => ByTimeAsync(
+                query,
+                x => new { x.ReceivedAt.Year, x.ReceivedAt.Month, x.ReceivedAt.Day },
+                x => new DateTimeOffset(x.Year, x.Month, x.Day, 0, 0, 0, TimeSpan.Zero),
+                top,
+                cancellationToken)
+        };
+    }
+
+    public Task<ClientActivity[]> GetClientsAsync(
         DateTimeOffset since,
-        Sorting<ClientColumn>? sort,
+        ClientOrder order,
+        SortDirection direction,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
     {
         var query = Summarize(dbContext.Requests.Where(x => x.ReceivedAt >= since));
-        query = sort switch
+        query = order switch
         {
-            null => query.OrderByDescending(x => x.LastSeenAt),
-            { Column: ClientColumn.Client } s => query.SortBy(x => x.ClientIp, s.Direction),
-            { Column: ClientColumn.Requests } s => query.SortBy(x => x.Requests, s.Direction).ThenByDescending(x => x.LastSeenAt),
-            { Column: ClientColumn.Hosts } s => query.SortBy(x => x.Hosts, s.Direction).ThenByDescending(x => x.LastSeenAt),
-            { Column: ClientColumn.Paths } s => query.SortBy(x => x.Targets, s.Direction).ThenByDescending(x => x.LastSeenAt),
-            { Column: ClientColumn.FirstSeen } s => query.SortBy(x => x.FirstSeenAt, s.Direction),
-            { Column: ClientColumn.UserAgent } s => query.SortBy(x => x.LastUserAgent ?? string.Empty, s.Direction).ThenByDescending(x => x.LastSeenAt),
-            { Direction: var direction } => query.SortBy(x => x.LastSeenAt, direction)
+            ClientOrder.ClientIp => query.SortBy(x => x.ClientIp, direction),
+            ClientOrder.Requests => query.SortBy(x => x.Requests, direction).ThenByDescending(x => x.LastSeenAt),
+            ClientOrder.Hosts => query.SortBy(x => x.Hosts, direction).ThenByDescending(x => x.LastSeenAt),
+            ClientOrder.Targets => query.SortBy(x => x.Targets, direction).ThenByDescending(x => x.LastSeenAt),
+            ClientOrder.FirstSeenAt => query.SortBy(x => x.FirstSeenAt, direction),
+            ClientOrder.LastUserAgent => query.SortBy(x => x.LastUserAgent ?? string.Empty, direction).ThenByDescending(x => x.LastSeenAt),
+            _ => query.SortBy(x => x.LastSeenAt, direction)
         };
         return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
-            .Select(ToSummary)
             .ToArrayAsync(cancellationToken);
     }
 
@@ -126,10 +170,9 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .CountAsync(cancellationToken);
     }
 
-    public Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
+    public Task<ClientActivity?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
     {
         return Summarize(dbContext.Requests.Where(x => x.ClientIp == clientIp))
-            .Select(ToSummary)
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -163,12 +206,12 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .ExecuteDeleteAsync(cancellationToken);
     }
 
-    private static IQueryable<ClientRow> Summarize(IQueryable<RequestRecord> requests)
+    private static IQueryable<ClientActivity> Summarize(IQueryable<RequestRecord> requests)
     {
         return requests
             .AsNoTracking()
             .GroupBy(x => x.ClientIp)
-            .Select(x => new ClientRow
+            .Select(x => new ClientActivity
             {
                 ClientIp = x.Key,
                 Requests = x.Count(),
@@ -180,14 +223,66 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             });
     }
 
-    private sealed class ClientRow
+    private static async Task<RequestBucket[]> ByCountAsync<TKey>(
+        IQueryable<RequestRecord> query,
+        Expression<Func<RequestRecord, TKey>> key,
+        Func<TKey, string> format,
+        int top,
+        CancellationToken cancellationToken)
     {
-        public string ClientIp { get; init; } = null!;
-        public int Requests { get; init; }
-        public int Hosts { get; init; }
-        public int Targets { get; init; }
-        public DateTimeOffset FirstSeenAt { get; init; }
-        public DateTimeOffset LastSeenAt { get; init; }
-        public string? LastUserAgent { get; init; }
+        var groups = await query
+            .GroupBy(key)
+            .Select(x => new
+            {
+                x.Key,
+                Requests = x.Count(),
+                Clients = x.Select(y => y.ClientIp).Distinct().Count(),
+                FirstSeenAt = x.Min(y => y.ReceivedAt),
+                LastSeenAt = x.Max(y => y.ReceivedAt)
+            })
+            .OrderByDescending(x => x.Requests)
+            .ThenByDescending(x => x.LastSeenAt)
+            .Take(top)
+            .ToArrayAsync(cancellationToken);
+        return [.. groups.Select(x => new RequestBucket { Key = format(x.Key), Requests = x.Requests, Clients = x.Clients, FirstSeenAt = x.FirstSeenAt, LastSeenAt = x.LastSeenAt })];
+    }
+
+    private static async Task<RequestBucket[]> ByTimeAsync<TKey>(
+        IQueryable<RequestRecord> query,
+        Expression<Func<RequestRecord, TKey>> key,
+        Func<TKey, DateTimeOffset> start,
+        int top,
+        CancellationToken cancellationToken)
+    {
+        var groups = await query
+            .GroupBy(key)
+            .Select(x => new
+            {
+                x.Key,
+                Requests = x.Count(),
+                Clients = x.Select(y => y.ClientIp).Distinct().Count(),
+                FirstSeenAt = x.Min(y => y.ReceivedAt),
+                LastSeenAt = x.Max(y => y.ReceivedAt)
+            })
+            .OrderByDescending(x => x.LastSeenAt)
+            .Take(top)
+            .ToArrayAsync(cancellationToken);
+        return [.. groups
+            .OrderBy(x => x.FirstSeenAt)
+            .Select(x => new RequestBucket
+            {
+                Key = start(x.Key).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                Requests = x.Requests,
+                Clients = x.Clients,
+                FirstSeenAt = x.FirstSeenAt,
+                LastSeenAt = x.LastSeenAt
+            })];
+    }
+
+    private static RequestRecord Fit(RequestRecord record)
+    {
+        record.Headers = record.Headers?.Truncate(RequestRecord.HeadersMaxLength);
+        record.Body = record.Body?.Truncate(RequestRecord.BodyMaxLength);
+        return record;
     }
 }

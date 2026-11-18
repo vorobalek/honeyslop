@@ -35,3 +35,6 @@ var/
 **/*.DotSettings.user
 **/.DS_Store
 *.log
+
+# Visual regression screenshots and their tooling
+tests/visual/

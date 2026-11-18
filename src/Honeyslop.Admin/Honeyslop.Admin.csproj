@@ -5,14 +5,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="MaxMind.Db"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect"/>
+        <PackageReference Include="ModelContextProtocol.AspNetCore"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\lib\Honeyslop.Data\Honeyslop.Data.csproj"/>
-        <ProjectReference Include="..\..\lib\Honeyslop.Reports\Honeyslop.Reports.csproj"/>
-        <ProjectReference Include="..\..\lib\Honeyslop.Llm\Honeyslop.Llm.csproj"/>
+        <ProjectReference Include="..\..\lib\Honeyslop.Admin.Core\Honeyslop.Admin.Core.csproj"/>
     </ItemGroup>
 
 </Project>
