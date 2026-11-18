@@ -19,6 +19,7 @@
         <input type="hidden" name="Target" value="@Model.Target"/>
         <input type="hidden" name="State" value="@Model.State"/>
         <input type="hidden" name="Sort" value="@Model.Sort"/>
+        <input type="hidden" name="Dir" value="@Model.Dir"/>
         <input type="hidden" name="p" value="@Model.PageNumber"/>
         <button type="submit" class="danger" data-requires-selection disabled="@(signIn is not null)" title="@signIn">Expire selected</button>
     </form>
@@ -29,6 +30,7 @@
             <input type="hidden" name="Target" value="@Model.Target"/>
             <input type="hidden" name="State" value="@Model.State"/>
             <input type="hidden" name="Sort" value="@Model.Sort"/>
+            <input type="hidden" name="Dir" value="@Model.Dir"/>
             <button type="submit" class="danger" disabled="@(signIn is not null)" title="@signIn">Expire @Model.TotalCount matching</button>
         </form>
     }
@@ -43,15 +45,15 @@
     <thead>
     <tr>
         <th class="check"><input type="checkbox" data-select-all aria-label="Select all" disabled="@(signIn is not null)"/></th>
-        <th>Status</th>
-        <th>Method</th>
-        <th>Host</th>
-        <th>Path</th>
-        <th class="number">Code</th>
-        <th class="number">Size</th>
-        <th class="number">Hits</th>
-        <th>Created</th>
-        <th>Last hit</th>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Status, "Status")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Method, "Method")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Host, "Host")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Path, "Path")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Code, "Code", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Size, "Size", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Hits, "Hits", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.Created, "Created")'/>
+        <partial name="_SortHeader" model='Model.Header(EntryColumn.LastHit, "Last hit")'/>
     </tr>
     </thead>
     <tbody>
@@ -85,11 +87,11 @@
 <nav class="pager">
     @if (Model.PageNumber > 0)
     {
-        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
+        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">@Model.PreviousLabel</a>
     }
     <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
     @if (Model.PageNumber + 1 < Model.PageCount)
     {
-        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
+        <a asp-page="/Index" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">@Model.NextLabel</a>
     }
 </nav>

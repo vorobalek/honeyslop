@@ -22,14 +22,6 @@
             }
         </select>
     </label>
-    <label>
-        Sort
-        <select name="Sort">
-            <option value="@EntrySort.Newest" selected="@(Model.Sort == EntrySort.Newest)">newest</option>
-            <option value="@EntrySort.LastHit" selected="@(Model.Sort == EntrySort.LastHit)">last hit</option>
-            <option value="@EntrySort.MostHits" selected="@(Model.Sort == EntrySort.MostHits)">most hits</option>
-        </select>
-    </label>
     <a class="button-link" asp-page="/Index">Reset</a>
 </form>
 

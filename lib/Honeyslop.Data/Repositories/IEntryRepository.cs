@@ -67,7 +67,7 @@ public interface IEntryRepository
 
     Task<EntrySummary[]> GetPageAsync(
         EntryFilter filter,
-        EntrySort sort,
+        Sorting<EntryColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);

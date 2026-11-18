@@ -10,6 +10,7 @@ public interface IRequestRepository
 
     Task<RequestSummary[]> GetPageAsync(
         RequestFilter filter,
+        Sorting<RequestColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
@@ -18,6 +19,7 @@ public interface IRequestRepository
 
     Task<ClientSummary[]> GetClientsAsync(
         DateTimeOffset since,
+        Sorting<ClientColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);

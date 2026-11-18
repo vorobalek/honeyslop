@@ -1,11 +1,10 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Honeyslop.Admin.Pages;
 
-public sealed class ReportsModel(IAbuseReportRepository abuseReportRepository) : PageModel
+public sealed class ReportsModel(IAbuseReportRepository abuseReportRepository) : SortedListModel<ReportColumn>
 {
     public const int PageSize = 50;
 
@@ -31,6 +30,13 @@ public sealed class ReportsModel(IAbuseReportRepository abuseReportRepository) :
     {
         PageNumber = Math.Max(0, PageNumber);
         TotalCount = await abuseReportRepository.CountAsync(cancellationToken);
-        Reports = await abuseReportRepository.GetPageAsync(PageNumber, PageSize, cancellationToken);
+        Reports = await abuseReportRepository.GetPageAsync(Sorting, PageNumber, PageSize, cancellationToken);
+    }
+
+    public override string ListPage => "/Reports";
+
+    protected override Dictionary<string, string> FilterValues()
+    {
+        return [];
     }
 }

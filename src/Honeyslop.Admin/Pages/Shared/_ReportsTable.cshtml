@@ -1,24 +1,45 @@
 @model ReportsTable
 
 <div class="table-scroll">
-    <table class="entries">
+    <table class="entries" data-sortable="@(Model.List is null ? "reports" : null)">
         <thead>
         <tr>
-            <th>Requested</th>
-            @if (Model.ShowClient)
+            @if (Model.List is { } list)
             {
-                <th>Client</th>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Requested, "Requested")'/>
+                @if (Model.ShowClient)
+                {
+                    <partial name="_SortHeader" model='list.Header(ReportColumn.Client, "Client")'/>
+                }
+                @if (Model.ShowRequester)
+                {
+                    <partial name="_SortHeader" model='list.Header(ReportColumn.By, "By")'/>
+                }
+                <partial name="_SortHeader" model='list.Header(ReportColumn.To, "To")'/>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Status, "Status")'/>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Sent, "Sent")'/>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Requests, "Requests", "number")'/>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Attempts, "Attempts", "number")'/>
+                <partial name="_SortHeader" model='list.Header(ReportColumn.Error, "Error")'/>
             }
-            @if (Model.ShowRequester)
+            else
             {
-                <th>By</th>
+                <th>Requested</th>
+                @if (Model.ShowClient)
+                {
+                    <th>Client</th>
+                }
+                @if (Model.ShowRequester)
+                {
+                    <th>By</th>
+                }
+                <th>To</th>
+                <th>Status</th>
+                <th>Sent</th>
+                <th class="number">Requests</th>
+                <th class="number">Attempts</th>
+                <th>Error</th>
             }
-            <th>To</th>
-            <th>Status</th>
-            <th>Sent</th>
-            <th class="number">Requests</th>
-            <th class="number">Attempts</th>
-            <th>Error</th>
         </tr>
         </thead>
         <tbody>

@@ -14,7 +14,7 @@
 </div>
 
 <div class="table-scroll">
-<table class="entries">
+<table class="entries" data-sortable="generators">
     <thead>
     <tr>
         <th>Generator</th>
@@ -76,7 +76,7 @@
                     @:—
                 }
             </td>
-            <td class="number nowrap">
+            <td class="number nowrap" data-sort="@(status?.BusySlots ?? -1)">
                 @if (status is not null)
                 {
                     <span class="slots">
@@ -110,7 +110,7 @@
 
 <h2>Generating now</h2>
 <div class="table-scroll">
-<table class="entries">
+<table class="entries" data-sortable="generating">
     <thead>
     <tr>
         <th>Entry</th>
@@ -142,8 +142,8 @@
                 }
             </td>
             <td class="number">@(entry.Attempts + 1)</td>
-            <td class="number">@((Model.RenderedAt - (entry.ClaimedAt ?? Model.RenderedAt)).DisplayDuration)</td>
-            <td class="number">@(((entry.ClaimedAt ?? Model.RenderedAt) - entry.CreatedAt).DisplayDuration)</td>
+            <td class="number" data-sort="@((Model.RenderedAt - (entry.ClaimedAt ?? Model.RenderedAt)).TotalSeconds)">@((Model.RenderedAt - (entry.ClaimedAt ?? Model.RenderedAt)).DisplayDuration)</td>
+            <td class="number" data-sort="@(((entry.ClaimedAt ?? Model.RenderedAt) - entry.CreatedAt).TotalSeconds)">@(((entry.ClaimedAt ?? Model.RenderedAt) - entry.CreatedAt).DisplayDuration)</td>
         </tr>
     }
     @if (Model.Generating.Length == 0)
@@ -159,7 +159,7 @@
 <h2>Queue · @Model.Queue.Queued waiting@(Model.Queue.OldestQueuedAt is { } oldest ? $", the oldest for {(Model.RenderedAt - oldest).DisplayDuration}" : "")</h2>
 <p class="hint">Entries somebody asked for within the wait window go first, newest first; the rest are taken oldest first.</p>
 <div class="table-scroll">
-<table class="entries">
+<table class="entries" data-sortable="queued">
     <thead>
     <tr>
         <th>Entry</th>
@@ -178,8 +178,8 @@
             <td class="mono">@entry.Method</td>
             <td class="mono host">@entry.Host</td>
             <td class="mono target">@entry.Target</td>
-            <td class="number">@((Model.RenderedAt - entry.CreatedAt).DisplayDuration)</td>
-            <td class="number">@(entry.RequestedAt is { } requestedAt ? (Model.RenderedAt - requestedAt).DisplayDuration + " ago" : "—")</td>
+            <td class="number" data-sort="@((Model.RenderedAt - entry.CreatedAt).TotalSeconds)">@((Model.RenderedAt - entry.CreatedAt).DisplayDuration)</td>
+            <td class="number" data-sort="@(entry.RequestedAt is { } requested ? (Model.RenderedAt - requested).TotalSeconds.ToString(CultureInfo.InvariantCulture) : "")">@(entry.RequestedAt is { } requestedAt ? (Model.RenderedAt - requestedAt).DisplayDuration + " ago" : "—")</td>
         </tr>
     }
     @if (Model.Queued.Length == 0)

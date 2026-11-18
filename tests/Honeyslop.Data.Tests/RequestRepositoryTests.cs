@@ -26,14 +26,18 @@ public sealed class RequestRepositoryTests
 
         await using var readScope = PostgresDatabase.CreateScope();
         var repository = readScope.ServiceProvider.GetRequiredService<IRequestRepository>();
-        var page = await repository.GetPageAsync(new RequestFilter(clientIp), 0, 10, CancellationToken.None);
+        var page = await repository.GetPageAsync(new RequestFilter(clientIp), null, 0, 10, CancellationToken.None);
         var hits = await repository.CountAsync(new RequestFilter(clientIp, Outcome: RequestOutcome.Hit), CancellationToken.None);
         var afterFirst = await repository.CountAsync(new RequestFilter(clientIp, AfterId: page[^1].Id), CancellationToken.None);
-        var client = (await repository.GetClientsAsync(now.AddHours(-1), 0, 1000, CancellationToken.None))
+        var client = (await repository.GetClientsAsync(now.AddHours(-1), null, 0, 1000, CancellationToken.None))
             .Single(x => x.ClientIp == clientIp);
 
         CollectionAssert.AreEqual(new[] { "/.env", "/.git/config", "/.env" }, page.Select(x => x.Target).ToArray());
+        var byPath = await repository.GetPageAsync(new RequestFilter(clientIp), new Sorting<RequestColumn>(RequestColumn.Path, SortDirection.Asc), 0, 10, CancellationToken.None);
+        var byRequests = await repository.GetClientsAsync(now.AddHours(-1), new Sorting<ClientColumn>(ClientColumn.Requests, SortDirection.Desc), 0, 1000, CancellationToken.None);
         Assert.AreEqual(1, hits);
+        CollectionAssert.AreEqual(new[] { "/.env", "/.env", "/.git/config" }, byPath.Select(x => x.Target).ToArray());
+        Assert.IsTrue(byRequests.Zip(byRequests.Skip(1)).All(x => x.First.Requests >= x.Second.Requests));
         Assert.AreEqual(2, afterFirst);
         Assert.AreEqual(3, client.Requests);
         Assert.AreEqual(2, client.Hosts);
@@ -89,7 +93,7 @@ public sealed class RequestRepositoryTests
 
         await using var readScope = PostgresDatabase.CreateScope();
         var left = await readScope.ServiceProvider.GetRequiredService<IRequestRepository>()
-            .GetPageAsync(new RequestFilter(clientIp), 0, 10, CancellationToken.None);
+            .GetPageAsync(new RequestFilter(clientIp), null, 0, 10, CancellationToken.None);
         CollectionAssert.AreEqual(new[] { "new.example.test" }, left.Select(x => x.Host).ToArray());
     }
 

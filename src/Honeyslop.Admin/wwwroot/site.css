@@ -525,6 +525,35 @@ pre.code {
     white-space: nowrap;
 }
 
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+th.sortable a {
+    color: inherit;
+}
+
+th.sortable a:hover {
+    text-decoration: none;
+}
+
+th.sorted-asc::after,
+th.sorted-desc::after {
+    margin-left: 4px;
+    color: var(--accent);
+    font-size: 10px;
+}
+
+th.sorted-asc::after {
+    content: "▲";
+}
+
+th.sorted-desc::after {
+    content: "▼";
+}
+
 .flag {
     margin-right: .4em;
     font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;

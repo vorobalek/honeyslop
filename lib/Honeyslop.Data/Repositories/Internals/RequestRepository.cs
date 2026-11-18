@@ -42,15 +42,29 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
 
     public Task<RequestSummary[]> GetPageAsync(
         RequestFilter filter,
+        Sorting<RequestColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
     {
-        return dbContext
+        var query = dbContext
             .Requests
             .AsNoTracking()
-            .FilterBy(filter)
-            .OrderByDescending(x => x.Id)
+            .FilterBy(filter);
+        query = sort switch
+        {
+            null => query.OrderByDescending(x => x.Id),
+            { Column: RequestColumn.Client } s => query.SortBy(x => x.ClientIp, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Method } s => query.SortBy(x => x.Method, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Host } s => query.SortBy(x => x.Host, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Path } s => query.SortBy(x => x.Target, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Outcome } s => query.SortBy(x => x.Outcome, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Code } s => query.SortBy(x => x.ResponseStatus, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.Duration } s => query.SortBy(x => x.DurationMs, s.Direction).ThenByDescending(x => x.Id),
+            { Column: RequestColumn.UserAgent } s => query.SortBy(x => x.UserAgent ?? string.Empty, s.Direction).ThenByDescending(x => x.Id),
+            { Direction: var direction } => query.SortBy(x => x.Id, direction)
+        };
+        return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
             .Select(x => new RequestSummary(
@@ -78,12 +92,24 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
 
     public Task<ClientSummary[]> GetClientsAsync(
         DateTimeOffset since,
+        Sorting<ClientColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
     {
-        return Summarize(dbContext.Requests.Where(x => x.ReceivedAt >= since))
-            .OrderByDescending(x => x.LastSeenAt)
+        var query = Summarize(dbContext.Requests.Where(x => x.ReceivedAt >= since));
+        query = sort switch
+        {
+            null => query.OrderByDescending(x => x.LastSeenAt),
+            { Column: ClientColumn.Client } s => query.SortBy(x => x.ClientIp, s.Direction),
+            { Column: ClientColumn.Requests } s => query.SortBy(x => x.Requests, s.Direction).ThenByDescending(x => x.LastSeenAt),
+            { Column: ClientColumn.Hosts } s => query.SortBy(x => x.Hosts, s.Direction).ThenByDescending(x => x.LastSeenAt),
+            { Column: ClientColumn.Paths } s => query.SortBy(x => x.Targets, s.Direction).ThenByDescending(x => x.LastSeenAt),
+            { Column: ClientColumn.FirstSeen } s => query.SortBy(x => x.FirstSeenAt, s.Direction),
+            { Column: ClientColumn.UserAgent } s => query.SortBy(x => x.LastUserAgent ?? string.Empty, s.Direction).ThenByDescending(x => x.LastSeenAt),
+            { Direction: var direction } => query.SortBy(x => x.LastSeenAt, direction)
+        };
+        return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
             .Select(ToSummary)

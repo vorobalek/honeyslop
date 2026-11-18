@@ -8,15 +8,15 @@
 <table class="entries">
     <thead>
     <tr>
-        <th>Time</th>
-        <th>Client</th>
-        <th>Method</th>
-        <th>Host</th>
-        <th>Path</th>
-        <th>Outcome</th>
-        <th class="number">Code</th>
-        <th class="number">ms</th>
-        <th>User-Agent</th>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Time, "Time")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Client, "Client")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Method, "Method")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Host, "Host")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Path, "Path")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Outcome, "Outcome")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Code, "Code", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.Duration, "ms", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(RequestColumn.UserAgent, "User-Agent")'/>
     </tr>
     </thead>
     <tbody>
@@ -56,11 +56,11 @@
 <nav class="pager">
     @if (Model.PageNumber > 0)
     {
-        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">← Newer</a>
+        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">@Model.PreviousLabel</a>
     }
     <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
     @if (Model.PageNumber + 1 < Model.PageCount)
     {
-        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">Older →</a>
+        <a asp-page="@Model.ListPage" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">@Model.NextLabel</a>
     }
 </nav>

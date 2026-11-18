@@ -2,13 +2,12 @@ using System.Globalization;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Honeyslop.Admin.Pages;
 
 public sealed class RequestsModel(
     IRequestRepository requestRepository,
-    TimeProvider timeProvider) : PageModel, IRequestList
+    TimeProvider timeProvider) : SortedListModel<RequestColumn>, IRequestList
 {
     public const int PageSize = 100;
 
@@ -34,7 +33,7 @@ public sealed class RequestsModel(
     public int TotalCount { get; private set; }
     public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
     public DateTimeOffset RenderedAt { get; private set; }
-    public string ListPage => "/Requests";
+    public override string ListPage => "/Requests";
     public RequestFilter Filter => new(ClientIp, Host, Target, Outcome, EntryId);
 
     public RequestFilterForm FilterForm =>
@@ -51,7 +50,7 @@ public sealed class RequestsModel(
         return Partial("_RequestsPanel", this);
     }
 
-    public Dictionary<string, string> RouteValues(int pageNumber)
+    protected override Dictionary<string, string> FilterValues()
     {
         var values = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(ClientIp))
@@ -64,8 +63,6 @@ public sealed class RequestsModel(
             values[nameof(Outcome)] = outcome.ToString();
         if (EntryId is { } entryId)
             values[nameof(EntryId)] = entryId.ToString(CultureInfo.InvariantCulture);
-        if (pageNumber > 0)
-            values["p"] = pageNumber.ToString(CultureInfo.InvariantCulture);
         return values;
     }
 
@@ -74,6 +71,6 @@ public sealed class RequestsModel(
         PageNumber = Math.Max(0, PageNumber);
         RenderedAt = timeProvider.GetUtcNow();
         TotalCount = await requestRepository.CountAsync(Filter, cancellationToken);
-        Requests = await requestRepository.GetPageAsync(Filter, PageNumber, PageSize, cancellationToken);
+        Requests = await requestRepository.GetPageAsync(Filter, Sorting, PageNumber, PageSize, cancellationToken);
     }
 }

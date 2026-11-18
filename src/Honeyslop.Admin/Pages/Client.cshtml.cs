@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Honeyslop.Admin.Access;
@@ -24,7 +23,7 @@ public sealed partial class ClientModel(
     IUserSettingsRepository userSettingsRepository,
     IOptions<AbuseReportOptions> reportOptions,
     TimeProvider timeProvider,
-    ILogger<ClientModel> logger) : PageModel, IRequestList
+    ILogger<ClientModel> logger) : SortedListModel<RequestColumn>, IRequestList
 {
     public const int PageSize = 100;
 
@@ -58,7 +57,7 @@ public sealed partial class ClientModel(
     public int TotalCount { get; private set; }
     public int PageCount => Math.Max(1, (TotalCount + PageSize - 1) / PageSize);
     public DateTimeOffset RenderedAt { get; private set; }
-    public string ListPage => "/Client";
+    public override string ListPage => "/Client";
     public RequestFilter Filter => new(Ip, Host, Target, Outcome);
     public int NewSinceLastSent { get; private set; }
     public AbuseReportEntity? LastReport => Reports.FirstOrDefault();
@@ -171,7 +170,7 @@ public sealed partial class ClientModel(
         return RedirectToClient(queued ? ReportNotice.Queued : ReportNotice.AlreadyQueued);
     }
 
-    public Dictionary<string, string> RouteValues(int pageNumber)
+    protected override Dictionary<string, string> FilterValues()
     {
         var values = new Dictionary<string, string> { ["ip"] = Ip };
         if (!string.IsNullOrWhiteSpace(Host))
@@ -180,8 +179,6 @@ public sealed partial class ClientModel(
             values[nameof(Target)] = Target;
         if (Outcome is { } outcome)
             values[nameof(Outcome)] = outcome.ToString();
-        if (pageNumber > 0)
-            values["p"] = pageNumber.ToString(CultureInfo.InvariantCulture);
         return values;
     }
 
@@ -209,7 +206,7 @@ public sealed partial class ClientModel(
 
     private async Task<AbuseLetter> WriteLetterAsync(ClientSummary summary, CancellationToken cancellationToken)
     {
-        var latest = await requestRepository.GetPageAsync(new RequestFilter(Ip), 0, AbuseLetter.LatestRequests, cancellationToken);
+        var latest = await requestRepository.GetPageAsync(new RequestFilter(Ip), null, 0, AbuseLetter.LatestRequests, cancellationToken);
         return AbuseLetter.Create(summary, latest, Whois);
     }
 
@@ -239,7 +236,7 @@ public sealed partial class ClientModel(
         PageNumber = Math.Max(0, PageNumber);
         RenderedAt = timeProvider.GetUtcNow();
         TotalCount = await requestRepository.CountAsync(Filter, cancellationToken);
-        Requests = await requestRepository.GetPageAsync(Filter, PageNumber, PageSize, cancellationToken);
+        Requests = await requestRepository.GetPageAsync(Filter, Sorting, PageNumber, PageSize, cancellationToken);
     }
 
     [LoggerMessage(LogLevel.Warning, "WHOIS lookup of {clientIp} failed")]

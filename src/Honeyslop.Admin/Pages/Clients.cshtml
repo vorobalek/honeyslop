@@ -24,13 +24,13 @@
 <table class="entries">
     <thead>
     <tr>
-        <th>Client</th>
-        <th class="number">Requests</th>
-        <th class="number">Hosts</th>
-        <th class="number">Paths</th>
-        <th>First seen</th>
-        <th>Last seen</th>
-        <th>Last User-Agent</th>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.Client, "Client")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.Requests, "Requests", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.Hosts, "Hosts", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.Paths, "Paths", "number")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.FirstSeen, "First seen")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.LastSeen, "Last seen")'/>
+        <partial name="_SortHeader" model='Model.Header(ClientColumn.UserAgent, "Last User-Agent")'/>
     </tr>
     </thead>
     <tbody>
@@ -59,11 +59,11 @@
 <nav class="pager">
     @if (Model.PageNumber > 0)
     {
-        <a asp-page="/Clients" asp-route-Days="@Model.Days" asp-route-p="@(Model.PageNumber - 1)">← More recent</a>
+        <a asp-page="/Clients" asp-all-route-data="Model.RouteValues(Model.PageNumber - 1)">@(Model.IsSorted ? "← Previous" : "← More recent")</a>
     }
     <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
     @if (Model.PageNumber + 1 < Model.PageCount)
     {
-        <a asp-page="/Clients" asp-route-Days="@Model.Days" asp-route-p="@(Model.PageNumber + 1)">Older →</a>
+        <a asp-page="/Clients" asp-all-route-data="Model.RouteValues(Model.PageNumber + 1)">@Model.NextLabel</a>
     }
 </nav>

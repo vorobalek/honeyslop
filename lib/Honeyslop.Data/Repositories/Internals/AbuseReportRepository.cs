@@ -44,12 +44,25 @@ internal sealed class AbuseReportRepository(ApplicationDbContext dbContext) : IA
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<AbuseReport[]> GetPageAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+    public Task<AbuseReport[]> GetPageAsync(Sorting<ReportColumn>? sort, int pageNumber, int pageSize, CancellationToken cancellationToken)
     {
-        return dbContext
+        var query = dbContext
             .AbuseReports
-            .AsNoTracking()
-            .OrderByDescending(x => x.Id)
+            .AsNoTracking();
+        query = sort switch
+        {
+            null => query.OrderByDescending(x => x.Id),
+            { Column: ReportColumn.Client } s => query.SortBy(x => x.ClientIp, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.By } s => query.SortBy(x => x.RequestedBy, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.To } s => query.SortBy(x => x.Recipients[0], s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.Status } s => query.SortBy(x => x.Status, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.Sent } s => query.SortBy(x => x.SentAt ?? x.CreatedAt, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.Requests } s => query.SortBy(x => x.AttachedRequests ?? 0, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.Attempts } s => query.SortBy(x => x.Attempts, s.Direction).ThenByDescending(x => x.Id),
+            { Column: ReportColumn.Error } s => query.SortBy(x => x.Error ?? string.Empty, s.Direction).ThenByDescending(x => x.Id),
+            { Direction: var direction } => query.SortBy(x => x.Id, direction)
+        };
+        return query
             .Skip(pageNumber * pageSize)
             .Take(pageSize)
             .ToArrayAsync(cancellationToken);

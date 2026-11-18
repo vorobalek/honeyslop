@@ -16,6 +16,68 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    const tableSorts = new Map();
+    const unitNumber = /^-?[\d,]+(\.\d+)?(\s?[a-zA-Z/%]+)?$/;
+    const sortValue = cell => {
+        const raw = (cell?.dataset.sort ?? cell?.textContent ?? "").trim();
+        return raw === "—" ? "" : raw;
+    };
+    const applyTableSort = table => {
+        const head = table.tHead?.rows[0];
+        const body = table.tBodies[0];
+        if (!head || !body) {
+            return;
+        }
+        const state = tableSorts.get(table.dataset.sortable);
+        Array.from(head.cells).forEach((cell, index) => {
+            const sorted = state?.index === index;
+            cell.classList.add("sortable");
+            cell.classList.toggle("sorted-asc", sorted && state.dir === "asc");
+            cell.classList.toggle("sorted-desc", sorted && state.dir === "desc");
+            cell.setAttribute("aria-sort", sorted ? (state.dir === "asc" ? "ascending" : "descending") : "none");
+        });
+        const rows = Array.from(body.rows).filter(row => row.cells.length === head.cells.length);
+        rows.forEach((row, index) => {
+            if (row.dataset.order === undefined) {
+                row.dataset.order = String(index);
+            }
+        });
+        let ordered = [...rows].sort((a, b) => Number(a.dataset.order) - Number(b.dataset.order));
+        if (state) {
+            const values = new Map(rows.map(row => [row, sortValue(row.cells[state.index])]));
+            const numeric = [...values.values()].every(value => value === "" || unitNumber.test(value));
+            const key = value => numeric ? Number.parseFloat(value.replace(/,/g, "")) : value.toLowerCase();
+            ordered = rows.sort((a, b) => {
+                const x = values.get(a);
+                const y = values.get(b);
+                if (x === "" || y === "") {
+                    return x === y ? 0 : x === "" ? 1 : -1;
+                }
+                const result = numeric ? key(x) - key(y) : key(x).localeCompare(key(y));
+                return state.dir === "asc" ? result : -result;
+            });
+        }
+        ordered.forEach(row => body.appendChild(row));
+    };
+    document.addEventListener("click", event => {
+        const header = event.target.closest("table[data-sortable] thead th");
+        if (!header) {
+            return;
+        }
+        const table = header.closest("table");
+        const key = table.dataset.sortable;
+        const state = tableSorts.get(key);
+        if (!state || state.index !== header.cellIndex) {
+            tableSorts.set(key, { index: header.cellIndex, dir: "asc" });
+        } else if (state.dir === "asc") {
+            tableSorts.set(key, { index: header.cellIndex, dir: "desc" });
+        } else {
+            tableSorts.delete(key);
+        }
+        applyTableSort(table);
+    });
+    document.querySelectorAll("table[data-sortable]").forEach(applyTableSort);
+
     const dialog = document.querySelector("[data-confirm-dialog]");
     document.addEventListener("submit", event => {
         const form = event.target;
@@ -108,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             input.value = value;
                         }
                     });
+                    element.querySelectorAll("table[data-sortable]").forEach(applyTableSort);
                     const after = element.querySelector("pre");
                     if (after) {
                         after.scrollTop = follow ? after.scrollHeight : top;
@@ -164,7 +227,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const apply = () => {
             window.clearTimeout(timer);
             const url = new URL(window.location.href);
+            const current = new URLSearchParams(url.search);
             url.search = "";
+            ["Sort", "Dir"].forEach(name => {
+                if (current.get(name)) {
+                    url.searchParams.set(name, current.get(name));
+                }
+            });
             new FormData(form).forEach((value, key) => {
                 if (value !== "") {
                     url.searchParams.set(key, value);

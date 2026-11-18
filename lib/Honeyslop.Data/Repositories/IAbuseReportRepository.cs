@@ -7,7 +7,7 @@ public interface IAbuseReportRepository
     Task<bool> TryAddAsync(AbuseReport report, CancellationToken cancellationToken);
     Task<AbuseReport?> GetByIdOrDefaultAsync(long id, CancellationToken cancellationToken);
     Task<AbuseReport[]> GetByClientAsync(string clientIp, CancellationToken cancellationToken);
-    Task<AbuseReport[]> GetPageAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+    Task<AbuseReport[]> GetPageAsync(Sorting<ReportColumn>? sort, int pageNumber, int pageSize, CancellationToken cancellationToken);
     Task<int> CountAsync(CancellationToken cancellationToken);
 
     Task<AbuseReport?> TryClaimNextAsync(

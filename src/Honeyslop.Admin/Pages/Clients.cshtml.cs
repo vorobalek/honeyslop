@@ -1,12 +1,11 @@
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Honeyslop.Admin.Pages;
 
 public sealed class ClientsModel(
     IRequestRepository requestRepository,
-    TimeProvider timeProvider) : PageModel
+    TimeProvider timeProvider) : SortedListModel<ClientColumn>
 {
     public const int PageSize = 50;
 
@@ -27,6 +26,13 @@ public sealed class ClientsModel(
             ? timeProvider.GetUtcNow().AddDays(-Days)
             : DateTimeOffset.MinValue;
         TotalCount = await requestRepository.CountClientsAsync(since, cancellationToken);
-        Clients = await requestRepository.GetClientsAsync(since, PageNumber, PageSize, cancellationToken);
+        Clients = await requestRepository.GetClientsAsync(since, Sorting, PageNumber, PageSize, cancellationToken);
+    }
+
+    public override string ListPage => "/Clients";
+
+    protected override Dictionary<string, string> FilterValues()
+    {
+        return new Dictionary<string, string> { [nameof(Days)] = Days.ToString(System.Globalization.CultureInfo.InvariantCulture) };
     }
 }

@@ -11,4 +11,7 @@ public interface IRequestList
     int PageCount { get; }
     DateTimeOffset RenderedAt { get; }
     Dictionary<string, string> RouteValues(int pageNumber);
+    SortHeader Header(RequestColumn column, string label, string? cssClass = null);
+    string PreviousLabel { get; }
+    string NextLabel { get; }
 }

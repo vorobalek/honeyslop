@@ -310,10 +310,10 @@ public sealed class EntryRepositoryTests
         Assert.AreEqual(EntryStatus.Expired, (await GetAsync(old.Id)).Status);
         CollectionAssert.AreEqual(
             new[] { current.Id },
-            (await readScope.Repository().GetPageAsync(new EntryFilter(host), EntrySort.Newest, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
+            (await readScope.Repository().GetPageAsync(new EntryFilter(host), null, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
         CollectionAssert.AreEqual(
             new[] { old.Id },
-            (await readScope.Repository().GetPageAsync(new EntryFilter(host, State: EntryState.Expired), EntrySort.Newest, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
+            (await readScope.Repository().GetPageAsync(new EntryFilter(host, State: EntryState.Expired), null, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
     }
 
     [TestMethod]
@@ -414,7 +414,7 @@ public sealed class EntryRepositoryTests
         var entry = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/phpinfo.php"));
         await using var scope = PostgresDatabase.CreateScope();
 
-        var page = await scope.Repository().GetPageAsync(new EntryFilter(host), EntrySort.MostHits, 0, 10, CancellationToken.None);
+        var page = await scope.Repository().GetPageAsync(new EntryFilter(host), new Sorting<EntryColumn>(EntryColumn.Hits, SortDirection.Desc), 0, 10, CancellationToken.None);
         var statistics = await scope.Repository().GetStatisticsAsync(CancellationToken.None);
 
         Assert.AreEqual(1, page.Length);

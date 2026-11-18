@@ -1,14 +1,12 @@
-using System.Globalization;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 
 namespace Honeyslop.Admin.Pages;
 
 public sealed class IndexModel(
     IEntryRepository entryRepository,
-    TimeProvider timeProvider) : PageModel
+    TimeProvider timeProvider) : SortedListModel<EntryColumn>
 {
     public const int PageSize = 50;
 
@@ -20,9 +18,6 @@ public sealed class IndexModel(
 
     [BindProperty(SupportsGet = true)]
     public EntryState? State { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public EntrySort Sort { get; set; }
 
     [BindProperty(SupportsGet = true, Name = "p")]
     public int PageNumber { get; set; }
@@ -73,7 +68,9 @@ public sealed class IndexModel(
         });
     }
 
-    public Dictionary<string, string> RouteValues(int pageNumber)
+    public override string ListPage => "/Index";
+
+    protected override Dictionary<string, string> FilterValues()
     {
         var values = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(Host))
@@ -82,10 +79,6 @@ public sealed class IndexModel(
             values[nameof(Target)] = Target;
         if (State is { } state)
             values[nameof(State)] = state.ToString();
-        if (Sort != EntrySort.Newest)
-            values[nameof(Sort)] = Sort.ToString();
-        if (pageNumber > 0)
-            values["p"] = pageNumber.ToString(CultureInfo.InvariantCulture);
         return values;
     }
 
@@ -95,7 +88,7 @@ public sealed class IndexModel(
         RenderedAt = timeProvider.GetUtcNow();
         Statistics = await entryRepository.GetStatisticsAsync(cancellationToken);
         TotalCount = await entryRepository.CountAsync(Filter, cancellationToken);
-        Entries = await entryRepository.GetPageAsync(Filter, Sort, PageNumber, PageSize, cancellationToken);
+        Entries = await entryRepository.GetPageAsync(Filter, Sorting, PageNumber, PageSize, cancellationToken);
     }
 
     private RedirectToPageResult RedirectToSelf(int expired, int? pageNumber = null)

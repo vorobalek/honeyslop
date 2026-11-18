@@ -279,7 +279,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
 
     public Task<EntrySummary[]> GetPageAsync(
         EntryFilter filter,
-        EntrySort sort,
+        Sorting<EntryColumn>? sort,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken)
@@ -290,14 +290,16 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .FilterBy(filter);
         query = sort switch
         {
-            EntrySort.LastHit => query
-                .OrderByDescending(x => x.LastHitAt ?? x.CreatedAt)
-                .ThenByDescending(x => x.Id),
-            EntrySort.MostHits => query
-                .OrderByDescending(x => x.Hits)
-                .ThenByDescending(x => x.Id),
-            _ => query
-                .OrderByDescending(x => x.Id)
+            null => query.OrderByDescending(x => x.Id),
+            { Column: EntryColumn.Status } s => query.SortBy(x => x.Status, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Method } s => query.SortBy(x => x.Method, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Host } s => query.SortBy(x => x.Host, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Path } s => query.SortBy(x => x.Target, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Code } s => query.SortBy(x => x.ResponseStatus ?? 0, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Size } s => query.SortBy(x => x.ResponseBody == null ? 0 : x.ResponseBody.Length, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.Hits } s => query.SortBy(x => x.Hits, s.Direction).ThenByDescending(x => x.Id),
+            { Column: EntryColumn.LastHit } s => query.SortBy(x => x.LastHitAt ?? x.CreatedAt, s.Direction).ThenByDescending(x => x.Id),
+            { Direction: var direction } => query.SortBy(x => x.Id, direction)
         };
         return query
             .Skip(pageNumber * pageSize)
