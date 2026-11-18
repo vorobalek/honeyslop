@@ -5,7 +5,7 @@ using Honeyslop.Data.Repositories;
 namespace Honeyslop.Admin.Tests.Clients;
 
 [TestClass]
-public sealed class AbuseReportTests
+public sealed class AbuseLetterTests
 {
     private static readonly DateTimeOffset First = new(2026, 11, 17, 8, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Last = new(2026, 11, 18, 9, 30, 15, TimeSpan.Zero);
@@ -21,7 +21,7 @@ public sealed class AbuseReportTests
             new(1, First, client.ClientIp, "POST", "b.example.test", "/wp-login.php", null, RequestOutcome.Generated, 403, 2, 900)
         ];
 
-        var report = AbuseReport.Create(client, latest, whois);
+        var report = AbuseLetter.Create(client, latest, whois);
 
         Assert.AreEqual("HTTP scanning from 203.0.113.9", report.Subject);
         Assert.Contains("203.0.113.9 (203.0.113.0/24, AS64500 EXAMPLE-AS) sent 42 HTTP requests for 17 paths to 3 host names we operate", report.Body);
@@ -36,9 +36,10 @@ public sealed class AbuseReportTests
     {
         var client = new ClientSummary("203.0.113.9", 1, 1, 1, First, First, null);
 
-        var report = AbuseReport.Create(client, [], null);
+        var report = AbuseLetter.Create(client, [], null);
 
         Assert.Contains("203.0.113.9 sent 1 HTTP request for 1 path to 1 host name we operate", report.Body);
         Assert.Contains("The latest 0 requests (UTC)", report.Body);
+        Assert.DoesNotContain("Regards", report.Body);
     }
 }

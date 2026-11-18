@@ -29,7 +29,7 @@ internal sealed partial class TrapHandler(
     IGlobalCancellationTokenSource globalCancellationTokenSource,
     IOptions<TrapOptions> options,
     TimeProvider timeProvider,
-    ILogger<TrapHandler> logger)
+    ILogger<TrapHandler> logger) : ITrapHandler
 {
     private const int ClientClosedRequest = 499;
     private const int MaxHeaderValueLength = 512;

@@ -2,12 +2,16 @@ using Honeyslop.Common;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Extensions;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Honeyslop.Data.Repositories.Internals;
 
 internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRepository
 {
+    private const int ClaimCandidates = 16;
+
     public Task<Entry?> GetByKeyHashOrDefaultAsync(byte[] keyHash, CancellationToken cancellationToken)
     {
         return dbContext
@@ -59,28 +63,38 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         int maxAttempts,
         CancellationToken cancellationToken)
     {
-        const int pending = (int)EntryStatus.Pending;
-        const int failed = (int)EntryStatus.Failed;
-        var claimed = await dbContext
-            .Database
-            .SqlQuery<long>(
-                $"""
-                 update public.entry
-                 set status = {pending}, claimed_by = {claimedBy}, claimed_at = {now}, updated_at = {now}, generator = null
-                 where id = (
-                     select id
-                     from public.entry
-                     where (status = {pending} and (claimed_at is null or claimed_at < {staleBefore}))
-                        or (status = {failed} and attempts < {maxAttempts} and updated_at < {retryBefore})
-                     order by coalesce(requested_at, created_at) >= {waitingSince} desc,
-                              case when coalesce(requested_at, created_at) >= {waitingSince} then coalesce(requested_at, created_at) end desc,
-                              created_at
-                     limit 1
-                     for update skip locked)
-                 returning id as "Value"
-                 """)
-            .ToListAsync(cancellationToken);
-        return claimed.Count > 0 ? claimed[0] : null;
+        Expression<Func<Entry, bool>> claimable = x =>
+            (x.Status == EntryStatus.Pending && (x.ClaimedAt == null || x.ClaimedAt < staleBefore)) ||
+            (x.Status == EntryStatus.Failed && x.Attempts < maxAttempts && x.UpdatedAt < retryBefore);
+        var candidates = await dbContext
+            .Entries
+            .Where(claimable)
+            .OrderByDescending(x => (x.RequestedAt ?? x.CreatedAt) >= waitingSince)
+            .ThenByDescending(x => (x.RequestedAt ?? x.CreatedAt) >= waitingSince ? x.RequestedAt ?? x.CreatedAt : (DateTimeOffset?)null)
+            .ThenBy(x => x.CreatedAt)
+            .Select(x => x.Id)
+            .Take(ClaimCandidates)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var id in candidates)
+        {
+            var claimed = await dbContext
+                .Entries
+                .Where(x => x.Id == id)
+                .Where(claimable)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(x => x.Status, EntryStatus.Pending)
+                        .SetProperty(x => x.ClaimedBy, claimedBy)
+                        .SetProperty(x => x.ClaimedAt, now)
+                        .SetProperty(x => x.UpdatedAt, now)
+                        .SetProperty(x => x.Generator, (string?)null),
+                    cancellationToken);
+            if (claimed == 1)
+                return id;
+        }
+
+        return null;
     }
 
     public Task TouchRequestedAsync(long id, DateTimeOffset now, CancellationToken cancellationToken)
@@ -162,8 +176,9 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
     {
         return dbContext
             .Database
-            .ExecuteSqlAsync(
-                $"select pg_notify('honeyslop_outputs', {output.ToPayload()})",
+            .ExecuteSqlRawAsync(
+                "select pg_notify(@channel, @payload)",
+                [new NpgsqlParameter("channel", "honeyslop_outputs"), new NpgsqlParameter("payload", output.ToPayload())],
                 cancellationToken);
     }
 

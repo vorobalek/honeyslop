@@ -78,6 +78,9 @@ internal static class EntryQueryableExtensions
             if (filter.EntryId is { } entryId)
                 query = query.Where(x => x.EntryId == entryId);
 
+            if (filter.AfterId is { } afterId)
+                query = query.Where(x => x.Id > afterId);
+
             return query;
         }
     }

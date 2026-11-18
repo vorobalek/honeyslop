@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [migrator, trap, admin]
+        service: [migrator, trap, admin, reporter]
     env:
       IMAGE_REPOSITORY: honeyslop-${{ matrix.service }}
     steps:

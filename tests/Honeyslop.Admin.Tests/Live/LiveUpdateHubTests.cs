@@ -14,9 +14,9 @@ public sealed class LiveUpdateHubTests
         await hub.StartAsync(stop.Token);
         using var subscription = hub.Subscribe();
 
-        hub.Publish(LiveUpdateHub.Entries, 1);
-        hub.Publish(LiveUpdateHub.Entries, 2);
-        hub.Publish(LiveUpdateHub.Requests);
+        hub.Publish(LiveTopics.Entries, 1);
+        hub.Publish(LiveTopics.Entries, 2);
+        hub.Publish(LiveTopics.Requests);
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var message = JsonDocument.Parse(await subscription.Reader.ReadAsync(timeout.Token)).RootElement;
@@ -37,8 +37,8 @@ public sealed class LiveUpdateHubTests
         await hub.StartAsync(CancellationToken.None);
         using var subscription = hub.Subscribe();
 
-        hub.Publish(LiveUpdateHub.Outputs, 7);
-        hub.Publish(LiveUpdateHub.Entries, 1);
+        hub.Publish(LiveTopics.Outputs, 7);
+        hub.Publish(LiveTopics.Entries, 1);
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var message = JsonDocument.Parse(await subscription.Reader.ReadAsync(timeout.Token)).RootElement;
@@ -59,7 +59,7 @@ public sealed class LiveUpdateHubTests
         var subscription = hub.Subscribe();
         subscription.Dispose();
 
-        hub.Publish(LiveUpdateHub.Entries, 1);
+        hub.Publish(LiveTopics.Entries, 1);
         await Task.Delay(600);
 
         Assert.AreEqual(0, hub.Subscribers);

@@ -1,7 +1,10 @@
 @model ClientModel
 @{
     var whois = Model.Whois;
-    var report = Model.Report;
+    var letter = Model.Letter;
+    var recipients = whois?.AbuseContacts ?? [];
+    var last = Model.LastReport;
+    var lastSent = Model.LastSent;
 }
 
 @if (whois is null)
@@ -32,14 +35,13 @@ else
         <dd>@(whois.Owner ?? "—")@(whois.Country is null ? "" : $" · {whois.Country}")</dd>
         <dt>Abuse contact</dt>
         <dd>
-            @if (whois.AbuseContacts.Length == 0)
+            @if (recipients.Length == 0)
             {
                 @:none published
             }
-            @foreach (var email in whois.AbuseContacts)
+            else
             {
-                <a class="mono" href="mailto:@email?subject=@Uri.EscapeDataString(report?.Subject ?? $"HTTP scanning from {Model.Ip}")">@email</a>
-                @:&nbsp;
+                <span class="mono">@string.Join(", ", recipients)</span>
             }
         </dd>
         <dt>Source</dt>
@@ -52,21 +54,107 @@ else
 
     @if (whois.Records.Length > 0)
     {
-        <details>
+        <details id="registry-records">
             <summary>Registry records</summary>
             <pre class="code">@whois.Records</pre>
         </details>
     }
 }
 
-@if (report is not null)
+@if (User.CanOperate || Model.Reports.Length > 0)
 {
-    <details>
-        <summary>Abuse report</summary>
-        <div class="actions">
-            <button type="button" data-copy="abuse-report">Copy</button>
-            <span class="hint">Subject: @report.Subject</span>
-        </div>
-        <pre class="code" id="abuse-report">@report.Body</pre>
+    <h2>Abuse report</h2>
+}
+
+@if (last is { Status: AbuseReportStatus.Pending })
+{
+    <p class="notice">
+        @if (last.ClaimedBy is not null)
+        {
+            @:Sending to <span class="mono">@string.Join(", ", last.Recipients)</span> right now.
+        }
+        else if (last.RetryAt is { } retryAt)
+        {
+            @:The last attempt failed, the next one is at @retryAt.Display UTC: <span class="error">@last.Error</span>
+        }
+        else
+        {
+            @:Queued for <span class="mono">@string.Join(", ", last.Recipients)</span> at @last.CreatedAt.Display UTC@(User.CanOperate ? $" by {last.RequestedBy}" : "").
+        }
+    </p>
+}
+else if (last is { Status: AbuseReportStatus.Failed })
+{
+    <p class="error">The report to <span class="mono">@string.Join(", ", last.Recipients)</span> failed: @last.Error</p>
+}
+
+@if (lastSent is not null)
+{
+    <p class="notice">
+        Sent to <span class="mono">@string.Join(", ", lastSent.Recipients)</span> at @lastSent.SentAt.Display UTC@(User.CanOperate ? $" by {lastSent.RequestedBy}" : ""),
+        with @((lastSent.AttachedRequests ?? 0).Of("request")) attached.
+        <a asp-page="/Report" asp-route-id="@lastSent.Id">Read the letter</a>.
+        @if (Model.NewSinceLastSent > 0)
+        {
+            @:@Model.NewSinceLastSent.Of("new request") arrived since then.
+        }
+        else
+        {
+            @:Nothing new from this address since then.
+        }
+    </p>
+}
+
+@if (User.CanOperate && letter is not null)
+{
+    <div class="actions">
+        @if (recipients.Length == 0)
+        {
+            <span class="hint">The registry publishes no abuse contact for this network.</span>
+        }
+        else if (Model.ReportPending)
+        {
+            <span class="hint">A report about this address is already on its way.</span>
+        }
+        else if (Model.AlreadyReported)
+        {
+            <span class="hint">Nothing new to report until this address sends more. The letter and the archive below are there to send it by hand.</span>
+        }
+        else
+        {
+            <form class="send-report" method="post" asp-page="/Client" asp-route-ip="@Model.Ip" asp-page-handler="Report"
+                  data-confirm="@Model.SendConfirmation" data-confirm-detail="@Model.SendConfirmationDetail" data-confirm-button="Send report">
+                <label>
+                    Sender name
+                    <input type="text" id="sender-name" name="SenderName" value="@Model.SenderName" maxlength="@Honeyslop.Data.Entities.AbuseReport.SenderNameMaxLength" placeholder="the address only"/>
+                </label>
+                <button type="submit" class="danger-filled">@Model.SendLabel</button>
+            </form>
+        }
+    </div>
+}
+
+@if (Model.Reports.Length > 0)
+{
+    <partial name="_ReportsTable" model="new ReportsTable(Model.Reports, false, User.CanOperate)"/>
+}
+
+@if (User.CanOperate && letter is not null)
+{
+    <details id="abuse-letter">
+        <summary>Letter</summary>
+        <dl class="meta">
+            <dt>To</dt>
+            <dd class="mono">@(recipients.Length == 0 ? "—" : string.Join(", ", recipients))</dd>
+            <dt>Subject</dt>
+            <dd>@letter.Subject</dd>
+            <dt>Attachment</dt>
+            <dd>@Model.ArchiveDescription</dd>
+        </dl>
+        <pre class="code" id="abuse-report">@letter.Body</pre>
     </details>
+    <div class="actions">
+        <button type="button" data-copy="abuse-report">Copy letter</button>
+        <a class="button-link" asp-page="/Client" asp-route-ip="@Model.Ip" asp-page-handler="Archive" download>Download archive</a>
+    </div>
 }

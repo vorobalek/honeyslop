@@ -7,11 +7,11 @@
     <ItemGroup>
         <PackageReference Include="MaxMind.Db"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect"/>
-        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\lib\Honeyslop.Data\Honeyslop.Data.csproj"/>
+        <ProjectReference Include="..\..\lib\Honeyslop.Reports\Honeyslop.Reports.csproj"/>
         <ProjectReference Include="..\..\lib\Honeyslop.Llm\Honeyslop.Llm.csproj"/>
     </ItemGroup>
 

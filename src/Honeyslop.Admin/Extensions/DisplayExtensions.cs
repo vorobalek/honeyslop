@@ -75,6 +75,26 @@ public static class DisplayExtensions
         };
     }
 
+    extension(AbuseReport report)
+    {
+        public string CssClass => report.Status switch
+        {
+            AbuseReportStatus.Sent => "badge badge-ready",
+            AbuseReportStatus.Failed => "badge badge-failed",
+            _ when report.ClaimedBy is not null => "badge badge-generated",
+            _ => "badge badge-pending"
+        };
+
+        public string Label => report.Status switch
+        {
+            AbuseReportStatus.Sent => "sent",
+            AbuseReportStatus.Failed => "failed",
+            _ when report.ClaimedBy is not null => "sending",
+            _ when report.RetryAt is not null => "retrying",
+            _ => "queued"
+        };
+    }
+
     extension(TimeSpan duration)
     {
         public string DisplayDuration => duration.TotalSeconds switch

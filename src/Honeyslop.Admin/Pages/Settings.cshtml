@@ -14,9 +14,31 @@
     </p>
 }
 
+@if (Model.PersonalSaved)
+{
+    <p class="notice">Saved your personal settings.</p>
+}
+
 @if (!User.CanOperate)
 {
     <p class="notice">Read-only view. <a href="@Request.SignInUrl">Sign in</a> to change the settings.</p>
+}
+
+@if (User.UserId is not null)
+{
+    <form method="post" asp-page-handler="Personal">
+    <fieldset class="settings">
+        <h2>Personal <span class="hint">only for @User.DisplayName</span></h2>
+
+        <div class="setting">
+            <label for="PersonalSenderName">Sign abuse reports as</label>
+            <input asp-for="PersonalSenderName" type="text" maxlength="@Honeyslop.Data.Entities.AbuseReport.SenderNameMaxLength" placeholder="@(Model.DefaultSenderName ?? "the address only")"/>
+            <p class="hint">The sender name on the reports you send; it never goes into the letter itself. Empty uses @Model.DefaultSenderNameHint.</p>
+        </div>
+
+        <button type="submit">Save personal settings</button>
+    </fieldset>
+    </form>
 }
 
 <form method="post">
@@ -120,6 +142,15 @@
                 <text>Sign-in is not configured, so this has no effect: the admin relies on the proxy in front of it.</text>
             }
         </p>
+    </div>
+
+    <h2>Outbound requests</h2>
+
+    <div class="setting">
+        <label for="UserAgent">User-Agent</label>
+        <input asp-for="UserAgent" type="text" maxlength="@UserAgentHeader.MaxLength" placeholder="@Model.DefaultUserAgent"/>
+        <span asp-validation-for="UserAgent" class="error"></span>
+        <p class="hint">Sent with every WHOIS lookup at RIPEstat, so they know who asks and how to reach us. Empty uses "@Model.DefaultUserAgent" from the USER_AGENT variable.</p>
     </div>
 
     <button type="submit">Save</button>

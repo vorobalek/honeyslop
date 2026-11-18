@@ -37,14 +37,13 @@ await Host
                 .AddSingleton<IPromptBuilder, PromptBuilder>()
                 .AddSingleton<ILlmDispatcher, LlmDispatcher>()
                 .AddSingleton<IGenerationSignal, GenerationSignal>()
-                .AddSingleton<EntryWatcher>()
-                .AddSingleton<IEntryWatcher>(serviceProvider => serviceProvider.GetRequiredService<EntryWatcher>())
-                .AddHostedService(serviceProvider => serviceProvider.GetRequiredService<EntryWatcher>())
+                .AddSingleton<IEntryWatcher, EntryWatcher>()
+                .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<IEntryWatcher>())
                 .AddSingleton<IHitCounter, HitCounter>()
                 .AddSingleton<ISettingsProvider, SettingsProvider>()
                 .AddSingleton<IRequestLog, RequestLog>()
                 .AddHostedService<RequestLogWriter>()
-                .AddScoped<TrapHandler>()
+                .AddScoped<ITrapHandler, TrapHandler>()
                 .AddHostedService<GenerationWorker>()
                 .AddHostedService<HitFlushService>()
                 .AddHealthChecks();
@@ -100,7 +99,7 @@ await Host
                 context => context.Connection.LocalPort == AppConfiguration.TrapPort,
                 trap => trap.Run(context => context
                     .RequestServices
-                    .GetRequiredService<TrapHandler>()
+                    .GetRequiredService<ITrapHandler>()
                     .HandleAsync(context)))
             .UseRouting()
             .UseEndpoints(endpoints => endpoints.MapMetrics())

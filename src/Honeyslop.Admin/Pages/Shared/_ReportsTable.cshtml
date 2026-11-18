@@ -1,0 +1,53 @@
+@model ReportsTable
+
+<div class="table-scroll">
+    <table class="entries">
+        <thead>
+        <tr>
+            <th>Requested</th>
+            @if (Model.ShowClient)
+            {
+                <th>Client</th>
+            }
+            @if (Model.ShowRequester)
+            {
+                <th>By</th>
+            }
+            <th>To</th>
+            <th>Status</th>
+            <th>Sent</th>
+            <th class="number">Requests</th>
+            <th class="number">Attempts</th>
+            <th>Error</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var report in Model.Reports)
+        {
+            <tr>
+                <td class="time"><a asp-page="/Report" asp-route-id="@report.Id">@report.CreatedAt.Display</a></td>
+                @if (Model.ShowClient)
+                {
+                    <td class="mono"><partial name="_ClientIp" model="report.ClientIp"/></td>
+                }
+                @if (Model.ShowRequester)
+                {
+                    <td>@report.RequestedBy</td>
+                }
+                <td class="mono">@string.Join(", ", report.Recipients)</td>
+                <td><span class="@report.CssClass">@report.Label</span></td>
+                <td class="time">@report.SentAt.Display</td>
+                <td class="number">@(report.AttachedRequests?.ToString() ?? "—")</td>
+                <td class="number">@report.Attempts</td>
+                <td class="error">@report.Error</td>
+            </tr>
+        }
+        @if (Model.Reports.Length == 0)
+        {
+            <tr>
+                <td colspan="@(6 + (Model.ShowClient ? 1 : 0) + (Model.ShowRequester ? 1 : 0))" class="empty">No abuse reports yet.</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

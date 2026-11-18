@@ -1,0 +1,19 @@
+@model ReportsModel
+
+<div class="actions">
+    <span class="count">@Model.TotalCount abuse reports, newest first</span>
+</div>
+
+<partial name="_ReportsTable" model="new ReportsTable(Model.Reports, true, User.CanOperate)"/>
+
+<nav class="pager">
+    @if (Model.PageNumber > 0)
+    {
+        <a asp-page="/Reports" asp-route-p="@(Model.PageNumber - 1)">← Newer</a>
+    }
+    <span>Page @(Model.PageNumber + 1) of @Model.PageCount</span>
+    @if (Model.PageNumber + 1 < Model.PageCount)
+    {
+        <a asp-page="/Reports" asp-route-p="@(Model.PageNumber + 1)">Older →</a>
+    }
+</nav>

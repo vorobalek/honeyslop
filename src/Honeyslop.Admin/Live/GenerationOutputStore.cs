@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Honeyslop.Admin.Live;
 
-public sealed class GenerationOutputStore(IMemoryCache memoryCache)
+internal sealed class GenerationOutputStore(IMemoryCache memoryCache) : IGenerationOutputStore
 {
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(1);
 

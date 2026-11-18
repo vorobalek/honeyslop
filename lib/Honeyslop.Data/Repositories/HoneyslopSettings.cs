@@ -10,7 +10,8 @@ public sealed record HoneyslopSettings(
     TimeSpan ClaimTimeout,
     TimeSpan RetryFailedAfter,
     TimeSpan GenerationTimeLimit,
-    bool PublicView)
+    bool PublicView,
+    string? UserAgent = null)
 {
     public static readonly HoneyslopSettings Default = new(
         TimeSpan.Zero,

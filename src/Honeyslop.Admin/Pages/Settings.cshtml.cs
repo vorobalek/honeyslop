@@ -1,15 +1,20 @@
 using Honeyslop.Admin.Access;
+using Honeyslop.Admin.Clients;
 using Honeyslop.Admin.Services;
 using Honeyslop.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Options;
 
 namespace Honeyslop.Admin.Pages;
 
 public sealed class SettingsModel(
     ISettingsRepository settingsRepository,
+    IUserSettingsRepository userSettingsRepository,
     ICacheMaintenance cacheMaintenance,
     IPublicView publicView,
+    IOptions<AbuseReportOptions> reportOptions,
+    IOptions<UserAgentOptions> userAgentOptions,
     TimeProvider timeProvider) : PageModel
 {
     [BindProperty]
@@ -63,8 +68,21 @@ public sealed class SettingsModel(
     [BindProperty]
     public bool PublicView { get; set; }
 
+    [BindProperty]
+    public string? UserAgent { get; set; }
+
+    [BindProperty]
+    public string? PersonalSenderName { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public bool Saved { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public bool PersonalSaved { get; set; }
+
+    public string? DefaultSenderName => reportOptions.Value.DefaultSenderName;
+    public string DefaultUserAgent => userAgentOptions.Value.Default;
+    public string DefaultSenderNameHint => DefaultSenderName is null ? "the address alone" : $"\"{DefaultSenderName}\"";
 
     [BindProperty(SupportsGet = true)]
     public int Expired { get; set; }
@@ -91,6 +109,21 @@ public sealed class SettingsModel(
         (RequestRetentionValue, RequestRetentionUnit) = Split(settings.RequestRetention);
         (GenerationWaitValue, GenerationWaitUnit) = Split(settings.GenerationWait);
         PublicView = settings.PublicView;
+        UserAgent = settings.UserAgent;
+        if (User.UserId is { } userId)
+            PersonalSenderName = (await userSettingsRepository.GetAsync(userId, cancellationToken)).SenderName;
+    }
+
+    public async Task<IActionResult> OnPostPersonalAsync(CancellationToken cancellationToken)
+    {
+        if (User.UserId is not { } userId)
+            return Forbid();
+        await userSettingsRepository.SaveAsync(
+            userId,
+            new UserSettings(SenderName.Clean(PersonalSenderName)),
+            timeProvider.GetUtcNow(),
+            cancellationToken);
+        return RedirectToPage(new { PersonalSaved = true });
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
@@ -109,6 +142,9 @@ public sealed class SettingsModel(
             ModelState.AddModelError(nameof(GenerationWaitValue), "Must be zero or positive.");
         if (RequestRetentionValue < 0)
             ModelState.AddModelError(nameof(RequestRetentionValue), "Must be zero or positive.");
+        UserAgent = string.IsNullOrWhiteSpace(UserAgent) ? null : UserAgent.Trim();
+        if (UserAgent is not null && !UserAgentHeader.IsValid(UserAgent))
+            ModelState.AddModelError(nameof(UserAgent), "Must be a valid User-Agent header of at most 512 characters.");
         if (!ModelState.IsValid)
             return Page();
 
@@ -122,7 +158,8 @@ public sealed class SettingsModel(
             Join(ClaimTimeoutValue, ClaimTimeoutUnit),
             Join(RetryFailedValue, RetryFailedUnit),
             Join(TimeLimitValue, TimeLimitUnit),
-            PublicView);
+            PublicView,
+            UserAgent);
         await settingsRepository.SaveAsync(settings, timeProvider.GetUtcNow(), cancellationToken);
         publicView.Reset();
         var result = await cacheMaintenance.RunAsync(settings, cancellationToken);

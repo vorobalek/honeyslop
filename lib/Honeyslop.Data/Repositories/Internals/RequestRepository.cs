@@ -1,12 +1,21 @@
+using System.Linq.Expressions;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Honeyslop.Data.Repositories.Internals;
 
 internal sealed class RequestRepository(ApplicationDbContext dbContext) : IRequestRepository
 {
+    private static readonly Expression<Func<ClientRow, ClientSummary>> ToSummary = x => new ClientSummary(
+        x.ClientIp,
+        x.Requests,
+        x.Hosts,
+        x.Targets,
+        x.FirstSeenAt,
+        x.LastSeenAt,
+        x.LastUserAgent);
+
     public async Task AddRangeAsync(IReadOnlyCollection<RequestRecord> records, CancellationToken cancellationToken)
     {
         await dbContext.Requests.AddRangeAsync(records, cancellationToken);
@@ -73,27 +82,11 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var skip = pageNumber * pageSize;
-        return dbContext
-            .Database
-            .SqlQueryRaw<ClientSummary>(
-                """
-                select client_ip,
-                       count(*)::int as requests,
-                       count(distinct host)::int as hosts,
-                       count(distinct target)::int as targets,
-                       min(received_at) as first_seen_at,
-                       max(received_at) as last_seen_at,
-                       (array_agg(user_agent order by id desc))[1] as last_user_agent
-                from public.request
-                where received_at >= @since
-                group by client_ip
-                order by max(received_at) desc
-                offset @skip limit @take
-                """,
-                new NpgsqlParameter("since", since),
-                new NpgsqlParameter("skip", skip),
-                new NpgsqlParameter("take", pageSize))
+        return Summarize(dbContext.Requests.Where(x => x.ReceivedAt >= since))
+            .OrderByDescending(x => x.LastSeenAt)
+            .Skip(pageNumber * pageSize)
+            .Take(pageSize)
+            .Select(ToSummary)
             .ToArrayAsync(cancellationToken);
     }
 
@@ -107,26 +100,33 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .CountAsync(cancellationToken);
     }
 
-    public async Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
+    public Task<ClientSummary?> GetClientOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
     {
-        var clients = await dbContext
-            .Database
-            .SqlQueryRaw<ClientSummary>(
-                """
-                select client_ip,
-                       count(*)::int as requests,
-                       count(distinct host)::int as hosts,
-                       count(distinct target)::int as targets,
-                       min(received_at) as first_seen_at,
-                       max(received_at) as last_seen_at,
-                       (array_agg(user_agent order by id desc))[1] as last_user_agent
-                from public.request
-                where client_ip = @client_ip
-                group by client_ip
-                """,
-                new NpgsqlParameter("client_ip", clientIp))
+        return Summarize(dbContext.Requests.Where(x => x.ClientIp == clientIp))
+            .Select(ToSummary)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<long?> GetLogStartAsync(string clientIp, int latest, CancellationToken cancellationToken)
+    {
+        var requests = dbContext.Requests.Where(x => x.ClientIp == clientIp);
+        return await requests
+                   .OrderByDescending(x => x.Id)
+                   .Skip(latest - 1)
+                   .Select(x => (long?)x.Id)
+                   .FirstOrDefaultAsync(cancellationToken) ??
+               await requests.MinAsync(x => (long?)x.Id, cancellationToken);
+    }
+
+    public Task<RequestRecord[]> GetLogAsync(string clientIp, long fromId, int limit, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Requests
+            .AsNoTracking()
+            .Where(x => x.ClientIp == clientIp && x.Id >= fromId)
+            .OrderBy(x => x.Id)
+            .Take(limit)
             .ToArrayAsync(cancellationToken);
-        return clients.SingleOrDefault();
     }
 
     public Task<int> DeleteReceivedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
@@ -135,5 +135,33 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .Requests
             .Where(x => x.ReceivedAt < threshold)
             .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private static IQueryable<ClientRow> Summarize(IQueryable<RequestRecord> requests)
+    {
+        return requests
+            .AsNoTracking()
+            .GroupBy(x => x.ClientIp)
+            .Select(x => new ClientRow
+            {
+                ClientIp = x.Key,
+                Requests = x.Count(),
+                Hosts = x.Select(y => y.Host).Distinct().Count(),
+                Targets = x.Select(y => y.Target).Distinct().Count(),
+                FirstSeenAt = x.Min(y => y.ReceivedAt),
+                LastSeenAt = x.Max(y => y.ReceivedAt),
+                LastUserAgent = x.OrderByDescending(y => y.Id).Select(y => y.UserAgent).FirstOrDefault()
+            });
+    }
+
+    private sealed class ClientRow
+    {
+        public string ClientIp { get; init; } = null!;
+        public int Requests { get; init; }
+        public int Hosts { get; init; }
+        public int Targets { get; init; }
+        public DateTimeOffset FirstSeenAt { get; init; }
+        public DateTimeOffset LastSeenAt { get; init; }
+        public string? LastUserAgent { get; init; }
     }
 }

@@ -14,7 +14,7 @@ internal static class LiveEndpoint
             return;
         }
 
-        var hub = httpContext.RequestServices.GetRequiredService<LiveUpdateHub>();
+        var hub = httpContext.RequestServices.GetRequiredService<ILiveUpdateHub>();
         var lifetime = httpContext.RequestServices.GetRequiredService<IHostApplicationLifetime>();
         var publicView = httpContext.User.CanOperate ? null : httpContext.RequestServices.GetRequiredService<IPublicView>();
         using var socket = await httpContext.WebSockets.AcceptWebSocketAsync();
@@ -39,7 +39,7 @@ internal static class LiveEndpoint
 
     private static async Task SendAsync(
         WebSocket socket,
-        LiveUpdateHub.Subscription subscription,
+        LiveSubscription subscription,
         IPublicView? publicView,
         CancellationToken cancellationToken)
     {

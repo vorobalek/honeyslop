@@ -16,11 +16,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    const dialog = document.querySelector("[data-confirm-dialog]");
     document.addEventListener("submit", event => {
-        const message = event.target.dataset.confirm;
-        if (message && !window.confirm(message)) {
-            event.preventDefault();
+        const form = event.target;
+        const message = form.dataset.confirm;
+        if (!message || form.dataset.confirmed === "true") {
+            return;
         }
+        event.preventDefault();
+        const submitter = event.submitter;
+        const proceed = () => {
+            form.dataset.confirmed = "true";
+            form.requestSubmit(submitter);
+        };
+        if (!dialog || typeof dialog.showModal !== "function") {
+            if (window.confirm(message)) {
+                proceed();
+            }
+            return;
+        }
+        const sender = form.querySelector("input[name='SenderName']");
+        dialog.querySelector("[data-confirm-question]").textContent = message;
+        dialog.querySelector("[data-confirm-detail]").textContent = form.dataset.confirmDetail || "";
+        dialog.querySelector("[data-confirm-sender]").textContent = sender
+            ? `From: ${sender.value.trim() || "the address alone, without a name"}`
+            : "";
+        dialog.querySelector("[data-confirm-accept]").textContent = form.dataset.confirmButton || "Confirm";
+        dialog.returnValue = "";
+        dialog.addEventListener("close", () => {
+            if (dialog.returnValue === "confirm" && form.isConnected) {
+                proceed();
+            }
+            panels.filter(panel => panel.dirty).forEach(panel => panel.refresh());
+        }, { once: true });
+        dialog.showModal();
     });
 
     const panels = Array.from(document.querySelectorAll("[data-live-panel]")).map(element => {
@@ -37,7 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 panel.dirty = true;
                 return;
             }
-            if (!force && (document.hidden || element.querySelector("input[name='ids']:checked"))) {
+            const typing = element.contains(document.activeElement) && document.activeElement.matches("input, textarea, select");
+            const confirming = document.querySelector("dialog[open]") !== null;
+            if (!force && (document.hidden || typing || confirming || element.querySelector("input[name='ids']:checked"))) {
                 panel.dirty = true;
                 return;
             }
@@ -50,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
             panel.loading = true;
             panel.dirty = false;
             const url = new URL(window.location.href);
-            url.searchParams.set("handler", "Panel");
+            url.searchParams.set("handler", element.dataset.liveHandler || "Panel");
             url.searchParams.delete("Expired");
             try {
                 const response = await fetch(url, { credentials: "same-origin", redirect: "manual" });
@@ -63,7 +94,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     const before = element.querySelector("pre");
                     const follow = !before || before.scrollTop + before.clientHeight >= before.scrollHeight - 4;
                     const top = before ? before.scrollTop : 0;
+                    const open = Array.from(element.querySelectorAll("details[id][open]"), details => details.id);
+                    const values = Array.from(element.querySelectorAll("input[id]:not([type=hidden])"), input => [input.id, input.value]);
                     element.innerHTML = html;
+                    open.forEach(id => element.querySelector(`details[id="${CSS.escape(id)}"]`)?.setAttribute("open", ""));
+                    values.forEach(([id, value]) => {
+                        const input = element.querySelector(`input[id="${CSS.escape(id)}"]`);
+                        if (input) {
+                            input.value = value;
+                        }
+                    });
                     const after = element.querySelector("pre");
                     if (after) {
                         after.scrollTop = follow ? after.scrollHeight : top;
@@ -79,37 +119,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         };
+        element.addEventListener("focusout", () => {
+            if (panel.dirty) {
+                window.setTimeout(panel.refresh, 0);
+            }
+        });
+        element.addEventListener("click", event => {
+            if (event.target.closest("[data-reload]")) {
+                element.innerHTML = "<p class=\"hint\">Looking it up again…</p>";
+                panel.refresh(true);
+            }
+        });
+        if (element.dataset.liveLoad !== undefined) {
+            panel.refresh(true);
+        }
         const interval = Number(element.dataset.liveInterval || 0);
         if (interval > 0) {
             window.setInterval(panel.refresh, interval);
         }
         return panel;
-    });
-
-    document.querySelectorAll("[data-load-handler]").forEach(element => {
-        const failed = "<p class=\"error\">The lookup failed. <button type=\"button\" data-reload>Try again</button></p>";
-        const load = async () => {
-            const url = new URL(window.location.href);
-            url.search = "";
-            url.searchParams.set("handler", element.dataset.loadHandler);
-            try {
-                const response = await fetch(url, { credentials: "same-origin", redirect: "manual" });
-                if (response.type === "opaqueredirect") {
-                    window.location.reload();
-                    return;
-                }
-                element.innerHTML = response.ok ? await response.text() : failed;
-            } catch {
-                element.innerHTML = failed;
-            }
-        };
-        element.addEventListener("click", event => {
-            if (event.target.closest("[data-reload]")) {
-                element.innerHTML = "<p class=\"hint\">Looking it up again…</p>";
-                load();
-            }
-        });
-        load();
     });
 
     document.addEventListener("click", async event => {

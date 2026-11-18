@@ -8,9 +8,8 @@ using Honeyslop.Admin.Services;
 using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
+using Honeyslop.Reports;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Caching.Distributed;
-using StackExchange.Redis;
 
 await Host
     .CreateDefaultBuilder(args)
@@ -28,9 +27,9 @@ await Host
                 .AddScoped<ICacheMaintenance, CacheMaintenance>()
                 .AddHostedService<MaintenanceService>()
                 .AddMemoryCache()
-                .AddSingleton<GenerationOutputStore>()
-                .AddSingleton<LiveUpdateHub>()
-                .AddHostedService(serviceProvider => serviceProvider.GetRequiredService<LiveUpdateHub>())
+                .AddSingleton<IGenerationOutputStore, GenerationOutputStore>()
+                .AddSingleton<ILiveUpdateHub, LiveUpdateHub>()
+                .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<ILiveUpdateHub>())
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))
@@ -38,25 +37,19 @@ await Host
                     AppConfiguration.GeoIpDatabase,
                     serviceProvider.GetRequiredService<ILogger<CountryLookup>>()))
                 .AddScoped<IWhoisLookup, WhoisLookup>()
+                .AddScoped<IUserAgentProvider, UserAgentProvider>()
+                .AddRequestArchives()
                 .AddHealthChecks();
-            services.AddHttpClient<RipeStatClient>(client =>
-            {
-                client.BaseAddress = RipeStatClient.BaseAddress;
-                client.Timeout = TimeSpan.FromSeconds(20);
-            });
-            if (string.IsNullOrWhiteSpace(AppConfiguration.RedisConnectionString))
-                services.AddSingleton<IDistributedCache, NoDistributedCache>();
-            else
-                services.AddStackExchangeRedisCache(x =>
-                {
-                    var options = ConfigurationOptions.Parse(AppConfiguration.RedisConnectionString);
-                    options.AbortOnConnectFail = false;
-                    x.ConfigurationOptions = options;
-                    x.InstanceName = "honeyslop:";
-                });
+            services.AddHttpClient<IRipeStatClient, RipeStatClient>(RipeStatClient.Configure);
             services
                 .AddDataProtection()
                 .UseEphemeralDataProtectionProvider();
+            services
+                .AddOptions<UserAgentOptions>()
+                .Configure(x => x.Default = AppConfiguration.UserAgent);
+            services
+                .AddOptions<AbuseReportOptions>()
+                .Configure(x => x.DefaultSenderName = SenderName.Clean(AppConfiguration.AbuseReportSenderName));
             services
                 .AddOptions<MaintenanceOptions>()
                 .Configure(x => x.Interval = TimeSpan.FromSeconds(AppConfiguration.MaintenanceIntervalSeconds));

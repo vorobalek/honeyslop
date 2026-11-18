@@ -31,5 +31,11 @@ public sealed partial class ApplicationDbContext(DbContextOptions<ApplicationDbC
             .HasIndex(x => x.KeyHash)
             .IsUnique()
             .HasFilter($"status <> {(int)EntryStatus.Expired}");
+        modelBuilder
+            .Entity<AbuseReport>()
+            .HasIndex(x => x.ClientIp, "ix_abuse_report_client_ip_pending")
+            .HasDatabaseName("ix_abuse_report_client_ip_pending")
+            .IsUnique()
+            .HasFilter($"status = {(int)AbuseReportStatus.Pending}");
     }
 }

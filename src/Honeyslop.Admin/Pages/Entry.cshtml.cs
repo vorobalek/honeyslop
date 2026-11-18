@@ -9,7 +9,7 @@ namespace Honeyslop.Admin.Pages;
 
 public sealed class EntryModel(
     IEntryRepository entryRepository,
-    GenerationOutputStore outputStore,
+    IGenerationOutputStore outputStore,
     TimeProvider timeProvider) : PageModel
 {
     private const string PreviewContentSecurityPolicy =

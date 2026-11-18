@@ -7,4 +7,5 @@ public sealed record RequestFilter(
     string? Host = null,
     string? Target = null,
     RequestOutcome? Outcome = null,
-    long? EntryId = null);
+    long? EntryId = null,
+    long? AfterId = null);

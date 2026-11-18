@@ -4,12 +4,8 @@ using System.Threading.Channels;
 
 namespace Honeyslop.Admin.Live;
 
-public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
+internal sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService, ILiveUpdateHub
 {
-    public const string Entries = "entries";
-    public const string Requests = "requests";
-    public const string Outputs = "outputs";
-
     private const int MaxEntryIds = 200;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(250);
 
@@ -18,13 +14,13 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
     private readonly HashSet<string> _topics = [];
     private readonly Dictionary<string, HashSet<long>> _ids = new()
     {
-        [Entries] = [],
-        [Outputs] = []
+        [LiveTopics.Entries] = [],
+        [LiveTopics.Outputs] = []
     };
 
     public int Subscribers => _subscribers.Count;
 
-    public Subscription Subscribe()
+    public LiveSubscription Subscribe()
     {
         var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(16)
         {
@@ -33,7 +29,7 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
         });
         var id = Guid.NewGuid();
         _subscribers[id] = channel;
-        return new Subscription(channel.Reader, () => _subscribers.TryRemove(id, out _));
+        return new LiveSubscription(channel.Reader, () => _subscribers.TryRemove(id, out _));
     }
 
     public void Publish(string topic, long? entryId = null)
@@ -48,8 +44,9 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
 
     public void PublishEverything()
     {
-        Publish(Entries);
-        Publish(Requests);
+        Publish(LiveTopics.Entries);
+        Publish(LiveTopics.Requests);
+        Publish(LiveTopics.Reports);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -75,8 +72,8 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
             message = JsonSerializer.Serialize(new
             {
                 topics = _topics.ToArray(),
-                entries = _ids[Entries].ToArray(),
-                outputs = _ids[Outputs].ToArray()
+                entries = _ids[LiveTopics.Entries].ToArray(),
+                outputs = _ids[LiveTopics.Outputs].ToArray()
             });
             _topics.Clear();
             foreach (var ids in _ids.Values)
@@ -85,15 +82,5 @@ public sealed class LiveUpdateHub(TimeProvider timeProvider) : BackgroundService
 
         foreach (var channel in _subscribers.Values)
             channel.Writer.TryWrite(message);
-    }
-
-    public sealed class Subscription(ChannelReader<string> reader, Action unsubscribe) : IDisposable
-    {
-        public ChannelReader<string> Reader => reader;
-
-        public void Dispose()
-        {
-            unsubscribe();
-        }
     }
 }

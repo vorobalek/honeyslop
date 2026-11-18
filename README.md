@@ -13,6 +13,7 @@ cost nothing.
 | `honeyslop-trap` | `src/Honeyslop.Trap` | Answers the catch-all on `:8080`; `/health` and `/metrics` on `:8081` |
 | `honeyslop-admin` | `src/Honeyslop.Admin` | Web UI: generated responses, request history per client, runtime settings |
 | `honeyslop-migrator` | `src/Honeyslop.Migrator` | Creates the database if it does not exist and applies EF Core migrations |
+| `honeyslop-reporter` | `src/Honeyslop.Reporter` | Sends queued abuse reports over SMTP; `/health` and `/metrics` on `:8081` |
 | `honeyslop-llm` | `llm/Dockerfile` | `llama-server` from llama.cpp in distroless: no shell, no TLS, no subprocesses, no model |
 | `honeyslop-model` | `model/Dockerfile` | Qwen3-4B-Instruct-2507 Q4_K_M as a single `/model.gguf`, pinned by sha256 |
 
@@ -54,15 +55,43 @@ the 8000-byte notification limit.
 
 Every client address carries the flag of its country and links to the page of that address: country, first and last
 request, its requests with the address filter locked and the other filters free, and what RIPEstat knows about the
-network. That is the routed prefix and origin AS, the registered network and its owner, the abuse contacts, the raw
-registry records and an abuse report ready to copy. The network part loads after the page, since RIPEstat sometimes
-takes seconds; its answers stay in Redis for a week, and without Redis every opening asks RIPEstat again. The page
-opens only for addresses in the request history or recorded as the first client of an entry, so the admin cannot be
-used to look up arbitrary addresses.
+network. That is the routed prefix and origin AS, the registered network and its owner, the abuse contacts and the
+raw registry records. The network part loads after the page, since RIPEstat sometimes takes seconds. Its answers are
+kept in the `client_whois` table and asked again once they are older than twelve hours; when RIPEstat does not answer,
+the stored one is shown. The page opens only for addresses in the request history or recorded as the first client of
+an entry, so the admin cannot be used to look up arbitrary addresses. RIPEstat sees the User-Agent set on the
+Settings page, or `USER_AGENT` when the setting is empty.
 
-Countries come from the [DB-IP](https://db-ip.com) IP to Country Lite database (CC BY 4.0), which the image build
-downloads into the admin image: the current month's file, or the previous month's before the new one is out. Each
-release brings it up to date, and every admin replica reads the same file from its image.
+Countries come from the [DB-IP](https://db-ip.com) IP to Country Lite database, licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The image build downloads it into the admin image, unmodified
+and with a `NOTICE` next to it, and every admin page links to DB-IP in its footer. The build takes the current month's
+file, or the previous month's before the new one is out. Each release brings it up to date, and every admin replica
+reads the same file from its image.
+
+### Abuse reports
+
+A signed-in user can send the abuse contacts of an address a report about it: a letter with the totals and the latest
+requests, and a zip archive with up to 50 000 of its requests, oldest first, as they were received. The archive has no
+responses of ours, no cookie values and none of the headers our proxy adds. Visitors who did not sign in see neither
+the letter nor the send form, and never who sent a report. The sender name is the one typed next to the button,
+filled in from the user's personal setting or `ABUSE_REPORT_SENDER_NAME`; it goes only into the From header. Every
+report is listed on the address page and on the Reports page, with the letter as it was sent; the From header and
+who asked for the report are shown only to signed-in users. Under the list a signed-in user also finds the current
+letter and can download the archive the reporter would attach, to send it by hand.
+
+The button only queues the report in the `abuse_report` table; `honeyslop-reporter` sends it:
+
+1. A reporter claims the oldest pending report with a conditional update, so two reporters never take the same one,
+   and keeps the claim alive every 15 seconds while it sends.
+2. A claim silent for two minutes is taken over by another reporter: a reporter that died does not leave the report
+   stuck. Every claim counts as an attempt, and a report that used five attempts is marked failed.
+3. A failed delivery is retried after 1, 5, 15 and 60 minutes. A recipient or sender the SMTP server refuses fails
+   the report at once.
+4. An address has at most one pending report. A sent report records the id of the last request in its archive, and
+   a new report is offered only once requests after that one arrive.
+
+A reporter that dies between the SMTP server accepting the letter and the database recording it sends the letter
+again after the takeover. Until `SMTP_PASSWORD` and the rest are set, reporters leave the queue alone.
 
 ### Configuration
 
@@ -90,8 +119,23 @@ Admin:
 | `OIDC_AUTHORITY` | — | OpenID Connect issuer to sign in with; unset turns sign-in off |
 | `OIDC_CLIENT_ID` | `honeyslop` | Client registered at the issuer |
 | `OIDC_CLIENT_SECRET` | — | Its secret, required with `OIDC_AUTHORITY` |
-| `REDIS_CONNECTION_STRING` | — | Redis for RIPEstat answers; unset asks RIPEstat on every opening |
 | `GEOIP_DATABASE` | `/app/geoip/country.mmdb` | DB-IP country database; a missing file only hides the flags |
+| `USER_AGENT` | `Honeyslop (+https://github.com/vorobalek/honeyslop)` | User-Agent for RIPEstat when the setting is empty |
+| `ABUSE_REPORT_SENDER_NAME` | — | Sender name of abuse reports for users without their own |
+
+Reporter:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DB_CONNECTION_STRING` | — | PostgreSQL connection string |
+| `SMTP_HOST`, `SMTP_PORT` | —, `587` | SMTP submission server |
+| `SMTP_STARTTLS` | `true` | Off only for a local test server |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | — | SMTP login |
+| `SMTP_FROM` | — | Sender address; the SMTP server must allow it for this login |
+| `MAX_ATTACHED_REQUESTS` | `50000` | The latest requests of an address put into the archive |
+| `MANAGEMENT_PORT` | `8081` | Health and metrics port |
+
+The image build takes a `USER_AGENT` build argument for the DB-IP download.
 
 Runtime settings live in the database and are edited on the admin Settings page; trap instances reload them every ten
 seconds:
@@ -108,6 +152,9 @@ seconds:
 | Keep the request history for | 30 days | Every request is recorded with its headers and body |
 | Generate responses for new requests | on | Off serves only what is cached |
 | Show everything read-only without signing in | off | On: anyone may browse the admin, changes still take signing in |
+| User-Agent | `USER_AGENT` | Sent with RIPEstat lookups |
+
+Each signed-in user also has a Personal section there, which nobody else sees: the name they sign abuse reports as.
 
 Saving applies the thresholds to everything already stored right away.
 
@@ -156,6 +203,15 @@ Flags need the country database; point `GEOIP_DATABASE` at a downloaded copy:
 
 ```bash
 curl -fsSL https://download.db-ip.com/free/dbip-country-lite-$(date -u +%Y-%m).mmdb.gz | gunzip > country.mmdb
+```
+
+To try abuse reports without mailing anyone, run a local mail catcher and point the reporter at it; the letters show up
+at `http://localhost:8025`:
+
+```bash
+docker run -d --rm -p 8025:8025 -p 1025:1025 -e MP_SMTP_AUTH_ACCEPT_ANY=1 -e MP_SMTP_AUTH_ALLOW_INSECURE=1 axllent/mailpit:v1.34.0
+SMTP_HOST=localhost SMTP_PORT=1025 SMTP_STARTTLS=false SMTP_USERNAME=test SMTP_PASSWORD=test SMTP_FROM=security@example.test \
+  dotnet run --project src/Honeyslop.Reporter
 ```
 
 To try sign-in, start a mock OpenID Connect issuer that lets anyone in under any name and run the admin with the

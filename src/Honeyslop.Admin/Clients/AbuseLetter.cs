@@ -5,11 +5,12 @@ using Honeyslop.Data.Repositories;
 
 namespace Honeyslop.Admin.Clients;
 
-public sealed record AbuseReport(string Subject, string Body)
+public sealed record AbuseLetter(string Subject, string Body)
 {
     public const int LatestRequests = 20;
+    public const int MaxAttachedRequests = 50000;
 
-    public static AbuseReport Create(
+    public static AbuseLetter Create(
         ClientSummary client,
         IReadOnlyCollection<RequestSummary> latest,
         WhoisInfo? whois)
@@ -44,7 +45,10 @@ public sealed record AbuseReport(string Subject, string Body)
             builder.Append('\n');
         }
 
-        builder.Append("\nPlease look into this and stop the traffic from this address.\n");
-        return new AbuseReport($"HTTP scanning from {client.ClientIp}", builder.ToString());
+        builder
+            .Append("\nThe attached archive holds every request we kept from this address, ")
+            .Append("with its headers and body as we received them.\n")
+            .Append("\nPlease look into this and stop the traffic from this address.\n");
+        return new AbuseLetter($"HTTP scanning from {client.ClientIp}", builder.ToString());
     }
 }

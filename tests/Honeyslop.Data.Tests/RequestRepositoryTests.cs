@@ -28,11 +28,13 @@ public sealed class RequestRepositoryTests
         var repository = readScope.ServiceProvider.GetRequiredService<IRequestRepository>();
         var page = await repository.GetPageAsync(new RequestFilter(clientIp), 0, 10, CancellationToken.None);
         var hits = await repository.CountAsync(new RequestFilter(clientIp, Outcome: RequestOutcome.Hit), CancellationToken.None);
+        var afterFirst = await repository.CountAsync(new RequestFilter(clientIp, AfterId: page[^1].Id), CancellationToken.None);
         var client = (await repository.GetClientsAsync(now.AddHours(-1), 0, 1000, CancellationToken.None))
             .Single(x => x.ClientIp == clientIp);
 
         CollectionAssert.AreEqual(new[] { "/.env", "/.git/config", "/.env" }, page.Select(x => x.Target).ToArray());
         Assert.AreEqual(1, hits);
+        Assert.AreEqual(2, afterFirst);
         Assert.AreEqual(3, client.Requests);
         Assert.AreEqual(2, client.Hosts);
         Assert.AreEqual(2, client.Targets);

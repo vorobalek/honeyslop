@@ -2,15 +2,23 @@ using System.Text.Json;
 
 namespace Honeyslop.Admin.Clients;
 
-internal sealed class RipeStatClient(HttpClient httpClient)
+internal sealed class RipeStatClient(HttpClient httpClient, IUserAgentProvider userAgentProvider) : IRipeStatClient
 {
     public static readonly Uri BaseAddress = new("https://stat.ripe.net/data/");
 
+    public static void Configure(HttpClient client)
+    {
+        client.BaseAddress = BaseAddress;
+        client.Timeout = TimeSpan.FromSeconds(20);
+    }
+
     public async Task<JsonElement> GetAsync(string dataCall, string resource, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.GetAsync(
-            $"{dataCall}/data.json?resource={Uri.EscapeDataString(resource)}&sourceapp=honeyslop",
-            cancellationToken);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{dataCall}/data.json?resource={Uri.EscapeDataString(resource)}&sourceapp=honeyslop");
+        request.Headers.TryAddWithoutValidation("User-Agent", await userAgentProvider.GetAsync(cancellationToken));
+        using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);

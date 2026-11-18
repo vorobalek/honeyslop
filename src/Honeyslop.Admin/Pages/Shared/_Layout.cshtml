@@ -17,6 +17,7 @@
         <a asp-page="/Index">Entries</a>
         <a asp-page="/Requests">Requests</a>
         <a asp-page="/Clients">Clients</a>
+        <a asp-page="/Reports">Reports</a>
         <a asp-page="/Generators">Generators</a>
         <a asp-page="/Settings">Settings</a>
     </nav>
@@ -41,6 +42,17 @@
 <main class="container">
     @RenderBody()
 </main>
+<dialog class="confirm" data-confirm-dialog>
+    <form method="dialog">
+        <p class="confirm-question" data-confirm-question></p>
+        <p class="hint" data-confirm-detail></p>
+        <p class="hint" data-confirm-sender></p>
+        <div class="actions">
+            <button type="submit" value="cancel" autofocus>Cancel</button>
+            <button type="submit" value="confirm" class="danger-filled" data-confirm-accept>Confirm</button>
+        </div>
+    </form>
+</dialog>
 <footer class="footer">
     <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
 </footer>

@@ -25,7 +25,10 @@ public static class AppConfiguration
     public static readonly string? OidcClientSecret = "OIDC_CLIENT_SECRET"
         .EnvironmentValue;
 
-    public static readonly string? RedisConnectionString = "REDIS_CONNECTION_STRING"
+    public static readonly string UserAgent = "USER_AGENT"
+        .GetEnvironmentValueWithFallback(Constants.UserAgent);
+
+    public static readonly string? AbuseReportSenderName = "ABUSE_REPORT_SENDER_NAME"
         .EnvironmentValue;
 
     public static readonly string GeoIpDatabase = "GEOIP_DATABASE"

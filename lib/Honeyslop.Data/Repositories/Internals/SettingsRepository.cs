@@ -16,6 +16,7 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
     private const string RetryFailedSeconds = "retry_failed_seconds";
     private const string GenerationTimeLimitSeconds = "generation_time_limit_seconds";
     private const string PublicView = "public_view";
+    private const string UserAgent = "user_agent";
 
     public async Task<HoneyslopSettings> GetAsync(CancellationToken cancellationToken)
     {
@@ -34,7 +35,8 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             ReadSeconds(values, ClaimTimeoutSeconds, defaults.ClaimTimeout),
             ReadSeconds(values, RetryFailedSeconds, defaults.RetryFailedAfter),
             ReadSeconds(values, GenerationTimeLimitSeconds, defaults.GenerationTimeLimit),
-            ReadFlag(values, PublicView, defaults.PublicView));
+            ReadFlag(values, PublicView, defaults.PublicView),
+            values.GetValueOrDefault(UserAgent));
     }
 
     public async Task SaveAsync(HoneyslopSettings settings, DateTimeOffset now, CancellationToken cancellationToken)
@@ -52,10 +54,18 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
         Set(RetryFailedSeconds, ((long)settings.RetryFailedAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture));
         Set(GenerationTimeLimitSeconds, ((long)settings.GenerationTimeLimit.TotalSeconds).ToString(CultureInfo.InvariantCulture));
         Set(PublicView, settings.PublicView.ToString(CultureInfo.InvariantCulture));
+        Set(UserAgent, settings.UserAgent);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        void Set(string key, string value)
+        void Set(string key, string? value)
         {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                if (existing.TryGetValue(key, out var unset))
+                    dbContext.Settings.Remove(unset);
+                return;
+            }
+
             if (existing.TryGetValue(key, out var setting))
             {
                 if (setting.Value == value)

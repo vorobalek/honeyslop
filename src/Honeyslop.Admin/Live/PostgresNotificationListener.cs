@@ -6,8 +6,8 @@ namespace Honeyslop.Admin.Live;
 
 internal sealed partial class PostgresNotificationListener(
     string connectionString,
-    LiveUpdateHub hub,
-    GenerationOutputStore outputStore,
+    ILiveUpdateHub hub,
+    IGenerationOutputStore outputStore,
     TimeProvider timeProvider,
     ILogger<PostgresNotificationListener> logger) : BackgroundService
 {
@@ -26,7 +26,7 @@ internal sealed partial class PostgresNotificationListener(
                 await using var connection = new NpgsqlConnection(builder.ConnectionString);
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
-                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs;", connection))
+                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports;", connection))
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 LogListening(logger);
                 hub.PublishEverything();
@@ -46,18 +46,20 @@ internal sealed partial class PostgresNotificationListener(
     private void Dispatch(string channel, string payload)
     {
         if (channel == "honeyslop_requests")
-            hub.Publish(LiveUpdateHub.Requests);
+            hub.Publish(LiveTopics.Requests);
+        else if (channel == "honeyslop_reports")
+            hub.Publish(LiveTopics.Reports);
         else if (channel == "honeyslop_outputs")
         {
             if (GenerationOutput.FromPayload(payload) is not { } output)
                 return;
             outputStore.Set(output);
-            hub.Publish(LiveUpdateHub.Outputs, output.EntryId);
+            hub.Publish(LiveTopics.Outputs, output.EntryId);
         }
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
-            hub.Publish(LiveUpdateHub.Entries, entryId);
+            hub.Publish(LiveTopics.Entries, entryId);
         else
-            hub.Publish(LiveUpdateHub.Entries);
+            hub.Publish(LiveTopics.Entries);
     }
 
     [LoggerMessage(LogLevel.Information, "Listening for database changes")]

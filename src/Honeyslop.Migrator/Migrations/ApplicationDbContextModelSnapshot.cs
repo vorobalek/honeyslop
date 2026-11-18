@@ -22,6 +22,143 @@ namespace Honeyslop.Migrator.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.AbuseReport", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("AttachedRequests")
+                        .HasColumnType("integer")
+                        .HasColumnName("attached_requests");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<string>("ClaimedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("claimed_by");
+
+                    b.Property<string>("ClientIp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("error");
+
+                    b.Property<long?>("LastRequestId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_request_id");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("message_id");
+
+                    b.PrimitiveCollection<string[]>("Recipients")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("recipients");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("requested_by");
+
+                    b.Property<DateTimeOffset?>("RetryAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("retry_at");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("sender_name");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("SentFrom")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("sent_from");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_abuse_report");
+
+                    b.HasIndex("ClientIp")
+                        .HasDatabaseName("ix_abuse_report_client_ip");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_abuse_report_status");
+
+                    b.HasIndex(new[] { "ClientIp" }, "ix_abuse_report_client_ip_pending")
+                        .IsUnique()
+                        .HasDatabaseName("ix_abuse_report_client_ip_pending")
+                        .HasFilter("status = 0");
+
+                    b.ToTable("abuse_report", "public");
+                });
+
+            modelBuilder.Entity("Honeyslop.Data.Entities.ClientWhois", b =>
+                {
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<string>("Info")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("info");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ClientIp")
+                        .HasName("pk_client_whois");
+
+                    b.ToTable("client_whois", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.Entry", b =>
                 {
                     b.Property<long>("Id")
@@ -278,6 +415,34 @@ namespace Honeyslop.Migrator.Migrations
                         .HasName("pk_setting");
 
                     b.ToTable("setting", "public");
+                });
+
+            modelBuilder.Entity("Honeyslop.Data.Entities.UserSetting", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("value");
+
+                    b.HasKey("UserId", "Key")
+                        .HasName("pk_user_setting");
+
+                    b.ToTable("user_setting", "public");
                 });
 
             modelBuilder.Entity("Honeyslop.Data.Entities.Entry", b =>
