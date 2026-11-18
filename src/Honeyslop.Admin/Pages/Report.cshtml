@@ -20,7 +20,14 @@
     @if (User.CanOperate)
     {
         <dt>From</dt>
-        <dd class="mono">@Model.From</dd>
+        @if (Model.FromIsExpected)
+        {
+            <dd><span class="mono hint">@Model.From</span> <span class="hint">· expected; fixed when the reporter sends it</span></dd>
+        }
+        else
+        {
+            <dd class="mono">@Model.From</dd>
+        }
     }
     <dt>Requested</dt>
     <dd>@report.CreatedAt.Display UTC@(User.CanOperate ? $" by {report.RequestedBy}" : "")</dd>

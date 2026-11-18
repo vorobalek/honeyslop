@@ -28,6 +28,9 @@ public static class AppConfiguration
     public static readonly string UserAgent = "USER_AGENT"
         .GetEnvironmentValueWithFallback(Constants.UserAgent);
 
+    public static readonly string? SmtpFrom = "SMTP_FROM"
+        .EnvironmentValue;
+
     public static readonly string? AbuseReportSenderName = "ABUSE_REPORT_SENDER_NAME"
         .EnvironmentValue;
 

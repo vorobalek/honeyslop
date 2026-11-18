@@ -38,9 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const sender = form.querySelector("input[name='SenderName']");
         dialog.querySelector("[data-confirm-question]").textContent = message;
         dialog.querySelector("[data-confirm-detail]").textContent = form.dataset.confirmDetail || "";
-        dialog.querySelector("[data-confirm-sender]").textContent = sender
-            ? `From: ${sender.value.trim() || "the address alone, without a name"}`
-            : "";
+        const name = sender ? sender.value.trim() : "";
+        const address = form.dataset.confirmAddress || "";
+        dialog.querySelector("[data-confirm-sender]").textContent = !sender
+            ? ""
+            : address
+                ? `From: ${name ? `"${name}" <${address}>` : address}`
+                : `From: ${name || "the address alone, without a name"}`;
         dialog.querySelector("[data-confirm-accept]").textContent = form.dataset.confirmButton || "Confirm";
         dialog.returnValue = "";
         dialog.addEventListener("close", () => {

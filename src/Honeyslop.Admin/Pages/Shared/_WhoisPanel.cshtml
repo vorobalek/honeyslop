@@ -123,7 +123,8 @@ else if (last is { Status: AbuseReportStatus.Failed })
         else
         {
             <form class="send-report" method="post" asp-page="/Client" asp-route-ip="@Model.Ip" asp-page-handler="Report"
-                  data-confirm="@Model.SendConfirmation" data-confirm-detail="@Model.SendConfirmationDetail" data-confirm-button="Send report">
+                  data-confirm="@Model.SendConfirmation" data-confirm-detail="@Model.SendConfirmationDetail" data-confirm-button="Send report"
+                  data-confirm-address="@Model.FromAddress">
                 <label>
                     Sender name
                     <input type="text" id="sender-name" name="SenderName" value="@Model.SenderName" maxlength="@Honeyslop.Data.Entities.AbuseReport.SenderNameMaxLength" placeholder="the address only"/>

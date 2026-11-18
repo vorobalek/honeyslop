@@ -69,6 +69,8 @@ public sealed partial class ClientModel(
     public string SendConfirmation =>
         $"Send the abuse report about {Ip} to {string.Join(", ", Whois?.AbuseContacts ?? [])}?";
 
+    public string? FromAddress => reportOptions.Value.FromAddress;
+
     public int ArchivedRequests => Math.Min(Summary?.Requests ?? 0, AbuseLetter.MaxAttachedRequests);
 
     public string SendConfirmationDetail =>

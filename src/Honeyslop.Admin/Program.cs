@@ -49,7 +49,11 @@ await Host
                 .Configure(x => x.Default = AppConfiguration.UserAgent);
             services
                 .AddOptions<AbuseReportOptions>()
-                .Configure(x => x.DefaultSenderName = SenderName.Clean(AppConfiguration.AbuseReportSenderName));
+                .Configure(x =>
+                {
+                    x.DefaultSenderName = SenderName.Clean(AppConfiguration.AbuseReportSenderName);
+                    x.FromAddress = AppConfiguration.SmtpFrom;
+                });
             services
                 .AddOptions<MaintenanceOptions>()
                 .Configure(x => x.Interval = TimeSpan.FromSeconds(AppConfiguration.MaintenanceIntervalSeconds));
