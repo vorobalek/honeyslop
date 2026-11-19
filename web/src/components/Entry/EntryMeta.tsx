@@ -4,6 +4,7 @@ import { display, displayOrDash } from '../../lib/time';
 import { Watch } from '../../lib/watchStore';
 import { EntryViewType } from '../../types/entryViewType';
 import ClientIp from '../Common/ClientIp';
+import EntryDelayButton from './EntryDelayButton';
 import React from 'react';
 
 type EntryMetaProps = {
@@ -14,6 +15,7 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
     const entry = useWatched(watch, (view) => view.entry);
     const country = useWatched(watch, (view) => view.country);
     const defaultDelay = useWatched(watch, (view) => view.defaultResponseDelayMilliseconds);
+    const expired = useWatched(watch, (view) => view.state === 'Expired');
     const generation = entry.generationMs !== null ? `${oneDecimal(entry.generationMs / 1000)} s` : '—';
     return (
         <dl className='meta'>
@@ -36,6 +38,12 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
                 {entry.responseDelayMilliseconds !== null
                     ? `${entry.responseDelayMilliseconds} ms, set on this entry`
                     : `${defaultDelay} ms, the default`}
+                {!expired && (
+                    <>
+                        {' '}
+                        <EntryDelayButton watch={watch} />
+                    </>
+                )}
             </dd>
             <dt>Attempts</dt>
             <dd>{entry.attempts}</dd>

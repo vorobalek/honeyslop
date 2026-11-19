@@ -19,6 +19,7 @@ type Opened = {
 const EntryDelayButton: React.FC<EntryDelayButtonProps> = ({ watch }) => {
     const { canOperate } = useSession();
     const [opened, setOpened] = useState<Opened | null>(null);
+    if (!canOperate) return null;
     const open = () => {
         const view = watch.value;
         if (view === undefined) return;
@@ -32,11 +33,10 @@ const EntryDelayButton: React.FC<EntryDelayButtonProps> = ({ watch }) => {
         <>
             <button
                 type='button'
-                disabled={!canOperate}
-                title={canOperate ? undefined : 'Sign in to change delays'}
+                className='link danger'
                 onClick={open}
             >
-                Set delay
+                change
             </button>
             {opened && (
                 <DelayDialog

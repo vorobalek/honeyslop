@@ -2,7 +2,6 @@ import { useWatched } from '../../hooks/useWatched';
 import { Watch } from '../../lib/watchStore';
 import { EntryViewType } from '../../types/entryViewType';
 import EntryChangeButton from './EntryChangeButton';
-import EntryDelayButton from './EntryDelayButton';
 import EntryExpireForm from './EntryExpireForm';
 import React from 'react';
 
@@ -18,7 +17,6 @@ const EntryActions: React.FC<EntryActionsProps> = ({ id, watch }) => {
     return (
         <div className='actions'>
             <EntryChangeButton watch={watch} />
-            {!expired && <EntryDelayButton watch={watch} />}
             {!expired && <EntryExpireForm id={id} />}
         </div>
     );
