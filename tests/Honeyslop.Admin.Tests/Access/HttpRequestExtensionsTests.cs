@@ -7,19 +7,22 @@ namespace Honeyslop.Admin.Tests.Access;
 public sealed class HttpRequestExtensionsTests
 {
     [TestMethod]
-    [DataRow("https://honeyslop.example", null, true)]
-    [DataRow("https://HONEYSLOP.example", null, true)]
-    [DataRow("https://evil.example", null, false)]
-    [DataRow("http://honeyslop.example", null, false)]
-    [DataRow("https://honeyslop.example:8443", null, false)]
-    [DataRow("null", null, false)]
-    [DataRow(null, "same-origin", true)]
-    [DataRow(null, "cross-site", false)]
-    [DataRow(null, null, false)]
-    public void IsSameOrigin_TrustsOnlyThisSite(string? origin, string? fetchSite, bool expected)
+    [DataRow("https", "https://honeyslop.example", null, true)]
+    [DataRow("https", "https://HONEYSLOP.example", null, true)]
+    [DataRow("wss", "https://honeyslop.example", null, true)]
+    [DataRow("https", "https://evil.example", null, false)]
+    [DataRow("wss", "https://evil.example", null, false)]
+    [DataRow("https", "http://honeyslop.example", null, false)]
+    [DataRow("ws", "https://honeyslop.example", null, false)]
+    [DataRow("https", "https://honeyslop.example:8443", null, false)]
+    [DataRow("https", "null", null, false)]
+    [DataRow("https", null, "same-origin", true)]
+    [DataRow("https", null, "cross-site", false)]
+    [DataRow("https", null, null, false)]
+    public void IsSameOrigin_TrustsOnlyThisSite(string scheme, string? origin, string? fetchSite, bool expected)
     {
         var request = new DefaultHttpContext().Request;
-        request.Scheme = "https";
+        request.Scheme = scheme;
         request.Host = new HostString("honeyslop.example");
         if (origin is not null)
             request.Headers.Origin = origin;
