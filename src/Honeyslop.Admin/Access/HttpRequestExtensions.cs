@@ -1,20 +1,13 @@
-using Microsoft.AspNetCore.WebUtilities;
-
 namespace Honeyslop.Admin.Access;
 
 public static class HttpRequestExtensions
 {
     extension(HttpRequest request)
     {
-        public string SignInUrl
-        {
-            get
-            {
-                var query = QueryHelpers.ParseQuery(request.QueryString.Value);
-                query.Remove("handler");
-                var returnUrl = request.PathBase.Add(request.Path).ToUriComponent() + QueryString.Create(query).ToUriComponent();
-                return $"/signin?returnUrl={Uri.EscapeDataString(returnUrl)}";
-            }
-        }
+        public bool IsSameOrigin => request.Headers.Origin.ToString() is { Length: > 0 } origin
+            ? Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+              string.Equals(uri.Scheme, request.Scheme, StringComparison.OrdinalIgnoreCase) &&
+              string.Equals(uri.Authority, request.Host.Value, StringComparison.OrdinalIgnoreCase)
+            : request.Headers["Sec-Fetch-Site"] == "same-origin";
     }
 }

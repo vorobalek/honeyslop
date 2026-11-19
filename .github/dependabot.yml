@@ -10,6 +10,30 @@ updates:
           - "Microsoft.EntityFrameworkCore*"
           - "Npgsql*"
           - "EFCore.*"
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+      playwright:
+        patterns:
+          - "@playwright/*"
+      tooling:
+        patterns:
+          - "typescript"
+          - "prettier"
+          - "@trivago/prettier-plugin-sort-imports"
+          - "@types/node"
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows"
     schedule:

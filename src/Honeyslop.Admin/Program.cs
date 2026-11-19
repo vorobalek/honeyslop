@@ -5,14 +5,19 @@ using Honeyslop.Admin.Core;
 using Honeyslop.Admin.Core.Access;
 using Honeyslop.Admin.Core.Options;
 using Honeyslop.Admin.Core.Text;
+using Honeyslop.Admin.Hubs;
 using Honeyslop.Admin.Live;
-using Honeyslop.Admin.Mcp;
 using Honeyslop.Admin.Live.Internals;
+using Honeyslop.Admin.Mcp;
 using Honeyslop.Admin.Middleware;
+using Honeyslop.Admin.Views;
+using Honeyslop.Admin.Views.Internals;
 using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.SignalR;
 
 await Host
     .CreateDefaultBuilder(args)
@@ -30,9 +35,14 @@ await Host
                 .AddSingleton<SecurityHeadersMiddleware>()
                 .AddAdminCore()
                 .AddHttpContextAccessor()
-                .AddScoped<IViewerContext, HttpViewerContext>()
-                .AddSingleton<ILiveUpdateHub, LiveUpdateHub>()
-                .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<ILiveUpdateHub>())
+                .AddScoped<ViewerContext>()
+                .AddScoped<IViewerContext>(serviceProvider => serviceProvider.GetRequiredService<ViewerContext>())
+                .AddScoped<IViewerScope>(serviceProvider => serviceProvider.GetRequiredService<ViewerContext>())
+                .AddScoped<IViewBuilder, ViewBuilder>()
+                .AddSingleton<ILiveSender, HubLiveSender>()
+                .AddSingleton<LiveSubscriptions>()
+                .AddSingleton<ILiveSubscriptions>(serviceProvider => serviceProvider.GetRequiredService<LiveSubscriptions>())
+                .AddHostedService(serviceProvider => serviceProvider.GetRequiredService<LiveSubscriptions>())
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))
@@ -68,7 +78,9 @@ await Host
                 x.ProbeTimeout = TimeSpan.FromSeconds(2);
                 x.DiscoveryInterval = TimeSpan.FromSeconds(15);
             });
-            services.AddRazorPages();
+            services
+                .AddSignalR(options => options.AddFilter<AdminHubFilter>())
+                .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         })
         .Configure(app => app
             .UseMiddleware<SecurityHeadersMiddleware>()
@@ -83,15 +95,21 @@ await Host
             .UseAuthorization()
             .UseEndpoints(endpoints =>
             {
-                endpoints.MapRazorPages();
-                endpoints.Map("/live", LiveEndpoint.HandleAsync);
+                endpoints
+                    .MapHub<AdminHub>("/hub", options => options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets)
+                    .AllowAnonymous();
+                endpoints.MapGet("/clients/{ip}/archive", ContentEndpoints.ArchiveAsync);
+                endpoints.MapGet("/entries/{id:long}/preview", ContentEndpoints.PreviewAsync);
                 endpoints.MapHoneyslopMcp();
                 endpoints.MapHealthChecks("/health").AllowAnonymous();
                 if (AppConfiguration.SignInEnabled)
                 {
                     endpoints.MapGet("/signin", AccountEndpoints.SignIn).AllowAnonymous();
-                    endpoints.MapPost("/signout", AccountEndpoints.SignOutAsync).AllowAnonymous();
+                    endpoints.MapPost("/signout", (Delegate)AccountEndpoints.SignOutAsync).AllowAnonymous();
                 }
+
+                endpoints.MapFallbackToFile("index.html");
+                endpoints.MapFallbackToFile("/clients/{ip}", "index.html");
             }))
         .UseUrls($"http://+:{AppConfiguration.Port}"))
     .Build()

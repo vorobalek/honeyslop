@@ -1,0 +1,24 @@
+import { useWatch } from '../../hooks/useWatch';
+import { useWatchPresence } from '../../hooks/useWatched';
+import { EntryViewType } from '../../types/entryViewType';
+import Presence from '../Common/Presence';
+import EntryDetails from './EntryDetails';
+import React from 'react';
+
+type EntryPageProps = {
+    id: number;
+};
+
+const EntryPage: React.FC<EntryPageProps> = ({ id }) => {
+    const watch = useWatch<EntryViewType>('watchEntry', id);
+    const presence = useWatchPresence(watch);
+    if (presence !== 'present') return <Presence presence={presence} />;
+    return (
+        <EntryDetails
+            id={id}
+            watch={watch}
+        />
+    );
+};
+
+export default React.memo(EntryPage);

@@ -24,6 +24,7 @@ async function signIn(context) {
 async function settle(page) {
   await page.waitForLoadState("networkidle");
   await page.locator("[data-live-status].online").waitFor({ timeout: 5000 }).catch(() => {});
+  await page.locator("main:not([aria-busy=true])").waitFor({ timeout: 15000 }).catch(() => {});
   await page.waitForFunction(() => !document.body.innerText.includes("Looking it up"), null, { timeout: 15000 }).catch(() => {});
   await page.waitForLoadState("networkidle");
   await page.evaluate(() => document.fonts.ready);

@@ -8,3 +8,6 @@ TestResults/
 var/
 .DS_Store
 *.mmdb
+
+# Admin web build output
+src/Honeyslop.Admin/wwwroot/

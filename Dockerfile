@@ -2,6 +2,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS base
 ENV ASPNETCORE_HTTP_PORTS=
 WORKDIR /app
 
+FROM node:24-alpine AS web
+WORKDIR /repo/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS restore
 WORKDIR /src
 COPY . .
@@ -14,6 +21,7 @@ FROM build AS tested
 RUN dotnet test "Honeyslop.sln" -c Release --no-build --filter "TestCategory!=Integration"
 
 FROM tested AS publish
+COPY --from=web /repo/src/Honeyslop.Admin/wwwroot src/Honeyslop.Admin/wwwroot
 RUN dotnet publish "src/Honeyslop.Migrator/Honeyslop.Migrator.csproj" -c Release -o /app/migrator /p:UseAppHost=false --no-build
 RUN dotnet publish "src/Honeyslop.Trap/Honeyslop.Trap.csproj" -c Release -o /app/trap /p:UseAppHost=false --no-build
 RUN dotnet publish "src/Honeyslop.Admin/Honeyslop.Admin.csproj" -c Release -o /app/admin /p:UseAppHost=false --no-build

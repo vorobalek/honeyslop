@@ -1,5 +1,7 @@
 using System.Globalization;
 using Honeyslop.Admin.Core.Services;
+using Honeyslop.Admin.Live.Contracts;
+using Honeyslop.Admin.Live.Enums;
 using Honeyslop.Common.Serializers;
 using Honeyslop.Llm.Contracts;
 using Npgsql;
@@ -8,7 +10,7 @@ namespace Honeyslop.Admin.Live;
 
 internal sealed partial class PostgresNotificationListener(
     string connectionString,
-    ILiveUpdateHub hub,
+    ILiveSubscriptions subscriptions,
     IJsonSerializer<GenerationOutputDto> outputSerializer,
     IGenerationOutputStore outputStore,
     TimeProvider timeProvider,
@@ -32,7 +34,7 @@ internal sealed partial class PostgresNotificationListener(
                 await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports;", connection))
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 LogListening(logger);
-                hub.PublishEverything();
+                subscriptions.PublishEverything();
                 while (!stoppingToken.IsCancellationRequested)
                     await connection.WaitAsync(stoppingToken);
             }
@@ -49,20 +51,20 @@ internal sealed partial class PostgresNotificationListener(
     private void Dispatch(string channel, string payload)
     {
         if (channel == "honeyslop_requests")
-            hub.Publish(LiveTopics.Requests);
+            subscriptions.Publish(new LiveChange(LiveTopic.Requests));
         else if (channel == "honeyslop_reports")
-            hub.Publish(LiveTopics.Reports);
+            subscriptions.Publish(new LiveChange(LiveTopic.Reports));
         else if (channel == "honeyslop_outputs")
         {
             if (outputSerializer.Deserialize(payload) is not { } output)
                 return;
             outputStore.Set(output);
-            hub.Publish(LiveTopics.Outputs, output.EntryId);
+            subscriptions.Publish(new LiveChange(LiveTopic.Outputs, output.EntryId));
         }
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
-            hub.Publish(LiveTopics.Entries, entryId);
+            subscriptions.Publish(new LiveChange(LiveTopic.Entries, entryId));
         else
-            hub.Publish(LiveTopics.Entries);
+            subscriptions.Publish(new LiveChange(LiveTopic.Entries));
     }
 
     [LoggerMessage(LogLevel.Information, "Listening for database changes")]

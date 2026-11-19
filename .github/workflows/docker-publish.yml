@@ -35,8 +35,36 @@ jobs:
       - name: Test
         run: dotnet test Honeyslop.sln --no-build --configuration Release --verbosity normal
 
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Check formatting and types
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
   build-and-push:
-    needs: test
+    needs: [test, web]
     runs-on: ubuntu-latest
     strategy:
       matrix:

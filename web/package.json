@@ -1,0 +1,48 @@
+{
+    "name": "honeyslop-admin",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "build:audit": "vite build --mode audit",
+        "check": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json && prettier . --check",
+        "prettify": "prettier . --write",
+        "audit:renders": "playwright test"
+    },
+    "dependencies": {
+        "@microsoft/signalr": "11.0.0",
+        "react": "19.3.1",
+        "react-dom": "19.3.1"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.63.0",
+        "@trivago/prettier-plugin-sort-imports": "6.0.2",
+        "@types/node": "26.6.6",
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+        "@vitejs/plugin-react": "6.3.0",
+        "prettier": "3.10.1",
+        "typescript": "7.0.2",
+        "vite": "8.3.8"
+    },
+    "prettier": {
+        "printWidth": 120,
+        "tabWidth": 4,
+        "useTabs": false,
+        "semi": true,
+        "singleQuote": true,
+        "jsxSingleQuote": true,
+        "trailingComma": "all",
+        "arrowParens": "always",
+        "bracketSpacing": true,
+        "quoteProps": "consistent",
+        "proseWrap": "always",
+        "endOfLine": "lf",
+        "singleAttributePerLine": true,
+        "bracketSameLine": false,
+        "plugins": [
+            "@trivago/prettier-plugin-sort-imports"
+        ]
+    }
+}

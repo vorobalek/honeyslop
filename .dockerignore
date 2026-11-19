@@ -18,6 +18,9 @@
 **/docker-compose*
 **/Dockerfile*
 **/node_modules
+**/test-results
+**/playwright-report
+src/Honeyslop.Admin/wwwroot
 **/npm-debug.log
 **/obj
 **/secrets.dev.yaml

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -14,9 +13,9 @@ internal static class AccountEndpoints
             [OpenIdConnectDefaults.AuthenticationScheme]);
     }
 
-    public static async Task<IResult> SignOutAsync(HttpContext httpContext, IAntiforgery antiforgery)
+    public static async Task<IResult> SignOutAsync(HttpContext httpContext)
     {
-        if (!await antiforgery.IsRequestValidAsync(httpContext))
+        if (!httpContext.Request.IsSameOrigin)
             return Results.BadRequest();
 
         await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
