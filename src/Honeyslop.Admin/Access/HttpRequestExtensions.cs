@@ -4,7 +4,7 @@ public static class HttpRequestExtensions
 {
     extension(HttpRequest request)
     {
-        public bool IsSameOrigin => request.Headers.Origin.ToString() is { Length: > 0 } origin
+        public bool IsSameOrigin => request.Headers.Origin.ToString() is { Length: > 0 } origin and not "null"
             ? Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
               string.Equals(uri.Scheme, PageScheme(request.Scheme), StringComparison.OrdinalIgnoreCase) &&
               string.Equals(uri.Authority, request.Host.Value, StringComparison.OrdinalIgnoreCase)
