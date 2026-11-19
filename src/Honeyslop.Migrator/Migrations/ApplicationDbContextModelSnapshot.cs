@@ -280,6 +280,10 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("early_drop_milliseconds");
 
+                    b.Property<long>("LastRequestId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_request_id");
+
                     b.Property<int>("ProbeEvery")
                         .HasColumnType("integer")
                         .HasColumnName("probe_every");
@@ -361,7 +365,7 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("data_protection_key", "public");
                 });
 
-            modelBuilder.Entity("Honeyslop.Data.Entities.DelayJob", b =>
+            modelBuilder.Entity("Honeyslop.Data.Entities.DelayLearningJob", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -369,10 +373,6 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Answered")
-                        .HasColumnType("boolean")
-                        .HasColumnName("answered");
 
                     b.Property<DateTimeOffset?>("ClaimedAt")
                         .HasColumnType("timestamp with time zone")
@@ -393,17 +393,18 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("DurationMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_ms");
+                    b.Property<bool>("InWork")
+                        .HasColumnType("boolean")
+                        .HasColumnName("in_work");
 
                     b.HasKey("Id")
-                        .HasName("pk_delay_job");
+                        .HasName("pk_delay_learning_job");
 
-                    b.HasIndex("ClaimedAt", "Id")
-                        .HasDatabaseName("ix_delay_job_claimed_at_id");
+                    b.HasIndex("ClientIp", "InWork")
+                        .IsUnique()
+                        .HasDatabaseName("ix_delay_learning_job_client_ip_in_work");
 
-                    b.ToTable("delay_job", "public");
+                    b.ToTable("delay_learning_job", "public");
                 });
 
             modelBuilder.Entity("Honeyslop.Data.Entities.Entry", b =>
@@ -678,6 +679,9 @@ namespace Honeyslop.Migrator.Migrations
 
                     b.HasIndex("ReceivedAt")
                         .HasDatabaseName("ix_request_received_at");
+
+                    b.HasIndex("ClientIp", "Id")
+                        .HasDatabaseName("ix_request_client_ip_id");
 
                     b.HasIndex("ClientIp", "ReceivedAt")
                         .HasDatabaseName("ix_request_client_ip_received_at");

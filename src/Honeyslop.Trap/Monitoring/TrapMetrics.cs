@@ -68,12 +68,16 @@ internal static class TrapMetrics
 
     public static readonly Counter DelayJobs = Metrics.CreateCounter(
         Constants.MetricsPrefix + "delay_jobs_total",
-        "Delay observations taken from the queue, by result.",
+        "Clients taken from the learning queue, by result.",
         "result");
+
+    public static readonly Counter DelayObservations = Metrics.CreateCounter(
+        Constants.MetricsPrefix + "delay_observations_total",
+        "Requests whose answer or drop the delay learner took in.");
 
     public static readonly Gauge DelayJobsWaiting = Metrics.CreateGauge(
         Constants.MetricsPrefix + "delay_jobs_waiting",
-        "Delay observations waiting in the queue.");
+        "Clients waiting in the learning queue.");
 
     public static readonly Gauge PersonalDelays = Metrics.CreateGauge(
         Constants.MetricsPrefix + "client_delays",

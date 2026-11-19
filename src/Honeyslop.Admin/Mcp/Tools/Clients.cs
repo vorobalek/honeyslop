@@ -59,11 +59,11 @@ public sealed class Clients(IClientsService clientsService)
         return clientsService.ResetResponseDelaysAsync(cancellationToken);
     }
 
-    [McpServerTool(Name = "reset_learned_delays", Title = "Forget every learned client delay", Destructive = true, Idempotent = true)]
-    [Description("Forgets what Auto-Delay learned about every client, so each starts again from the middle of the range. Returns how many were forgotten.")]
-    public Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync(CancellationToken cancellationToken = default)
+    [McpServerTool(Name = "relearn_delays", Title = "Learn every client delay again from the request log", Destructive = true, Idempotent = true)]
+    [Description("Forgets what Auto-Delay learned and queues every client in the request log to be learned again from its requests, in the background while Auto-Delay is on. Returns how many learned delays were forgotten.")]
+    public Task<ClientDelaysChangeDto> RelearnDelaysAsync(CancellationToken cancellationToken = default)
     {
-        return clientsService.ResetLearnedDelaysAsync(cancellationToken);
+        return clientsService.RelearnDelaysAsync(cancellationToken);
     }
 
     [McpServerTool(Name = "send_abuse_report", Title = "Send an abuse report", Destructive = false, Idempotent = false, OpenWorld = true)]

@@ -6,15 +6,15 @@ import { countOf } from '../../lib/numbers';
 import { ClientDelaysChangeType } from '../../types/clientDelaysChangeType';
 import React from 'react';
 
-async function resetLearned(): Promise<void> {
+async function relearn(): Promise<void> {
     const confirmed = await confirmAction({
-        question: 'Forget every learned delay?',
-        detail: 'Every client starts again from the middle of the range.',
-        button: 'Forget',
+        question: 'Learn every delay again?',
+        detail: 'Learned delays are forgotten now and learned again in the background from each client’s requests in the log.',
+        button: 'Relearn',
     });
     if (!confirmed) return;
-    const result = await invokeHub<ClientDelaysChangeType>('resetLearnedDelays');
-    postNotice(`Forgot ${countOf(result.changed, 'learned delay')}.`);
+    const result = await invokeHub<ClientDelaysChangeType>('relearnDelays');
+    postNotice(`Forgot ${countOf(result.changed, 'learned delay')}; learning them again from the log.`);
 }
 
 async function resetManual(): Promise<void> {
@@ -34,9 +34,9 @@ const AutoDelayResets: React.FC = () => (
             <button
                 type='button'
                 className='danger'
-                onClick={() => perform(resetLearned)}
+                onClick={() => perform(relearn)}
             >
-                Reset learning
+                Relearn delays
             </button>
             <button
                 type='button'

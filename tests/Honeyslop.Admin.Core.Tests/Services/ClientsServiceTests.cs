@@ -195,15 +195,21 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
-    public async Task ResetLearnedDelaysAsync_ForgetsTheLearnedDelaysAndTheQueuedObservations()
+    public async Task RelearnDelaysAsync_ForgetsTheLearnedDelaysAndQueuesEveryClientInTheLog()
     {
         var setup = new Setup();
         setup.Probes.Setup(x => x.ClearAsync(It.IsAny<CancellationToken>())).ReturnsAsync(412);
+        setup.Requests.Setup(x => x.GetClientIpsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(["192.0.2.7", "::ffff:192.0.2.7", "2001:db8::1", ""]);
+        string[]? queued = null;
+        setup.Jobs
+            .Setup(x => x.EnqueueAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<string>, DateTimeOffset, CancellationToken>((clients, _, _) => queued = [.. clients]);
 
-        var change = await setup.Service().ResetLearnedDelaysAsync(CancellationToken.None);
+        var change = await setup.Service().RelearnDelaysAsync(CancellationToken.None);
 
         Assert.AreEqual(412, change.Changed);
         setup.Jobs.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Once);
+        CollectionAssert.AreEqual(new[] { "192.0.2.7", "2001:db8::1" }, queued);
     }
 
     [TestMethod]
@@ -211,7 +217,7 @@ public sealed class ClientsServiceTests
     {
         var setup = new Setup();
 
-        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() => setup.Service(ViewerDto.Anonymous).ResetLearnedDelaysAsync(CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() => setup.Service(ViewerDto.Anonymous).RelearnDelaysAsync(CancellationToken.None));
         await Assert.ThrowsExactlyAsync<AccessDeniedException>(() => setup.Service(ViewerDto.Anonymous).ResetResponseDelaysAsync(CancellationToken.None));
     }
 
@@ -311,7 +317,7 @@ public sealed class ClientsServiceTests
         public List<string[]> BounceLookups { get; } = [];
         public Mock<IClientDelayRepository> Delays { get; } = new();
         public Mock<IClientProbeRepository> Probes { get; } = new();
-        public Mock<IDelayJobRepository> Jobs { get; } = new();
+        public Mock<IDelayLearningJobRepository> Jobs { get; } = new();
         public Mock<IRequestRepository> Requests { get; } = new();
         public Mock<IAbuseReportRepository> Repository { get; } = new();
         public AbuseReport? Added { get; private set; }

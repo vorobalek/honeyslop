@@ -27,7 +27,7 @@ internal sealed partial class ClientsService(
     IAbuseReportBounceRepository bounceRepository,
     IClientDelayRepository clientDelayRepository,
     IClientProbeRepository clientProbeRepository,
-    IDelayJobRepository delayJobRepository,
+    IDelayLearningJobRepository delayLearningJobRepository,
     IRequestArchiveBuilder archiveBuilder,
     ICountryLookup countryLookup,
     IWhoisLookup whoisLookup,
@@ -164,11 +164,20 @@ internal sealed partial class ClientsService(
         return new ClientDelaysChangeDto(await clientDelayRepository.ClearAsync(cancellationToken));
     }
 
-    public async Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync(CancellationToken cancellationToken)
+    public async Task<ClientDelaysChangeDto> RelearnDelaysAsync(CancellationToken cancellationToken)
     {
         access.EnsureCanOperate();
-        await delayJobRepository.ClearAsync(cancellationToken);
-        return new ClientDelaysChangeDto(await clientProbeRepository.ClearAsync(cancellationToken));
+        await delayLearningJobRepository.ClearAsync(cancellationToken);
+        var forgotten = await clientProbeRepository.ClearAsync(cancellationToken);
+        string[] clients =
+        [
+            .. (await requestRepository.GetClientIpsAsync(cancellationToken))
+                .Select(x => IPAddress.TryParse(x, out var address) ? ClientAddress.Key(address) : null)
+                .OfType<string>()
+                .Distinct(StringComparer.Ordinal)
+        ];
+        await delayLearningJobRepository.EnqueueAsync(clients, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
+        return new ClientDelaysChangeDto(forgotten);
     }
 
     private static ClientDelayChangeDto DelayRefused(string field, string message)

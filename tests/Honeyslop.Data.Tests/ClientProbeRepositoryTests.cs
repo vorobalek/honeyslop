@@ -19,7 +19,9 @@ public sealed class ClientProbeRepositoryTests
 
         var added = await repository.TryAddAsync(Probe(ip, 15_000, null, now), CancellationToken.None);
         var addedAgain = await repository.TryAddAsync(Probe(ip, 1, null, now), CancellationToken.None);
-        var first = await repository.TryReplaceAsync(Probe(ip, 9_900, 10_000, now), 0, CancellationToken.None);
+        var replacement = Probe(ip, 9_900, 10_000, now);
+        replacement.LastRequestId = 42;
+        var first = await repository.TryReplaceAsync(replacement, 0, CancellationToken.None);
         var stale = await repository.TryReplaceAsync(Probe(ip, 20_000, null, now), 0, CancellationToken.None);
         var stored = await repository.GetOrDefaultAsync(ip, CancellationToken.None);
         var listed = await repository.GetAnyOfAsync([ip, "192.0.2.250"], CancellationToken.None);
@@ -28,7 +30,7 @@ public sealed class ClientProbeRepositoryTests
         Assert.IsFalse(addedAgain);
         Assert.IsTrue(first);
         Assert.IsFalse(stale);
-        Assert.AreEqual((9_900, (int?)10_000, 1), (stored!.DelayMilliseconds, stored.TimeoutMilliseconds, stored.Version));
+        Assert.AreEqual((9_900, (int?)10_000, 1, 42L), (stored!.DelayMilliseconds, stored.TimeoutMilliseconds, stored.Version, stored.LastRequestId));
         Assert.AreEqual(ip, listed.Single().ClientIp);
     }
 

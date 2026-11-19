@@ -38,6 +38,7 @@ internal static class DelayLearner
             AnswersSinceProbe = current.AnswersSinceProbe,
             Probing = current.Probing,
             EarlyDropMilliseconds = current.EarlyDropMilliseconds,
+            LastRequestId = current.LastRequestId,
             Version = current.Version,
             UpdatedAt = now
         };

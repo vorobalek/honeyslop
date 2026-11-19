@@ -208,6 +208,39 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .ToArrayAsync(cancellationToken);
     }
 
+    public Task<RequestRecord[]> GetTimingsAsync(IReadOnlyCollection<string> clientIps, long afterId, int limit, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Requests
+            .AsNoTracking()
+            .Where(x => clientIps.Contains(x.ClientIp) && x.Id > afterId)
+            .Where(x => x.Outcome == RequestOutcome.Hit ||
+                        x.Outcome == RequestOutcome.Generated ||
+                        x.Outcome == RequestOutcome.Abandoned ||
+                        x.Outcome == RequestOutcome.Waiting)
+            .OrderBy(x => x.Id)
+            .Take(limit)
+            .Select(x => new RequestRecord
+            {
+                Id = x.Id,
+                ReceivedAt = x.ReceivedAt,
+                ClientIp = x.ClientIp,
+                Outcome = x.Outcome,
+                DurationMs = x.DurationMs
+            })
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public Task<string[]> GetClientIpsAsync(CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Requests
+            .AsNoTracking()
+            .Select(x => x.ClientIp)
+            .Distinct()
+            .ToArrayAsync(cancellationToken);
+    }
+
     public Task<int> DeleteReceivedBeforeAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
     {
         return dbContext

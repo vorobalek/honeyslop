@@ -62,6 +62,7 @@ internal sealed class ClientProbeRepository(ApplicationDbContext dbContext) : IC
                     .SetProperty(x => x.AnswersSinceProbe, probe.AnswersSinceProbe)
                     .SetProperty(x => x.Probing, probe.Probing)
                     .SetProperty(x => x.EarlyDropMilliseconds, probe.EarlyDropMilliseconds)
+                    .SetProperty(x => x.LastRequestId, probe.LastRequestId)
                     .SetProperty(x => x.Version, expectedVersion + 1)
                     .SetProperty(x => x.UpdatedAt, probe.UpdatedAt),
                 cancellationToken) > 0;

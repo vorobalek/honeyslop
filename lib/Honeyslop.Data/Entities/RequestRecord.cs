@@ -9,6 +9,7 @@ namespace Honeyslop.Data.Entities;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(ReceivedAt))]
 [Index(nameof(ClientIp), nameof(ReceivedAt))]
+[Index(nameof(ClientIp), nameof(Id))]
 [Index(nameof(EntryId))]
 public class RequestRecord
 {

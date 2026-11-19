@@ -103,10 +103,10 @@ public sealed class AdminHub(
         return clientsService.SetResponseDelayAsync(ip, milliseconds, Context.ConnectionAborted);
     }
 
-    [HubMethodName("resetLearnedDelays")]
-    public Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync()
+    [HubMethodName("relearnDelays")]
+    public Task<ClientDelaysChangeDto> RelearnDelaysAsync()
     {
-        return clientsService.ResetLearnedDelaysAsync(Context.ConnectionAborted);
+        return clientsService.RelearnDelaysAsync(Context.ConnectionAborted);
     }
 
     [HubMethodName("resetClientDelays")]

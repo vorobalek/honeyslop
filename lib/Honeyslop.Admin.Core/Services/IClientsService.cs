@@ -14,5 +14,5 @@ public interface IClientsService
     Task<ReportRequestDto> ReportAsync(string ip, string? senderName, CancellationToken cancellationToken);
     Task<ClientDelayChangeDto> SetResponseDelayAsync(string ip, int? milliseconds, CancellationToken cancellationToken);
     Task<ClientDelaysChangeDto> ResetResponseDelaysAsync(CancellationToken cancellationToken);
-    Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync(CancellationToken cancellationToken);
+    Task<ClientDelaysChangeDto> RelearnDelaysAsync(CancellationToken cancellationToken);
 }

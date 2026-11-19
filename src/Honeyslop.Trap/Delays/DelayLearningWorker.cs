@@ -1,5 +1,8 @@
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Monitoring;
 using Honeyslop.Trap.Options;
 using Honeyslop.Trap.Settings;
@@ -14,9 +17,10 @@ internal sealed partial class DelayLearningWorker(
     TimeProvider timeProvider,
     ILogger<DelayLearningWorker> logger) : BackgroundService
 {
-    private const int Attempts = 5;
+    private const int Page = 500;
     private static readonly TimeSpan Idle = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan Lease = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan Unfinished = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan CountEvery = TimeSpan.FromSeconds(10);
 
     private long? _countedAt;
@@ -51,7 +55,7 @@ internal sealed partial class DelayLearningWorker(
             return false;
 
         await using var scope = scopeFactory.CreateAsyncScope();
-        var jobs = scope.ServiceProvider.GetRequiredService<IDelayJobRepository>();
+        var jobs = scope.ServiceProvider.GetRequiredService<IDelayLearningJobRepository>();
         var now = await scope.ServiceProvider.GetRequiredService<IServerTimeRepository>().GetNowAsync(cancellationToken);
         var instance = options.Value.InstanceName;
         var job = await jobs.TryClaimNextAsync(instance, now, now - Lease, cancellationToken);
@@ -63,38 +67,66 @@ internal sealed partial class DelayLearningWorker(
 
         if (_countedAt is not { } countedAt || timeProvider.GetElapsedTime(countedAt) >= CountEvery)
         {
-            TrapMetrics.DelayJobsWaiting.Set(await jobs.CountAsync(cancellationToken));
+            TrapMetrics.DelayJobsWaiting.Set(await jobs.CountWaitingAsync(cancellationToken));
             _countedAt = timeProvider.GetTimestamp();
         }
 
-        await LearnAsync(scope.ServiceProvider.GetRequiredService<IClientProbeRepository>(), job, settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds, now, cancellationToken);
+        var learned = await LearnAsync(scope.ServiceProvider, job.ClientIp, settings, now, cancellationToken);
+        TrapMetrics.DelayJobs.WithLabels(learned ? "learned" : "lost").Inc();
+        if (!learned)
+            LogLost(logger, job.ClientIp);
         await jobs.CompleteAsync(job.Id, instance, cancellationToken);
         return true;
     }
 
-    private async Task LearnAsync(IClientProbeRepository probes, DelayJob job, int min, int max, DateTimeOffset now, CancellationToken cancellationToken)
+    private static async Task<bool> LearnAsync(IServiceProvider services, string clientIp, HoneyslopSettings settings, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < Attempts; attempt++)
+        var probes = services.GetRequiredService<IClientProbeRepository>();
+        var requests = services.GetRequiredService<IRequestRepository>();
+        var spellings = ClientAddress.Spellings(clientIp);
+        var (min, max) = (settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds);
+        var current = await probes.GetOrDefaultAsync(clientIp, cancellationToken);
+        while (true)
         {
-            var current = await probes.GetOrDefaultAsync(job.ClientIp, cancellationToken);
-            var next = DelayLearner.Observe(current ?? DelayLearner.Start(job.ClientIp, min, max, now), job.Answered, job.DurationMs, min, max, now);
-            var saved = current is null
-                ? await probes.TryAddAsync(next, cancellationToken)
-                : await probes.TryReplaceAsync(next, current.Version, cancellationToken);
-            if (saved)
+            var timings = await requests.GetTimingsAsync(spellings, current?.LastRequestId ?? 0, Page, cancellationToken);
+            var next = current ?? DelayLearner.Start(clientIp, min, max, now);
+            var observed = 0;
+            var unfinished = false;
+            foreach (var request in timings)
             {
-                TrapMetrics.DelayJobs.WithLabels("learned").Inc();
-                return;
-            }
-        }
+                if (request.Outcome == RequestOutcome.Waiting)
+                {
+                    if (request.ReceivedAt > now - Unfinished)
+                    {
+                        unfinished = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    next = DelayLearner.Observe(next, request.Outcome != RequestOutcome.Abandoned, request.DurationMs, min, max, now);
+                    observed++;
+                }
 
-        TrapMetrics.DelayJobs.WithLabels("contended").Inc();
-        LogContended(logger, job.ClientIp);
+                next.LastRequestId = request.Id;
+            }
+
+            if (next.LastRequestId == (current?.LastRequestId ?? 0))
+                return true;
+            if (current is null ? !await probes.TryAddAsync(next, cancellationToken) : !await probes.TryReplaceAsync(next, current.Version, cancellationToken))
+                return false;
+
+            TrapMetrics.DelayObservations.Inc(observed);
+            if (unfinished || timings.Length < Page)
+                return true;
+            next.Version = current is null ? next.Version : current.Version + 1;
+            current = next;
+        }
     }
 
     [LoggerMessage(LogLevel.Warning, "Learning response delays failed, retrying")]
     static partial void LogFailed(ILogger<DelayLearningWorker> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Warning, "Gave up on a delay observation for {clientIp}: other workers kept changing it")]
-    static partial void LogContended(ILogger<DelayLearningWorker> logger, string clientIp);
+    [LoggerMessage(LogLevel.Warning, "Lost the learned delay of {clientIp} to another worker that took the client over")]
+    static partial void LogLost(ILogger<DelayLearningWorker> logger, string clientIp);
 }

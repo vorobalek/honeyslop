@@ -23,6 +23,8 @@ public class ClientProbe
 
     public int? EarlyDropMilliseconds { get; set; }
 
+    public long LastRequestId { get; set; }
+
     public int Version { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
