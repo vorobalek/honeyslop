@@ -132,6 +132,25 @@ public sealed class NotificationTests
     }
 
     [TestMethod]
+    public async Task ClientDelayChanges_AreAnnounced()
+    {
+        await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);
+        await connection.OpenAsync();
+        var received = new List<string>();
+        connection.Notification += (_, notification) => received.Add(notification.Channel);
+        await using (var command = new NpgsqlCommand("listen honeyslop_clients", connection))
+            await command.ExecuteNonQueryAsync();
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<IClientDelayRepository>()
+                .SetAsync($"203.0.113.{Random.Shared.Next(1, 254)}", 250, "operator", DateTimeOffset.UtcNow, CancellationToken.None);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!received.Contains("honeyslop_clients"))
+            await connection.WaitAsync(timeout.Token);
+    }
+
+    [TestMethod]
     public async Task GenerationOutput_IsAnnouncedWithItsContent()
     {
         await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);

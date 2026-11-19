@@ -3,6 +3,7 @@ import { countOf } from '../../lib/numbers';
 import { display } from '../../lib/time';
 import { Watch } from '../../lib/watchStore';
 import { ClientType } from '../../types/clientType';
+import ClientDelayButton from './ClientDelayButton';
 import React from 'react';
 
 type ClientMetaProps = {
@@ -12,6 +13,8 @@ type ClientMetaProps = {
 const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
     const country = useWatched(watch, (client) => client.country);
     const activity = useWatched(watch, (client) => client.activity);
+    const ip = useWatched(watch, (client) => client.ip);
+    const delay = useWatched(watch, (client) => client.responseDelayMilliseconds);
     return (
         <>
             <dl className='meta'>
@@ -31,6 +34,14 @@ const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
                         <dd className='agent'>{activity.lastUserAgent ?? '—'}</dd>
                     </>
                 )}
+                <dt>Delay</dt>
+                <dd>
+                    {delay !== null ? `${delay} ms, set on this address` : 'none; the delays of the entries apply'}{' '}
+                    <ClientDelayButton
+                        ip={ip}
+                        milliseconds={delay}
+                    />
+                </dd>
             </dl>
             {!activity && (
                 <p className='notice'>

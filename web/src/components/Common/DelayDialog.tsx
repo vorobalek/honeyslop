@@ -1,25 +1,32 @@
 import { perform } from '../../lib/actions';
 import { confirmAction } from '../../lib/confirmation';
-import { RESPONSE_DELAY_MAX_SECONDS } from '../../lib/constants';
-import { invokeHub } from '../../lib/hubConnection';
+import { RESPONSE_DELAY_MAX_MILLISECONDS } from '../../lib/constants';
 import { postNotice } from '../../lib/noticeStore';
-import { EntryChangeType } from '../../types/entryChangeType';
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 
-type EntryDelayDialogProps = {
-    id: number;
-    seconds: number | null;
-    fallback: number;
+type DelayDialogProps = {
+    title: string;
+    question: string;
+    milliseconds: number | null;
+    placeholder: string;
+    hint: string;
+    detail: (milliseconds: number | null) => string;
+    notice: (milliseconds: number | null) => string;
+    save: (milliseconds: number | null) => Promise<string | null>;
     onClose: () => void;
 };
 
-function delayNotice(seconds: number | null, fallback: number): string {
-    return seconds === null
-        ? `The entry waits the default ${fallback} s again.`
-        : `The entry waits ${seconds} s before every response.`;
-}
-
-const EntryDelayDialog: React.FC<EntryDelayDialogProps> = ({ id, seconds, fallback, onClose }) => {
+const DelayDialog: React.FC<DelayDialogProps> = ({
+    title,
+    question,
+    milliseconds,
+    placeholder,
+    hint,
+    detail,
+    notice,
+    save,
+    onClose,
+}) => {
     const dialog = useRef<HTMLDialogElement>(null);
     const [error, setError] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
@@ -29,28 +36,24 @@ const EntryDelayDialog: React.FC<EntryDelayDialogProps> = ({ id, seconds, fallba
     }, []);
 
     const send = async (value: number | null) => {
-        const confirmed = await confirmAction({
-            question: 'Change the delay of this entry?',
-            detail: `The trap waits ${value ?? fallback} s before every response it serves from this entry.`,
-            button: 'Change',
-        });
+        const confirmed = await confirmAction({ question, detail: detail(value), button: 'Change' });
         if (!confirmed) return;
         setSending(true);
         try {
-            const result = await invokeHub<EntryChangeType>('setEntryDelay', [id], value);
-            if (!result.changed) {
-                setError(Object.values(result.errors)[0] ?? null);
+            const refused = await save(value);
+            if (refused !== null) {
+                setError(refused);
                 return;
             }
             dialog.current?.close();
-            postNotice(delayNotice(value, fallback));
+            postNotice(notice(value));
         } finally {
             setSending(false);
         }
     };
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const text = String(new FormData(event.currentTarget).get('Seconds') ?? '').trim();
+        const text = String(new FormData(event.currentTarget).get('Milliseconds') ?? '').trim();
         perform(
             () => send(text === '' ? null : Number(text)),
             (reason) => setError(reason),
@@ -59,27 +62,27 @@ const EntryDelayDialog: React.FC<EntryDelayDialogProps> = ({ id, seconds, fallba
 
     return (
         <dialog
-            className='entry-delay'
+            className='delay-dialog'
             ref={dialog}
             onClose={onClose}
         >
             <form onSubmit={submit}>
-                <p className='dialog-title'>Delay of this entry</p>
+                <p className='dialog-title'>{title}</p>
                 <fieldset disabled={sending}>
                     <div className='setting'>
-                        <label htmlFor='entry-delay'>Hold every response for, seconds</label>
+                        <label htmlFor='delay-milliseconds'>Hold every response for, milliseconds</label>
                         <input
                             type='number'
-                            id='entry-delay'
-                            name='Seconds'
+                            id='delay-milliseconds'
+                            name='Milliseconds'
                             min='0'
-                            max={RESPONSE_DELAY_MAX_SECONDS}
+                            max={RESPONSE_DELAY_MAX_MILLISECONDS}
                             step='1'
-                            placeholder={String(fallback)}
-                            defaultValue={seconds ?? ''}
+                            placeholder={placeholder}
+                            defaultValue={milliseconds ?? ''}
                         />
                         {error && <span className='error'>{error}</span>}
-                        <p className='hint'>{`Empty uses the default, ${fallback} s now.`}</p>
+                        <p className='hint'>{hint}</p>
                     </div>
                 </fieldset>
                 <div className='actions'>
@@ -102,4 +105,4 @@ const EntryDelayDialog: React.FC<EntryDelayDialogProps> = ({ id, seconds, fallba
     );
 };
 
-export default React.memo(EntryDelayDialog);
+export default React.memo(DelayDialog);

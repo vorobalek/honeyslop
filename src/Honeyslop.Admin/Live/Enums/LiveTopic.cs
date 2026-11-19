@@ -5,5 +5,6 @@ public enum LiveTopic
     Entries,
     Requests,
     Outputs,
-    Reports
+    Reports,
+    Clients
 }

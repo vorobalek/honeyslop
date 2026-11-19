@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
                     async (views, request, cancellationToken) => await views.GetClientsAsync(request.Query, cancellationToken))
                 .AddWatch<ClientWatch, object?>(
                     WatchAudience.Shared,
-                    _ => new LiveInterest([LiveTopic.Requests]),
+                    _ => new LiveInterest([LiveTopic.Requests, LiveTopic.Clients]),
                     async (views, request, cancellationToken) => await views.GetClientAsync(request.Ip, cancellationToken))
                 .AddWatch<ClientAbuseWatch, object?>(
                     WatchAudience.Personal,

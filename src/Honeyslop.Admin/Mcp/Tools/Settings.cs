@@ -41,8 +41,8 @@ public sealed class Settings(ISettingsService settingsService)
         bool? publicView = null,
         [Description("User-Agent for outbound lookups; an empty string restores the default.")]
         string? userAgent = null,
-        [Description("Seconds the trap waits before every response served from an entry that sets no delay of its own, 0 to 600; -1 goes back to RESPONSE_DELAY_SECONDS.")]
-        long? responseDelaySeconds = null,
+        [Description("Milliseconds the trap waits before every response served from an entry when neither the client nor the entry sets a delay of its own, 0 to 600000; -1 goes back to RESPONSE_DELAY_MILLISECONDS.")]
+        int? responseDelayMilliseconds = null,
         CancellationToken cancellationToken = default)
     {
         var current = (await settingsService.GetAsync(cancellationToken)).Settings;
@@ -59,11 +59,11 @@ public sealed class Settings(ISettingsService settingsService)
             GenerationTimeLimit = Seconds(generationTimeLimitSeconds) ?? current.GenerationTimeLimit,
             PublicView = publicView ?? current.PublicView,
             UserAgent = userAgent ?? current.UserAgent,
-            ResponseDelay = responseDelaySeconds switch
+            ResponseDelayMilliseconds = responseDelayMilliseconds switch
             {
-                null => current.ResponseDelay,
+                null => current.ResponseDelayMilliseconds,
                 -1 => null,
-                { } seconds => TimeSpan.FromSeconds(seconds)
+                { } milliseconds => milliseconds
             }
         };
         return await settingsService.SaveAsync(settings, cancellationToken);

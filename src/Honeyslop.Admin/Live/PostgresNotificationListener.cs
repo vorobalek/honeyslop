@@ -33,7 +33,7 @@ internal sealed partial class PostgresNotificationListener(
                 await using var connection = new NpgsqlConnection(builder.ConnectionString);
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
-                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports; listen honeyslop_settings;", connection))
+                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports; listen honeyslop_settings; listen honeyslop_clients;", connection))
                 {
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 }
@@ -66,6 +66,10 @@ internal sealed partial class PostgresNotificationListener(
         else if (channel == "honeyslop_reports")
         {
             subscriptions.Publish(new LiveChange(LiveTopic.Reports));
+        }
+        else if (channel == "honeyslop_clients")
+        {
+            subscriptions.Publish(new LiveChange(LiveTopic.Clients));
         }
         else if (channel == "honeyslop_outputs")
         {

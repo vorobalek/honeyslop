@@ -70,8 +70,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     them forever.
                 </DurationSetting>
                 <ResponseDelaySetting
-                    seconds={settings.responseDelay === null ? null : timeSpanSeconds(settings.responseDelay)}
-                    fallback={timeSpanSeconds(view.defaultResponseDelay)}
+                    milliseconds={settings.responseDelayMilliseconds}
+                    fallback={view.defaultResponseDelayMilliseconds}
                     error={errors.ResponseDelay}
                 />
 

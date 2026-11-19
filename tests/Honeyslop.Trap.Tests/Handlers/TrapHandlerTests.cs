@@ -134,9 +134,9 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(1));
-        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelay = TimeSpan.FromSeconds(10) };
+        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = 10_000 };
         var entry = ReadyEntry(7);
-        entry.ResponseDelaySeconds = 3;
+        entry.ResponseDelayMilliseconds = 3_250;
         sut.Repository
             .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entry);
@@ -145,7 +145,29 @@ public sealed class TrapHandlerTests
         await sut.Handler.HandleAsync(context);
 
         Assert.AreEqual("APP_KEY=base64:fake", Body(context));
-        CollectionAssert.AreEqual(new[] { TimeSpan.FromSeconds(3) }, time.Delays);
+        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(3_250) }, time.Delays);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_ClientWithADelay_WaitsThatLongEvenIfTheEntryHasItsOwn()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(1));
+        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = 10_000 };
+        sut.ClientDelays
+            .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TimeSpan.FromMilliseconds(750));
+        var entry = ReadyEntry(7);
+        entry.ResponseDelayMilliseconds = 3_250;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var context = Request("GET", "/.env");
+        context.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:203.0.113.7");
+        await sut.Handler.HandleAsync(context);
+
+        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(750) }, time.Delays);
     }
 
     [TestMethod]
@@ -156,7 +178,7 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(environment));
-        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelay = setting < 0 ? null : TimeSpan.FromSeconds(setting) };
+        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = setting < 0 ? null : setting * 1000 };
         sut.Repository
             .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ReadyEntry(7));
@@ -476,6 +498,7 @@ public sealed class TrapHandlerTests
                 Watcher,
                 Hits,
                 Settings.Object,
+                ClientDelays.Object,
                 Log,
                 globalCancellationTokenSource.Object,
                 options,
@@ -485,6 +508,7 @@ public sealed class TrapHandlerTests
 
         public Mock<IEntryRepository> Repository { get; } = CreateRepository();
         public Mock<ISettingsProvider> Settings { get; } = new();
+        public Mock<IClientDelays> ClientDelays { get; } = new();
 
         public HoneyslopSettings CurrentSettings { get; set; } = HoneyslopSettings.Default with
         {

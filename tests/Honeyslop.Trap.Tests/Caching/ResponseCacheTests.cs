@@ -73,6 +73,7 @@ public sealed class ResponseCacheTests
             "Host=unused",
             cache,
             Mock.Of<ISettingsProvider>(),
+            Mock.Of<IClientDelays>(),
             TimeProvider.System,
             NullLogger<ChangeListener>.Instance);
         cache.Set(Key, Response(1), cache.Version);
@@ -91,12 +92,26 @@ public sealed class ResponseCacheTests
     {
         using var cache = Enabled();
         var settings = new Mock<ISettingsProvider>();
-        var listener = new ChangeListener("Host=unused", cache, settings.Object, TimeProvider.System, NullLogger<ChangeListener>.Instance);
+        var listener = new ChangeListener("Host=unused", cache, settings.Object, Mock.Of<IClientDelays>(), TimeProvider.System, NullLogger<ChangeListener>.Instance);
         cache.Set(Key, Response(1), cache.Version);
 
         listener.Dispatch("honeyslop_settings", "");
 
         settings.Verify(x => x.Reset(), Times.Once);
+        Assert.IsTrue(cache.TryGet(Key, out _));
+    }
+
+    [TestMethod]
+    public void ClientDelayChange_ReloadsTheClientDelaysAndKeepsTheCache()
+    {
+        using var cache = Enabled();
+        var clientDelays = new Mock<IClientDelays>();
+        var listener = new ChangeListener("Host=unused", cache, Mock.Of<ISettingsProvider>(), clientDelays.Object, TimeProvider.System, NullLogger<ChangeListener>.Instance);
+        cache.Set(Key, Response(1), cache.Version);
+
+        listener.Dispatch("honeyslop_clients", "");
+
+        clientDelays.Verify(x => x.Reset(), Times.Once);
         Assert.IsTrue(cache.TryGet(Key, out _));
     }
 

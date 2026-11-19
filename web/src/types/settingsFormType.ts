@@ -10,5 +10,5 @@ export interface SettingsFormType {
     generationTimeLimitSeconds: number;
     publicView: boolean;
     userAgent: string | null;
-    responseDelaySeconds: number | null;
+    responseDelayMilliseconds: number | null;
 }

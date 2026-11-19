@@ -45,6 +45,12 @@ internal sealed partial class EntriesService(
         var entry = await entryRepository.GetByIdOrDefaultAsync(id, cancellationToken);
         if (entry is null)
             return null;
+        if (!access.Viewer.CanOperate)
+        {
+            entry.ChangedBy = null;
+            entry.Guidance = null;
+        }
+
         var current = entry.Status == EntryStatus.Expired
             ? await entryRepository.GetByKeyHashOrDefaultAsync(entry.KeyHash, cancellationToken)
             : null;
@@ -53,7 +59,7 @@ internal sealed partial class EntriesService(
             entry.ClientIp is null ? null : countryLookup.Find(entry.ClientIp),
             current?.Id,
             entry.State == EntryState.Generating ? outputStore.GetOrDefault(entry.Id) : null,
-            (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.ResponseDelay ?? responseDelayOptions.Value.Default,
+            (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.ResponseDelayMilliseconds ?? responseDelayOptions.Value.DefaultMilliseconds,
             await serverTime.GetNowAsync(cancellationToken));
     }
 
@@ -146,14 +152,14 @@ internal sealed partial class EntriesService(
 
     public async Task<EntryChangeDto> SetResponseDelayAsync(
         IReadOnlyCollection<long> ids,
-        int? seconds,
+        int? milliseconds,
         CancellationToken cancellationToken)
     {
         access.EnsureCanOperate();
-        if (seconds is < 0 or > Entry.ResponseDelayMaxSeconds)
-            return Refused(nameof(Entry.ResponseDelaySeconds), $"Must be from 0 to {Entry.ResponseDelayMaxSeconds} seconds.");
+        if (milliseconds is < 0 or > Entry.ResponseDelayMaxMilliseconds)
+            return Refused(nameof(Entry.ResponseDelayMilliseconds), $"Must be from 0 to {Entry.ResponseDelayMaxMilliseconds} milliseconds.");
         var changed = ids.Count > 0
-            ? await entryRepository.SetResponseDelayAsync(ids, seconds, await serverTime.GetNowAsync(cancellationToken), cancellationToken)
+            ? await entryRepository.SetResponseDelayAsync(ids, milliseconds, await serverTime.GetNowAsync(cancellationToken), cancellationToken)
             : [];
         return changed.Length > 0
             ? new EntryChangeDto(new Dictionary<string, string>(), changed)
@@ -326,7 +332,7 @@ internal sealed partial class EntriesService(
             UserAgent = current.UserAgent,
             RequestHeaders = current.RequestHeaders,
             RequestBody = current.RequestBody,
-            ResponseDelaySeconds = current.ResponseDelaySeconds,
+            ResponseDelayMilliseconds = current.ResponseDelayMilliseconds,
             ChangedBy = access.Viewer.Name,
             CreatedAt = now,
             UpdatedAt = now

@@ -57,7 +57,7 @@ await Host
                 .Configure(x => x.Default = AppConfiguration.UserAgent);
             services
                 .AddOptions<ResponseDelayOptions>()
-                .Configure(x => x.Default = TimeSpan.FromSeconds(Math.Clamp(AppConfiguration.ResponseDelaySeconds, 0, Entry.ResponseDelayMaxSeconds)));
+                .Configure(x => x.DefaultMilliseconds = Math.Clamp(AppConfiguration.ResponseDelayMilliseconds, 0, Entry.ResponseDelayMaxMilliseconds));
             services
                 .AddOptions<AbuseReportOptions>()
                 .Configure(x =>

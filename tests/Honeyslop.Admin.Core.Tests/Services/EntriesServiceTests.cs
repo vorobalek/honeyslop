@@ -4,6 +4,7 @@ using Honeyslop.Admin.Core.Exceptions;
 using Honeyslop.Admin.Core.Options;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Core.Services.Internals;
+using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
@@ -266,22 +267,22 @@ public sealed class EntriesServiceTests
     public async Task RegenerateAsync_KeepsTheDelayOfTheEntryItReplaces()
     {
         var current = Ready(1, "/SDK/webLanguage");
-        current.ResponseDelaySeconds = 30;
+        current.ResponseDelayMilliseconds = 30_000;
         Active(current);
 
         await Service(Viewers.Operator).RegenerateAsync([1], null, CancellationToken.None);
 
-        Assert.AreEqual(30, _replacements.Single().ResponseDelaySeconds);
+        Assert.AreEqual(30_000, _replacements.Single().ResponseDelayMilliseconds);
     }
 
     [TestMethod]
     [DataRow(-1)]
-    [DataRow(601)]
-    public async Task SetResponseDelayAsync_OutOfRange_IsRefused(int seconds)
+    [DataRow(600_001)]
+    public async Task SetResponseDelayAsync_OutOfRange_IsRefused(int milliseconds)
     {
-        var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], seconds, CancellationToken.None);
+        var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], milliseconds, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { nameof(Entry.ResponseDelaySeconds) }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[] { nameof(Entry.ResponseDelayMilliseconds) }, change.Errors.Keys.ToArray());
         _entries.Verify(x => x.SetResponseDelayAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<int?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -329,6 +330,23 @@ public sealed class EntriesServiceTests
             })
             .ReturnsAsync(added);
         return () => captured ?? throw new AssertFailedException("Nothing was added.");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task GetAsync_ShowsWhoChangedTheEntryAndTheCommentOnlyToOperators(bool signedIn)
+    {
+        var entry = Ready(5, "/index.php");
+        entry.ChangedBy = "operator";
+        entry.Guidance = "return rendered HTML";
+        _entries.Setup(x => x.GetByIdOrDefaultAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(entry);
+        _settings.Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Settings());
+
+        var details = await Service(signedIn ? Viewers.Operator : ViewerDto.Anonymous).GetAsync(5, CancellationToken.None);
+
+        Assert.AreEqual(signedIn ? "operator" : null, details!.Entry.ChangedBy);
+        Assert.AreEqual(signedIn ? "return rendered HTML" : null, details.Entry.Guidance);
     }
 
     private void Active(params Entry[] entries)

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using Honeyslop.Common;
 using Honeyslop.Data.Entities;
@@ -26,6 +27,7 @@ internal sealed partial class TrapHandler(
     IEntryWatcher entryWatcher,
     IHitCounter hitCounter,
     ISettingsProvider settingsProvider,
+    IClientDelays clientDelays,
     IRequestLog requestLog,
     IGlobalCancellationTokenSource globalCancellationTokenSource,
     IOptions<TrapOptions> options,
@@ -100,7 +102,7 @@ internal sealed partial class TrapHandler(
             status = response.Status;
             entryId = response.EntryId > 0 ? response.EntryId : null;
             if (outcome is RequestOutcome.Hit or RequestOutcome.Generated)
-                await DelayAsync(response, httpContext.RequestAborted);
+                await DelayAsync(httpContext.Connection.RemoteIpAddress, response, httpContext.RequestAborted);
             await ResponseWriter.WriteAsync(httpContext, response, httpContext.RequestAborted);
         }
         catch (Exception exception) when (exception is OperationCanceledException or IOException &&
@@ -177,11 +179,13 @@ internal sealed partial class TrapHandler(
         return (RequestOutcome.Generated, generated);
     }
 
-    private async Task DelayAsync(CachedResponse response, CancellationToken cancellationToken)
+    private async Task DelayAsync(IPAddress? client, CachedResponse response, CancellationToken cancellationToken)
     {
-        var delay = response.Delay ??
-                    (await settingsProvider.GetAsync(cancellationToken)).ResponseDelay ??
-                    options.Value.ResponseDelay;
+        var delay = (client is null ? null : await clientDelays.GetAsync(ClientAddress.Key(client), cancellationToken)) ??
+                    response.Delay ??
+                    ((await settingsProvider.GetAsync(cancellationToken)).ResponseDelayMilliseconds is { } milliseconds
+                        ? TimeSpan.FromMilliseconds(milliseconds)
+                        : options.Value.ResponseDelay);
         if (delay > TimeSpan.Zero)
             await Task.Delay(delay, timeProvider, cancellationToken);
     }

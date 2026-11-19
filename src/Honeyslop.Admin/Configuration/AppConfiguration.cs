@@ -38,7 +38,7 @@ public static class AppConfiguration
     public static readonly string? StaticExtensions = "STATIC_EXTENSIONS"
         .EnvironmentValue;
 
-    public static readonly int ResponseDelaySeconds = "RESPONSE_DELAY_SECONDS"
+    public static readonly int ResponseDelayMilliseconds = "RESPONSE_DELAY_MILLISECONDS"
         .GetEnvironmentValueWithFallback(0);
 
     public static readonly string? AbuseReportSenderName = "ABUSE_REPORT_SENDER_NAME"

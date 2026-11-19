@@ -116,11 +116,11 @@ public sealed class ToolsTests
         var current = HoneyslopSettings.Default with
         {
             UserAgent = "custom",
-            ResponseDelay = TimeSpan.FromSeconds(9)
+            ResponseDelayMilliseconds = 9000
         };
         settings
             .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SettingsDto(current, "default", TimeSpan.Zero, null, null));
+            .ReturnsAsync(new SettingsDto(current, "default", 0, null, null));
         HoneyslopSettings? saved = null;
         settings
             .Setup(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<CancellationToken>()))
@@ -129,13 +129,13 @@ public sealed class ToolsTests
 
         await new Settings(settings.Object).UpdateAsync(3600, publicView: true);
         var kept = saved;
-        await new Settings(settings.Object).UpdateAsync(responseDelaySeconds: -1);
+        await new Settings(settings.Object).UpdateAsync(responseDelayMilliseconds: -1);
 
         Assert.AreEqual(current with
         {
             CacheTtl = TimeSpan.FromHours(1),
             PublicView = true
         }, kept);
-        Assert.IsNull(saved?.ResponseDelay);
+        Assert.IsNull(saved?.ResponseDelayMilliseconds);
     }
 }

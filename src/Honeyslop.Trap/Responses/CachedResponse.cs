@@ -31,6 +31,6 @@ public sealed record CachedResponse(
 
     public static TimeSpan? DelayOf(Entry entry)
     {
-        return entry.ResponseDelaySeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null;
+        return entry.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : null;
     }
 }

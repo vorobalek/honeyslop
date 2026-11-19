@@ -11,6 +11,7 @@ using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Reports;
 using Honeyslop.Reports.Contracts;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ internal sealed partial class ClientsService(
     ISettingsRepository settingsRepository,
     IBlockedAbuseContactRepository blockedContactRepository,
     IAbuseReportBounceRepository bounceRepository,
+    IClientDelayRepository clientDelayRepository,
     IRequestArchiveBuilder archiveBuilder,
     ICountryLookup countryLookup,
     IWhoisLookup whoisLookup,
@@ -50,9 +52,10 @@ internal sealed partial class ClientsService(
     public async Task<ClientDto?> GetAsync(string ip, CancellationToken cancellationToken)
     {
         await access.EnsureCanReadAsync(cancellationToken);
-        return await FindAsync(ip, cancellationToken) is { } known
-            ? new ClientDto(ip, countryLookup.Find(ip), known.Summary)
-            : null;
+        if (await FindAsync(ip, cancellationToken) is not { } known)
+            return null;
+        var delay = await clientDelayRepository.GetOrDefaultAsync(ClientAddress.Key(IPAddress.Parse(ip)), cancellationToken);
+        return new ClientDto(ip, countryLookup.Find(ip), known.Summary, delay?.ResponseDelayMilliseconds);
     }
 
     public async Task<ClientAbuseDto?> GetAbuseAsync(string ip, CancellationToken cancellationToken)
@@ -133,6 +136,22 @@ internal sealed partial class ClientsService(
         return await abuseReportRepository.TryAddAsync(report, cancellationToken)
             ? new ReportRequestDto(ReportOutcome.Queued, report.Id)
             : new ReportRequestDto(ReportOutcome.AlreadyQueued);
+    }
+
+    public async Task<ClientDelayChangeDto> SetResponseDelayAsync(string ip, int? milliseconds, CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        if (!IPAddress.TryParse(ip, out var address))
+            return DelayRefused("Ip", "Must be an IP address.");
+        if (milliseconds is < 0 or > Entry.ResponseDelayMaxMilliseconds)
+            return DelayRefused(nameof(Entry.ResponseDelayMilliseconds), $"Must be from 0 to {Entry.ResponseDelayMaxMilliseconds} milliseconds.");
+        await clientDelayRepository.SetAsync(ClientAddress.Key(address), milliseconds, access.Viewer.Name, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
+        return new ClientDelayChangeDto(new Dictionary<string, string>(), milliseconds);
+    }
+
+    private static ClientDelayChangeDto DelayRefused(string field, string message)
+    {
+        return new ClientDelayChangeDto(new Dictionary<string, string> { [field] = message }, null);
     }
 
     private async Task<KnownClient?> FindAsync(string ip, CancellationToken cancellationToken)

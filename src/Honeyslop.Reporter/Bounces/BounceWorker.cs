@@ -1,6 +1,7 @@
 using System.Globalization;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Reporter.Mail;
+using Honeyslop.Reporter.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace Honeyslop.Reporter.Bounces;
@@ -15,7 +16,9 @@ internal sealed partial class BounceWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!imapOptions.Value.Configured)
+        var configured = imapOptions.Value.Configured;
+        ReporterMetrics.MailboxConfigured.Set(configured ? 1 : 0);
+        if (!configured)
         {
             LogNotConfigured(logger);
             return;
@@ -24,6 +27,7 @@ internal sealed partial class BounceWorker(
         LogStarted(logger, string.Join(", ", options.Value.Folders));
         while (!stoppingToken.IsCancellationRequested)
         {
+            var read = true;
             foreach (var folder in options.Value.Folders)
             {
                 try
@@ -36,9 +40,13 @@ internal sealed partial class BounceWorker(
                 }
                 catch (Exception exception)
                 {
+                    read = false;
                     LogScanFailed(logger, folder, exception);
                 }
             }
+
+            if (read)
+                ReporterMetrics.MailboxRead.Set(timeProvider.GetUtcNow().ToUnixTimeMilliseconds() / 1000.0);
 
             await Task.Delay(options.Value.PollInterval, timeProvider, stoppingToken).ContinueWith(_ => { }, TaskScheduler.Default);
         }

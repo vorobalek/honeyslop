@@ -159,6 +159,40 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
+    public async Task SetResponseDelayAsync_SavesTheDelayOfTheNormalizedAddress()
+    {
+        var setup = new Setup();
+
+        var v6 = await setup.Service().SetResponseDelayAsync("2001:DB8::0:7", 1500, CancellationToken.None);
+        var mapped = await setup.Service().SetResponseDelayAsync("::ffff:198.51.100.4", null, CancellationToken.None);
+
+        Assert.IsTrue(v6.Changed && mapped.Changed);
+        setup.Delays.Verify(x => x.SetAsync("2001:db8::7", 1500, "operator", Now, It.IsAny<CancellationToken>()), Times.Once);
+        setup.Delays.Verify(x => x.SetAsync("198.51.100.4", null, "operator", Now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    [DataRow("not-an-ip", 100, "Ip")]
+    [DataRow(Ip, -1, "ResponseDelayMilliseconds")]
+    [DataRow(Ip, 600_001, "ResponseDelayMilliseconds")]
+    public async Task SetResponseDelayAsync_WrongAddressOrDelay_IsRefused(string ip, int milliseconds, string field)
+    {
+        var setup = new Setup();
+
+        var change = await setup.Service().SetResponseDelayAsync(ip, milliseconds, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { field }, change.Errors.Keys.ToArray());
+        setup.Delays.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task SetResponseDelayAsync_Anonymous_IsDenied()
+    {
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
+            new Setup().Service(ViewerDto.Anonymous).SetResponseDelayAsync(Ip, 100, CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task ReportAsync_NewRequestsSinceTheLastReport_QueuesAFollowUpSignedWithTheGivenName()
     {
         var setup = new Setup
@@ -245,6 +279,7 @@ public sealed class ClientsServiceTests
         public string[] Blocked { get; init; } = [];
         public BouncedContact[] Bounced { get; init; } = [];
         public List<string[]> BounceLookups { get; } = [];
+        public Mock<IClientDelayRepository> Delays { get; } = new();
         public Mock<IAbuseReportRepository> Repository { get; } = new();
         public AbuseReport? Added { get; private set; }
 
@@ -302,6 +337,7 @@ public sealed class ClientsServiceTests
                 settings.Object,
                 blocked.Object,
                 bounces.Object,
+                Delays.Object,
                 Mock.Of<IRequestArchiveBuilder>(),
                 Mock.Of<ICountryLookup>(),
                 whois.Object,

@@ -1,6 +1,6 @@
 import { useWatched } from '../../hooks/useWatched';
 import { oneDecimal } from '../../lib/numbers';
-import { display, displayOrDash, timeSpanSeconds } from '../../lib/time';
+import { display, displayOrDash } from '../../lib/time';
 import { Watch } from '../../lib/watchStore';
 import { EntryViewType } from '../../types/entryViewType';
 import ClientIp from '../Common/ClientIp';
@@ -13,7 +13,7 @@ type EntryMetaProps = {
 const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
     const entry = useWatched(watch, (view) => view.entry);
     const country = useWatched(watch, (view) => view.country);
-    const defaultDelay = useWatched(watch, (view) => timeSpanSeconds(view.defaultResponseDelay));
+    const defaultDelay = useWatched(watch, (view) => view.defaultResponseDelayMilliseconds);
     const generation = entry.generationMs !== null ? `${oneDecimal(entry.generationMs / 1000)} s` : '—';
     return (
         <dl className='meta'>
@@ -33,9 +33,9 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
             <dd className='mono'>{entry.generator ?? '—'}</dd>
             <dt>Delay</dt>
             <dd>
-                {entry.responseDelaySeconds !== null
-                    ? `${entry.responseDelaySeconds} s, set on this entry`
-                    : `${defaultDelay} s, the default`}
+                {entry.responseDelayMilliseconds !== null
+                    ? `${entry.responseDelayMilliseconds} ms, set on this entry`
+                    : `${defaultDelay} ms, the default`}
             </dd>
             <dt>Attempts</dt>
             <dd>{entry.attempts}</dd>

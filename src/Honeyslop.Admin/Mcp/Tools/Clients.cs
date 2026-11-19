@@ -26,7 +26,7 @@ public sealed class Clients(IClientsService clientsService)
     }
 
     [McpServerTool(Name = "get_client", Title = "Get a client address", ReadOnly = true, Idempotent = true)]
-    [Description("One client address: country, request, host and path counts, first and last request and the last User-Agent.")]
+    [Description("One client address: country, request, host and path counts, first and last request, the last User-Agent and the response delay set on it.")]
     public async Task<ClientDto> GetAsync([Description("Client address.")] string ip, CancellationToken cancellationToken = default)
     {
         return await clientsService.GetAsync(ip, cancellationToken) ?? throw new McpException($"{ip} never sent anything.");
@@ -38,6 +38,18 @@ public sealed class Clients(IClientsService clientsService)
     public async Task<ClientAbuseDto> GetAbuseAsync([Description("Client address.")] string ip, CancellationToken cancellationToken = default)
     {
         return await clientsService.GetAbuseAsync(ip, cancellationToken) ?? throw new McpException($"{ip} never sent anything.");
+    }
+
+    [McpServerTool(Name = "set_client_delay", Title = "Delay the responses to a client", Destructive = false, Idempotent = true)]
+    [Description(
+        "Makes the trap wait this many milliseconds before every response it serves to the address from an entry, whatever delay the entry or the settings ask for, to hold a scanner's connections open longer. Without milliseconds the address goes back to the entries' delays and the default. Returns the delay as saved, or what was wrong.")]
+    public Task<ClientDelayChangeDto> SetDelayAsync(
+        [Description("Client address.")] string ip,
+        [Description("Milliseconds from 0 to 600000; leave out to clear.")]
+        int? milliseconds = null,
+        CancellationToken cancellationToken = default)
+    {
+        return clientsService.SetResponseDelayAsync(ip, milliseconds, cancellationToken);
     }
 
     [McpServerTool(Name = "send_abuse_report", Title = "Send an abuse report", Destructive = false, Idempotent = false, OpenWorld = true)]

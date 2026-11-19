@@ -4,4 +4,5 @@ namespace Honeyslop.Admin.Core.Contracts;
 
 public sealed record ClientDto(string Ip,
     CountryDto? Country,
-    ClientActivity? Activity);
+    ClientActivity? Activity,
+    int? ResponseDelayMilliseconds);

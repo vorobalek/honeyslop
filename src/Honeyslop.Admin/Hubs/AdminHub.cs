@@ -97,10 +97,16 @@ public sealed class AdminHub(
         return entriesService.CreateWithResponseAsync(request, response, Context.ConnectionAborted);
     }
 
-    [HubMethodName("setEntryDelay")]
-    public Task<EntryChangeDto> SetEntryDelayAsync(long[] ids, int? seconds)
+    [HubMethodName("setClientDelay")]
+    public Task<ClientDelayChangeDto> SetClientDelayAsync(string ip, int? milliseconds)
     {
-        return entriesService.SetResponseDelayAsync(ids, seconds, Context.ConnectionAborted);
+        return clientsService.SetResponseDelayAsync(ip, milliseconds, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("setEntryDelay")]
+    public Task<EntryChangeDto> SetEntryDelayAsync(long[] ids, int? milliseconds)
+    {
+        return entriesService.SetResponseDelayAsync(ids, milliseconds, Context.ConnectionAborted);
     }
 
     [HubMethodName("report")]
@@ -138,7 +144,7 @@ public sealed class AdminHub(
                 GenerationTimeLimit = TimeSpan.FromSeconds(form.GenerationTimeLimitSeconds),
                 PublicView = form.PublicView,
                 UserAgent = string.IsNullOrWhiteSpace(form.UserAgent) ? null : form.UserAgent.Trim(),
-                ResponseDelay = form.ResponseDelaySeconds is { } delay ? TimeSpan.FromSeconds(delay) : null
+                ResponseDelayMilliseconds = form.ResponseDelayMilliseconds
             },
             Context.ConnectionAborted);
     }

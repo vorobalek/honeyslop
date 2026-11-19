@@ -32,6 +32,6 @@ public static class GenerationConfiguration
     public static readonly string? StaticExtensions = "STATIC_EXTENSIONS"
         .EnvironmentValue;
 
-    public static readonly int ResponseDelaySeconds = "RESPONSE_DELAY_SECONDS"
+    public static readonly int ResponseDelayMilliseconds = "RESPONSE_DELAY_MILLISECONDS"
         .GetEnvironmentValueWithFallback(0);
 }

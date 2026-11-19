@@ -8,6 +8,7 @@ internal sealed partial class ChangeListener(
     string connectionString,
     IResponseCache responseCache,
     ISettingsProvider settingsProvider,
+    IClientDelays clientDelays,
     TimeProvider timeProvider,
     ILogger<ChangeListener> logger) : BackgroundService
 {
@@ -26,13 +27,14 @@ internal sealed partial class ChangeListener(
                 await using var connection = new NpgsqlConnection(builder.ConnectionString);
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
-                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_settings;", connection))
+                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_settings; listen honeyslop_clients;", connection))
                 {
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 }
 
                 responseCache.Enable();
                 settingsProvider.Reset();
+                clientDelays.Reset();
                 LogListening(logger);
                 while (!stoppingToken.IsCancellationRequested)
                     await connection.WaitAsync(stoppingToken);
@@ -52,6 +54,8 @@ internal sealed partial class ChangeListener(
     {
         if (channel == "honeyslop_settings")
             settingsProvider.Reset();
+        else if (channel == "honeyslop_clients")
+            clientDelays.Reset();
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
             responseCache.Evict(entryId);
         else

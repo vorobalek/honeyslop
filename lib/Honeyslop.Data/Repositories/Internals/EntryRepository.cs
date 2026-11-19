@@ -72,7 +72,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
 
     public async Task<long[]> SetResponseDelayAsync(
         IReadOnlyCollection<long> ids,
-        int? seconds,
+        int? milliseconds,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -87,7 +87,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => active.Contains(x.Id) && x.Status != EntryStatus.Expired)
             .ExecuteUpdateAsync(
                 setters => setters
-                    .SetProperty(x => x.ResponseDelaySeconds, seconds)
+                    .SetProperty(x => x.ResponseDelayMilliseconds, milliseconds)
                     .SetProperty(x => x.UpdatedAt, now),
                 cancellationToken);
         return active;

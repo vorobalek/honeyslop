@@ -28,6 +28,9 @@ internal sealed partial class ReportStateMetrics(
                 .CountByStateAsync(cancellationToken);
             foreach (var (state, count) in counts)
                 ReporterMetrics.Reports.WithLabels(state.ToString().ToLowerInvariant()).Set(count);
+            ReporterMetrics.BouncedContacts.Set(await scope.ServiceProvider
+                .GetRequiredService<IAbuseReportBounceRepository>()
+                .CountContactsAsync(DateTimeOffset.MinValue, null, cancellationToken));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

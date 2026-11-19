@@ -11,7 +11,7 @@ public interface IEntryRepository
     Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken);
     Task<Entry[]> GetChangeableAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken);
     Task<bool> TryReplaceAsync(IReadOnlyCollection<Entry> replacements, DateTimeOffset now, CancellationToken cancellationToken);
-    Task<long[]> SetResponseDelayAsync(IReadOnlyCollection<long> ids, int? seconds, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<long[]> SetResponseDelayAsync(IReadOnlyCollection<long> ids, int? milliseconds, DateTimeOffset now, CancellationToken cancellationToken);
     Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken);
 
     Task<long?> TryClaimNextAsync(

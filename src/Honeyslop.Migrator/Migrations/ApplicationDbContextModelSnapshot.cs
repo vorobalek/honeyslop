@@ -235,6 +235,32 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("blocked_abuse_contact", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.ClientDelay", b =>
+                {
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<string>("ChangedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("changed_by");
+
+                    b.Property<int>("ResponseDelayMilliseconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("response_delay_milliseconds");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ClientIp")
+                        .HasName("pk_client_delay");
+
+                    b.ToTable("client_delay", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.ClientWhois", b =>
                 {
                     b.Property<string>("ClientIp")
@@ -406,9 +432,9 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnType("character varying(65536)")
                         .HasColumnName("response_body");
 
-                    b.Property<int?>("ResponseDelaySeconds")
+                    b.Property<int?>("ResponseDelayMilliseconds")
                         .HasColumnType("integer")
-                        .HasColumnName("response_delay_seconds");
+                        .HasColumnName("response_delay_milliseconds");
 
                     b.Property<int?>("ResponseStatus")
                         .HasColumnType("integer")

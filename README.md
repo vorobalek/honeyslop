@@ -4,8 +4,9 @@ Catch-all for HTTP requests that no real route answers. A small language model w
 for would return (a camera's device info, a leaked `.env`, a WordPress installer), once per method, host and path; the
 answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a comment
 for the model or writes it by hand. Entries can also be made by hand before anyone asks, and responses can be held back
-by a delay to keep scanners waiting. Every request is recorded, and the networks that scan can be sent an abuse report
-with their request log attached; the reports that bounce show up next to the addresses that bounced them.
+by a delay set on a client, on an entry or as the default, to keep scanners waiting. Every request is recorded, and the
+networks that scan can be sent an abuse report with their request log attached; the reports that bounce show up next to
+the addresses that bounced them.
 
 ### Services
 
@@ -29,22 +30,22 @@ with their request log attached; the reports that bounce show up next to the add
 | `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                       |
 | `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                         |
 | `MAX_TARGET_LENGTH`                 | `1024`         | Longer paths get a 414 without the model, at most 2048        |
-| `RESPONSE_DELAY_SECONDS`            | `0`            | Wait before a response from an entry, unless set in the admin |
+| `RESPONSE_DELAY_MILLISECONDS`       | `0`            | Wait before a response from an entry, unless set in the admin |
 | `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                               |
 
-| Admin                                                              | Default                                               |                                                                              |
-| ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `DB_CONNECTION_STRING`                                             |                                                       | PostgreSQL                                                                   |
-| `PORT`                                                             | `8080`                                                |                                                                              |
-| `LLM_URL`                                                          |                                                       | Model servers for the Generators page                                        |
-| `OIDC_AUTHORITY`                                                   |                                                       | Sign-in issuer; without it, an authenticating proxy goes in front            |
-| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                             | `honeyslop`                                           |                                                                              |
-| `MCP_RESOURCE`                                                     |                                                       | Public URL of `/mcp`; turns MCP on when sign-in is on                        |
-| `GEOIP_DATABASE`                                                   | `/app/geoip/country.mmdb`                             | DB-IP country database                                                       |
-| `USER_AGENT`                                                       | `Honeyslop (+https://github.com/vorobalek/honeyslop)` | For RIPEstat lookups                                                         |
-| `ABUSE_REPORT_SENDER_NAME`, `SMTP_FROM`                            |                                                       | Shown on a report before it is sent                                          |
-| `MAINTENANCE_INTERVAL_SECONDS`                                     | `60`                                                  | Expiration and pruning                                                       |
-| `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_SECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
+| Admin                                                                   | Default                                               |                                                                              |
+| ----------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `DB_CONNECTION_STRING`                                                  |                                                       | PostgreSQL                                                                   |
+| `PORT`                                                                  | `8080`                                                |                                                                              |
+| `LLM_URL`                                                               |                                                       | Model servers for the Generators page                                        |
+| `OIDC_AUTHORITY`                                                        |                                                       | Sign-in issuer; without it, an authenticating proxy goes in front            |
+| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                                  | `honeyslop`                                           |                                                                              |
+| `MCP_RESOURCE`                                                          |                                                       | Public URL of `/mcp`; turns MCP on when sign-in is on                        |
+| `GEOIP_DATABASE`                                                        | `/app/geoip/country.mmdb`                             | DB-IP country database                                                       |
+| `USER_AGENT`                                                            | `Honeyslop (+https://github.com/vorobalek/honeyslop)` | For RIPEstat lookups                                                         |
+| `ABUSE_REPORT_SENDER_NAME`, `SMTP_FROM`                                 |                                                       | Shown on a report before it is sent                                          |
+| `MAINTENANCE_INTERVAL_SECONDS`                                          | `60`                                                  | Expiration and pruning                                                       |
+| `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_MILLISECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
 
 | Reporter                                      | Default       |                                                             |
 | --------------------------------------------- | ------------- | ----------------------------------------------------------- |

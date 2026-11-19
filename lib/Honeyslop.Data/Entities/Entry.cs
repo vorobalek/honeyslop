@@ -27,7 +27,7 @@ public class Entry
     public const int ResponseBodyMaxLength = 65536;
     public const int ResponseHeadersMaxCount = 30;
     public const int GuidanceMaxLength = 2048;
-    public const int ResponseDelayMaxSeconds = 600;
+    public const int ResponseDelayMaxMilliseconds = 600_000;
     public const int ChangedByMaxLength = 128;
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -105,5 +105,5 @@ public class Entry
     [MaxLength(ChangedByMaxLength)]
     public string? ChangedBy { get; set; }
 
-    public int? ResponseDelaySeconds { get; set; }
+    public int? ResponseDelayMilliseconds { get; set; }
 }

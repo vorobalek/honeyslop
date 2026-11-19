@@ -51,6 +51,7 @@ await Host
                 .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<IEntryWatcher>())
                 .AddSingleton<IHitCounter, HitCounter>()
                 .AddSingleton<ISettingsProvider, SettingsProvider>()
+                .AddSingleton<IClientDelays, ClientDelays>()
                 .AddSingleton<IRequestLog, RequestLog>()
                 .AddHostedService<RequestLogWriter>()
                 .AddScoped<ITrapHandler, TrapHandler>()
@@ -73,7 +74,7 @@ await Host
                     x.MemoryCacheSizeLimit = GenerationConfiguration.MemoryCacheMegabytes * 1024L * 1024L;
                     x.HitFlushInterval = TimeSpan.FromSeconds(GenerationConfiguration.HitFlushSeconds);
                     x.Requests.Apply(GenerationConfiguration.MaxTargetLength, GenerationConfiguration.StaticExtensions);
-                    x.ResponseDelay = TimeSpan.FromSeconds(Math.Clamp(GenerationConfiguration.ResponseDelaySeconds, 0, Entry.ResponseDelayMaxSeconds));
+                    x.ResponseDelay = TimeSpan.FromMilliseconds(Math.Clamp(GenerationConfiguration.ResponseDelayMilliseconds, 0, Entry.ResponseDelayMaxMilliseconds));
                 });
             services
                 .AddLlm(x =>

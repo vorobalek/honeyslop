@@ -58,14 +58,14 @@ public sealed class SettingsServiceTests
 
     [TestMethod]
     [DataRow(-1)]
-    [DataRow(601)]
-    public async Task SaveAsync_ResponseDelayOutOfRange_IsRejected(int seconds)
+    [DataRow(600_001)]
+    public async Task SaveAsync_ResponseDelayOutOfRange_IsRejected(int milliseconds)
     {
         var result = await Service(Viewers.Operator).SaveAsync(
-            HoneyslopSettings.Default with { ResponseDelay = TimeSpan.FromSeconds(seconds) },
+            HoneyslopSettings.Default with { ResponseDelayMilliseconds = milliseconds },
             CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { nameof(HoneyslopSettings.ResponseDelay) }, result.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[] { nameof(HoneyslopSettings.ResponseDelayMilliseconds) }, result.Errors.Keys.ToArray());
         _settings.Verify(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -76,7 +76,7 @@ public sealed class SettingsServiceTests
 
         var view = await Service(Viewers.Operator).GetAsync(CancellationToken.None);
 
-        Assert.AreEqual(TimeSpan.FromSeconds(2), view.DefaultResponseDelay);
+        Assert.AreEqual(2000, view.DefaultResponseDelayMilliseconds);
     }
 
     [TestMethod]
@@ -113,7 +113,7 @@ public sealed class SettingsServiceTests
             }),
             Microsoft.Extensions.Options.Options.Create(new ResponseDelayOptions
             {
-                Default = TimeSpan.FromSeconds(2)
+                DefaultMilliseconds = 2000
             }),
             Viewers.Guard(viewer),
             Viewers.ServerTime(DateTimeOffset.UnixEpoch));

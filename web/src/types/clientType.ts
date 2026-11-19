@@ -5,4 +5,5 @@ export interface ClientType {
     ip: string;
     country: CountryType | null;
     activity: ClientActivityType | null;
+    responseDelayMilliseconds: number | null;
 }

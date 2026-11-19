@@ -12,4 +12,5 @@ public interface IClientsService
     Task<ClientAbuseDto?> GetAbuseAsync(string ip, CancellationToken cancellationToken);
     Task<RequestLogArchive?> GetArchiveAsync(string ip, CancellationToken cancellationToken);
     Task<ReportRequestDto> ReportAsync(string ip, string? senderName, CancellationToken cancellationToken);
+    Task<ClientDelayChangeDto> SetResponseDelayAsync(string ip, int? milliseconds, CancellationToken cancellationToken);
 }

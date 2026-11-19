@@ -10,6 +10,6 @@ export interface EntryViewType {
     country: CountryType | null;
     currentId: number | null;
     output: GenerationOutputType | null;
-    defaultResponseDelay: string;
+    defaultResponseDelayMilliseconds: number;
     asOf: string;
 }

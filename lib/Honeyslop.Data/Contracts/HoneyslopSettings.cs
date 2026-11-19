@@ -15,7 +15,7 @@ public sealed record HoneyslopSettings
     public TimeSpan GenerationTimeLimit { get; init; } = TimeSpan.FromMinutes(10);
     public bool PublicView { get; init; }
     public string? UserAgent { get; init; }
-    public TimeSpan? ResponseDelay { get; init; }
+    public int? ResponseDelayMilliseconds { get; init; }
 
     public TimeSpan HeartbeatInterval => ClaimTimeout / 4 > TimeSpan.FromSeconds(5)
         ? ClaimTimeout / 4

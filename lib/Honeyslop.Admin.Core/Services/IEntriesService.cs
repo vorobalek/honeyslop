@@ -17,5 +17,5 @@ public interface IEntriesService
     Task<EntryChangeDto> ReplaceAsync(IReadOnlyCollection<long> ids, EntryResponseDto response, CancellationToken cancellationToken);
     Task<EntryChangeDto> CreateAsync(EntryRequestDto request, string? guidance, CancellationToken cancellationToken);
     Task<EntryChangeDto> CreateWithResponseAsync(EntryRequestDto request, EntryResponseDto response, CancellationToken cancellationToken);
-    Task<EntryChangeDto> SetResponseDelayAsync(IReadOnlyCollection<long> ids, int? seconds, CancellationToken cancellationToken);
+    Task<EntryChangeDto> SetResponseDelayAsync(IReadOnlyCollection<long> ids, int? milliseconds, CancellationToken cancellationToken);
 }

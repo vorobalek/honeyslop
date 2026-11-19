@@ -31,7 +31,7 @@ internal sealed class ViewBuilder(
                 details.Country,
                 details.CurrentId,
                 details.Output,
-                details.DefaultResponseDelay,
+                details.DefaultResponseDelayMilliseconds,
                 details.AsOf)
             : null;
     }
