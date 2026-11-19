@@ -1,8 +1,8 @@
 using System.IO.Compression;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
-using Honeyslop.Worker.Reports;
 using Honeyslop.Reports;
+using Honeyslop.Worker.Reports;
 using MimeKit;
 
 namespace Honeyslop.Worker.Tests.Reports;

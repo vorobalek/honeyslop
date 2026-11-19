@@ -85,13 +85,21 @@ public sealed class ReportsServiceTests
         var blocked = new Mock<IBlockedAbuseContactRepository>();
         blocked
             .Setup(x => x.GetAnyOfAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new BlockedAbuseContact { Contact = "@dead.example" }]);
+            .ReturnsAsync([
+                new BlockedAbuseContact
+                {
+                    Contact = "@dead.example"
+                }
+            ]);
 
         var page = await Service(Viewers.Operator, Queued(), [], bounces.Object, blocked.Object)
             .GetBouncedContactsAsync(new BouncedContactsQuery(7, "example"), CancellationToken.None);
 
         Assert.AreEqual(2, page.Contacts.Total);
-        CollectionAssert.AreEqual(new[] { true, false }, page.Contacts.Items.Select(x => x.Blocked).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            true, false
+        }, page.Contacts.Items.Select(x => x.Blocked).ToArray());
     }
 
     private static BouncedContact Contact(string recipient)

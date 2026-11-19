@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text;
 using Honeyslop.Common;
 using Honeyslop.Data.Delays;
@@ -191,11 +190,15 @@ internal sealed partial class TrapHandler(
             ? await clientDelays.GetAsync(ClientAddress.Key(address), cancellationToken)
             : new PersonalDelay(null, null);
         var learning = settings.AutoDelayEnabled;
-        var (delay, source) = client.Manual is { } manual ? (manual, "manual")
-            : learning && client.Learned is { } learned ? (learned, "learned")
-            : learning ? (TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)), "start")
-            : response.Delay is { } entry ? (entry, "entry")
-            : (settings.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : options.Value.ResponseDelay, "default");
+        var (delay, source) = client.Manual is { } manual
+            ? (manual, "manual")
+            : learning && client.Learned is { } learned
+                ? (learned, "learned")
+                : learning
+                    ? (TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)), "start")
+                    : response.Delay is { } entry
+                        ? (entry, "entry")
+                        : (settings.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : options.Value.ResponseDelay, "default");
         TrapMetrics.ResponseDelays.WithLabels(source).Inc();
         var remaining = delay - timeProvider.GetElapsedTime(startedAt);
         if (learning)

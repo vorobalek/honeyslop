@@ -1,5 +1,4 @@
 using Honeyslop.Data.Requests;
-using Honeyslop.Trap.Requests;
 using Honeyslop.Trap.Requests.Internals;
 
 namespace Honeyslop.Trap.Tests.Requests;

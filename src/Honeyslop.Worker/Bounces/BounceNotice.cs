@@ -5,8 +5,19 @@ using MimeKit;
 
 namespace Honeyslop.Worker.Bounces;
 
-internal sealed partial record BounceNotice(string? MessageId, DateTimeOffset? Date, string[] ReferencedMessageIds, BounceRecipient[] Recipients)
+internal sealed partial record BounceNotice(string? MessageId,
+    DateTimeOffset? Date,
+    string[] ReferencedMessageIds,
+    BounceRecipient[] Recipients)
 {
+    public string[] LookupIds =>
+    [
+        .. ReferencedMessageIds.SelectMany(x => new[]
+        {
+            x, $"<{x}>"
+        })
+    ];
+
     public static BounceNotice? Parse(MimeMessage message)
     {
         var walk = new Walk();
@@ -25,8 +36,6 @@ internal sealed partial record BounceNotice(string? MessageId, DateTimeOffset? D
             [.. walk.References],
             recipients);
     }
-
-    public string[] LookupIds => [.. ReferencedMessageIds.SelectMany(x => new[] { x, $"<{x}>" })];
 
     public AbuseReportBounce[] ToBounces(string fallbackNotificationId, IReadOnlyCollection<AbuseReport> reports, DateTimeOffset now)
     {

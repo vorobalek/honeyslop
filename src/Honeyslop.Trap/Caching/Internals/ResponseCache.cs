@@ -12,8 +12,8 @@ internal sealed class ResponseCache : IResponseCache, IDisposable
 {
     private readonly MemoryCache _cache;
     private readonly TimeSpan _duration;
-    private readonly Lock _lock = new();
     private readonly ConcurrentDictionary<long, string> _keys = new();
+    private readonly Lock _lock = new();
     private bool _enabled;
     private long _version;
 
@@ -26,12 +26,12 @@ internal sealed class ResponseCache : IResponseCache, IDisposable
         });
     }
 
-    public long Version => Interlocked.Read(ref _version);
-
     public void Dispose()
     {
         _cache.Dispose();
     }
+
+    public long Version => Interlocked.Read(ref _version);
 
     public bool TryGet(EntryKey key, [NotNullWhen(true)] out CachedResponse? response)
     {
@@ -83,7 +83,9 @@ internal sealed class ResponseCache : IResponseCache, IDisposable
     public void Clear()
     {
         lock (_lock)
+        {
             Drop();
+        }
     }
 
     public void Enable()

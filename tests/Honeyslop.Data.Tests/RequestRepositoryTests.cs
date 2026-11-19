@@ -61,10 +61,8 @@ public sealed class RequestRepositoryTests
         var now = DateTimeOffset.UtcNow;
         var records = new[]
         {
-            Record(clientIp, "a.example.test", "/1", now.AddMinutes(-5), RequestOutcome.Hit),
-            Record(clientIp, "a.example.test", "/2", now.AddMinutes(-4), RequestOutcome.Static),
-            Record("::ffff:" + clientIp, "a.example.test", "/3", now.AddMinutes(-3), RequestOutcome.Abandoned),
-            Record(clientIp, "a.example.test", "/4", now.AddMinutes(-2), RequestOutcome.Waiting),
+            Record(clientIp, "a.example.test", "/1", now.AddMinutes(-5), RequestOutcome.Hit), Record(clientIp, "a.example.test", "/2", now.AddMinutes(-4), RequestOutcome.Static),
+            Record("::ffff:" + clientIp, "a.example.test", "/3", now.AddMinutes(-3), RequestOutcome.Abandoned), Record(clientIp, "a.example.test", "/4", now.AddMinutes(-2), RequestOutcome.Waiting),
             Record(clientIp + "0", "a.example.test", "/5", now.AddMinutes(-1), RequestOutcome.Generated)
         };
         await using (var scope = PostgresDatabase.CreateScope())
@@ -78,10 +76,16 @@ public sealed class RequestRepositoryTests
         var afterFirst = await repository.GetTimingsAsync([clientIp, "::ffff:" + clientIp], all[0].Id, 1, CancellationToken.None);
         var clients = await repository.GetClientIpsAsync(CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { RequestOutcome.Hit, RequestOutcome.Abandoned, RequestOutcome.Waiting }, all.Select(x => x.Outcome).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            RequestOutcome.Hit, RequestOutcome.Abandoned, RequestOutcome.Waiting
+        }, all.Select(x => x.Outcome).ToArray());
         Assert.AreEqual(records[2].Id, afterFirst.Single().Id);
         Assert.AreEqual(5, all[0].DurationMs);
-        CollectionAssert.IsSubsetOf(new[] { clientIp, "::ffff:" + clientIp }, clients);
+        CollectionAssert.IsSubsetOf(new[]
+        {
+            clientIp, "::ffff:" + clientIp
+        }, clients);
     }
 
     [TestMethod]

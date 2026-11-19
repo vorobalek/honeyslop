@@ -181,7 +181,10 @@ public sealed class EntriesServiceTests
 
         Assert.IsTrue(change.Changed);
         var entry = added();
-        CollectionAssert.AreEqual(new[] { entry.Id }, change.Ids);
+        CollectionAssert.AreEqual(new[]
+        {
+            entry.Id
+        }, change.Ids);
         Assert.AreEqual("GET", entry.Method);
         Assert.AreEqual("camera.example", entry.Host);
         CollectionAssert.AreEqual(EntryKey.Create("GET", "camera.example", "/SDK/webLanguage").Hash, entry.KeyHash);
@@ -219,7 +222,10 @@ public sealed class EntriesServiceTests
             CancellationToken.None);
 
         Assert.IsFalse(change.Changed);
-        CollectionAssert.AreEquivalent(new[] { "Method", "Host", "RequestHeaders" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "Method", "Host", "RequestHeaders"
+        }, change.Errors.Keys.ToArray());
         _entries.Verify(x => x.TryAddAsync(It.IsAny<Entry>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -235,7 +241,10 @@ public sealed class EntriesServiceTests
             .GetAwaiter()
             .GetResult();
 
-        CollectionAssert.AreEqual(new[] { "Target" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "Target"
+        }, change.Errors.Keys.ToArray());
     }
 
     [TestMethod]
@@ -253,7 +262,10 @@ public sealed class EntriesServiceTests
 
         Assert.IsFalse(change.Changed);
         StringAssert.Contains(change.Errors["Entries"], "42");
-        CollectionAssert.AreEqual(new long[] { 42 }, change.Ids);
+        CollectionAssert.AreEqual(new long[]
+        {
+            42
+        }, change.Ids);
     }
 
     [TestMethod]
@@ -282,7 +294,10 @@ public sealed class EntriesServiceTests
     {
         var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], milliseconds, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { nameof(Entry.ResponseDelayMilliseconds) }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            nameof(Entry.ResponseDelayMilliseconds)
+        }, change.Errors.Keys.ToArray());
         _entries.Verify(x => x.SetResponseDelayAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<int?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -296,7 +311,10 @@ public sealed class EntriesServiceTests
         var change = await Service(Viewers.Operator).SetResponseDelayAsync([1, 2], 15, CancellationToken.None);
 
         Assert.IsTrue(change.Changed);
-        CollectionAssert.AreEqual(new long[] { 2 }, change.Ids);
+        CollectionAssert.AreEqual(new long[]
+        {
+            2
+        }, change.Ids);
     }
 
     [TestMethod]
@@ -308,7 +326,10 @@ public sealed class EntriesServiceTests
 
         var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], null, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "Entries"
+        }, change.Errors.Keys.ToArray());
     }
 
     [TestMethod]

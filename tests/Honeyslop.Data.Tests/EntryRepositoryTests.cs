@@ -561,9 +561,14 @@ public sealed class EntryRepositoryTests
 
         long[] changed;
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             changed = await scope.Repository().SetResponseDelayAsync([ready.Id, expired.Id], 1200, DateTimeOffset.UtcNow, CancellationToken.None);
+        }
 
-        CollectionAssert.AreEqual(new[] { ready.Id }, changed);
+        CollectionAssert.AreEqual(new[]
+        {
+            ready.Id
+        }, changed);
         Assert.AreEqual(1200, (await GetAsync(ready.Id)).ResponseDelayMilliseconds);
         Assert.IsNull((await GetAsync(expired.Id)).ResponseDelayMilliseconds);
     }
@@ -582,9 +587,7 @@ public sealed class EntryRepositoryTests
 
         CollectionAssert.AreEqual(new[]
         {
-            ready.Id,
-            alone.Id,
-            current.Id
+            ready.Id, alone.Id, current.Id
         }, changeable.Select(x => x.Id).ToArray());
     }
 

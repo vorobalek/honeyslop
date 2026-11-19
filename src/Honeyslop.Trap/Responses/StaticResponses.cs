@@ -1,7 +1,6 @@
 using System.Text;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Requests;
-using Honeyslop.Trap.Requests;
 
 namespace Honeyslop.Trap.Responses;
 

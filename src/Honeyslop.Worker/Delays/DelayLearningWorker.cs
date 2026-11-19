@@ -1,6 +1,5 @@
 using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Delays;
-using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;

@@ -28,7 +28,10 @@ public sealed class BlockedContactsServiceTests
 
         Assert.IsTrue(change.Done);
         Assert.AreEqual(2, change.Changed);
-        CollectionAssert.AreEqual(new[] { "abuse@bouncing.example", "@bouncing.example" }, added.Select(x => x.Contact).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@bouncing.example", "@bouncing.example"
+        }, added.Select(x => x.Contact).ToArray());
         Assert.IsTrue(added.All(x => x is { Note: "bounces", CreatedBy: "operator" } && x.CreatedAt == Now));
     }
 
@@ -39,7 +42,10 @@ public sealed class BlockedContactsServiceTests
     {
         var change = await Service(Viewers.Operator).BlockAsync([contact], null, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "Contacts" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "Contacts"
+        }, change.Errors.Keys.ToArray());
         _repository.Verify(x => x.AddAsync(It.IsAny<IReadOnlyCollection<BlockedAbuseContact>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -59,7 +65,14 @@ public sealed class BlockedContactsServiceTests
     {
         _repository
             .Setup(x => x.GetPageAsync(null, 0, IBlockedContactsService.PageSize, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new BlockedAbuseContact { Contact = "@bouncing.example", CreatedBy = "operator", CreatedAt = Now }]);
+            .ReturnsAsync([
+                new BlockedAbuseContact
+                {
+                    Contact = "@bouncing.example",
+                    CreatedBy = "operator",
+                    CreatedAt = Now
+                }
+            ]);
         _repository.Setup(x => x.CountAsync(null, It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var anonymous = await Service(ViewerDto.Anonymous).GetPageAsync(new BlockedContactsQuery(), CancellationToken.None);

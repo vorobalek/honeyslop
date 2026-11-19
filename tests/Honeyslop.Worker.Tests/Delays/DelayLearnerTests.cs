@@ -1,6 +1,5 @@
 using Honeyslop.Data.Delays;
 using Honeyslop.Data.Entities;
-using Honeyslop.Worker.Delays;
 
 namespace Honeyslop.Worker.Tests.Delays;
 

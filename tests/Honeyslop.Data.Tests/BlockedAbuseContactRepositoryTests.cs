@@ -17,14 +17,19 @@ public sealed class BlockedAbuseContactRepositoryTests
 
         var added = new[]
         {
-            await AddAsync([first]),
-            await AddAsync([Contact($"abuse@{host}", "again"), Contact($"@{host}", null)])
+            await AddAsync([first]), await AddAsync([Contact($"abuse@{host}", "again"), Contact($"@{host}", null)])
         };
 
-        CollectionAssert.AreEqual(new[] { 1, 1 }, added);
+        CollectionAssert.AreEqual(new[]
+        {
+            1, 1
+        }, added);
         await using var scope = PostgresDatabase.CreateScope();
         var stored = await Repository(scope).GetAnyOfAsync([$"abuse@{host}", $"@{host}", "abuse@other.example"], CancellationToken.None);
-        CollectionAssert.AreEquivalent(new[] { $"abuse@{host}", $"@{host}" }, stored.Select(x => x.Contact).ToArray());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            $"abuse@{host}", $"@{host}"
+        }, stored.Select(x => x.Contact).ToArray());
         Assert.AreEqual("bounces", stored.Single(x => x.Contact == $"abuse@{host}").Note);
     }
 

@@ -62,7 +62,7 @@ internal sealed class ReportsService(
         string[] blocked =
         [
             .. (await blockedContactRepository.GetAnyOfAsync(AbuseContactBlocklist.Candidates(contacts.Select(x => x.Recipient)), cancellationToken))
-                .Select(x => x.Contact)
+            .Select(x => x.Contact)
         ];
         return new BouncedContactsPageDto(
             new PagedDto<BouncedContactDto>([.. contacts.Select(x => x.ToDto(blocked))], total, page, IReportsService.PageSize),

@@ -93,12 +93,18 @@ public sealed class DelayLearningJobRepositoryTests
                 if (job is null)
                     return mine;
                 lock (held)
+                {
                     if (!held.Add(job.ClientIp))
                         overlaps++;
+                }
+
                 mine.Add(job.ClientIp);
                 await Repository(scope).EnqueueAsync([job.ClientIp], now, CancellationToken.None);
                 lock (held)
+                {
                     held.Remove(job.ClientIp);
+                }
+
                 Assert.IsTrue(await Repository(scope).CompleteAsync(job.Id, $"worker-{worker}", CancellationToken.None));
                 if (mine.Count > 40)
                     return mine;

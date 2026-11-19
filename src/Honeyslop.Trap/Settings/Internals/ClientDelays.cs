@@ -13,9 +13,11 @@ internal sealed partial class ClientDelays(
     private static readonly TimeSpan ChangedRefreshInterval = TimeSpan.FromSeconds(1);
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
-    private DateTimeOffset _loadedAt = DateTimeOffset.MinValue;
     private volatile bool _changed;
+    private DateTimeOffset _loadedAt = DateTimeOffset.MinValue;
     private Snapshot _snapshot = new(FrozenDictionary<string, TimeSpan>.Empty, FrozenDictionary<string, TimeSpan>.Empty);
+
+    private bool Fresh => timeProvider.GetUtcNow() - _loadedAt < (_changed ? ChangedRefreshInterval : RefreshInterval);
 
     public async ValueTask<PersonalDelay> GetAsync(string clientIp, CancellationToken cancellationToken)
     {
@@ -29,8 +31,6 @@ internal sealed partial class ClientDelays(
     {
         _changed = true;
     }
-
-    private bool Fresh => timeProvider.GetUtcNow() - _loadedAt < (_changed ? ChangedRefreshInterval : RefreshInterval);
 
     private async Task<Snapshot> RefreshAsync(CancellationToken cancellationToken)
     {
@@ -69,5 +69,6 @@ internal sealed partial class ClientDelays(
     [LoggerMessage(LogLevel.Warning, "Failed to load client delays, keeping the previous ones")]
     static partial void LogRefreshFailed(ILogger<ClientDelays> logger, Exception exception);
 
-    private sealed record Snapshot(FrozenDictionary<string, TimeSpan> Manual, FrozenDictionary<string, TimeSpan> Learned);
+    private sealed record Snapshot(FrozenDictionary<string, TimeSpan> Manual,
+        FrozenDictionary<string, TimeSpan> Learned);
 }

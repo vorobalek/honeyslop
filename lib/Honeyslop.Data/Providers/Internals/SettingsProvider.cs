@@ -1,5 +1,4 @@
 using Honeyslop.Data.Contracts;
-using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

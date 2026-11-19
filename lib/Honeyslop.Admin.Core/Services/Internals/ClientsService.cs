@@ -172,9 +172,9 @@ internal sealed partial class ClientsService(
         string[] clients =
         [
             .. (await requestRepository.GetClientIpsAsync(cancellationToken))
-                .Select(x => IPAddress.TryParse(x, out var address) ? ClientAddress.Key(address) : null)
-                .OfType<string>()
-                .Distinct(StringComparer.Ordinal)
+            .Select(x => IPAddress.TryParse(x, out var address) ? ClientAddress.Key(address) : null)
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
         ];
         await delayLearningJobRepository.EnqueueAsync(clients, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
         return new ClientDelaysChangeDto(forgotten);
@@ -182,7 +182,10 @@ internal sealed partial class ClientsService(
 
     private static ClientDelayChangeDto DelayRefused(string field, string message)
     {
-        return new ClientDelayChangeDto(new Dictionary<string, string> { [field] = message }, null);
+        return new ClientDelayChangeDto(new Dictionary<string, string>
+        {
+            [field] = message
+        }, null);
     }
 
     private async Task<KnownClient?> FindAsync(string ip, CancellationToken cancellationToken)
@@ -232,7 +235,7 @@ internal sealed partial class ClientsService(
         string[] blocked =
         [
             .. (await blockedContactRepository.GetAnyOfAsync(AbuseContactBlocklist.Candidates(whois.AbuseContacts), cancellationToken))
-                .Select(x => x.Contact)
+            .Select(x => x.Contact)
         ];
         return [.. whois.AbuseContacts.Where(x => AbuseContactBlocklist.Blocks(blocked, x))];
     }

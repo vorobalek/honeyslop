@@ -5,7 +5,6 @@ using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Monitoring;
-using Honeyslop.Trap.Settings;
 
 namespace Honeyslop.Trap.Requests;
 

@@ -66,7 +66,10 @@ public sealed class BounceNoticeTests
 
         Assert.HasCount(2, bounces);
         Assert.IsTrue(bounces.All(x => x.ReportId == 23));
-        CollectionAssert.AreEqual(new[] { "noc@hoster.example", "abuse@hoster.example" }, bounces.Select(x => x.Recipient).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "noc@hoster.example", "abuse@hoster.example"
+        }, bounces.Select(x => x.Recipient).ToArray());
         Assert.IsTrue(bounces.All(x => x.NotificationId == "20261119170000.ABC123@mx.hoster.example"));
         Assert.IsTrue(bounces.All(x => x.BouncedAt == new DateTimeOffset(2026, 11, 19, 17, 0, 0, TimeSpan.Zero) && x.CreatedAt == Now));
     }

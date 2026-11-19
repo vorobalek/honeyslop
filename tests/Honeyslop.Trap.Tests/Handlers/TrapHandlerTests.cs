@@ -135,7 +135,10 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(1));
-        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = 10_000 };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            ResponseDelayMilliseconds = 10_000
+        };
         var entry = ReadyEntry(7);
         entry.ResponseDelayMilliseconds = 3_250;
         sut.Repository
@@ -146,7 +149,10 @@ public sealed class TrapHandlerTests
         await sut.Handler.HandleAsync(context);
 
         Assert.AreEqual("APP_KEY=base64:fake", Body(context));
-        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(3_250) }, time.Delays);
+        CollectionAssert.AreEqual(new[]
+        {
+            TimeSpan.FromMilliseconds(3_250)
+        }, time.Delays);
     }
 
     [TestMethod]
@@ -166,7 +172,12 @@ public sealed class TrapHandlerTests
 
         await sut.Handler.HandleAsync(Request("GET", "/.env"));
 
-        CollectionAssert.AreEqual(waitedMs == 0 ? Array.Empty<TimeSpan>() : new[] { TimeSpan.FromMilliseconds(waitedMs) }, time.Delays);
+        CollectionAssert.AreEqual(waitedMs == 0
+            ? Array.Empty<TimeSpan>()
+            : new[]
+            {
+                TimeSpan.FromMilliseconds(waitedMs)
+            }, time.Delays);
     }
 
     [TestMethod]
@@ -174,7 +185,10 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time);
-        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            AutoDelayEnabled = true
+        };
         sut.ClientDelays
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PersonalDelay(null, TimeSpan.FromMilliseconds(3_250)));
@@ -199,7 +213,12 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time);
-        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true, AutoDelayMinMilliseconds = 0, AutoDelayMaxMilliseconds = 30_000 };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            AutoDelayEnabled = true,
+            AutoDelayMinMilliseconds = 0,
+            AutoDelayMaxMilliseconds = 30_000
+        };
         sut.Repository
             .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ReadyEntry(7));
@@ -216,7 +235,10 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time);
-        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            AutoDelayEnabled = true
+        };
         sut.ClientDelays
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PersonalDelay(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20)));
@@ -230,7 +252,10 @@ public sealed class TrapHandlerTests
         await sut.Handler.HandleAsync(context);
 
         Assert.AreEqual("ok!", Body(context));
-        CollectionAssert.AreEqual(new[] { TimeSpan.FromSeconds(7), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1) }, time.Delays);
+        CollectionAssert.AreEqual(new[]
+        {
+            TimeSpan.FromSeconds(7), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1)
+        }, time.Delays);
     }
 
     [TestMethod]
@@ -251,7 +276,10 @@ public sealed class TrapHandlerTests
         await sut.Handler.HandleAsync(context);
 
         Assert.AreEqual("APP_KEY=base64:fake", Body(context));
-        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(1_500) }, time.Delays);
+        CollectionAssert.AreEqual(new[]
+        {
+            TimeSpan.FromMilliseconds(1_500)
+        }, time.Delays);
     }
 
     [TestMethod]
@@ -259,7 +287,10 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(1));
-        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = 10_000 };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            ResponseDelayMilliseconds = 10_000
+        };
         sut.ClientDelays
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PersonalDelay(TimeSpan.FromMilliseconds(750), null));
@@ -273,7 +304,10 @@ public sealed class TrapHandlerTests
         context.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:203.0.113.7");
         await sut.Handler.HandleAsync(context);
 
-        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(750) }, time.Delays);
+        CollectionAssert.AreEqual(new[]
+        {
+            TimeSpan.FromMilliseconds(750)
+        }, time.Delays);
     }
 
     [TestMethod]
@@ -284,14 +318,22 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(environment));
-        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = setting < 0 ? null : setting * 1000 };
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            ResponseDelayMilliseconds = setting < 0 ? null : setting * 1000
+        };
         sut.Repository
             .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ReadyEntry(7));
 
         await sut.Handler.HandleAsync(Request("GET", "/.env"));
 
-        CollectionAssert.AreEqual(expected == 0 ? Array.Empty<TimeSpan>() : new[] { TimeSpan.FromSeconds(expected) }, time.Delays);
+        CollectionAssert.AreEqual(expected == 0
+            ? Array.Empty<TimeSpan>()
+            : new[]
+            {
+                TimeSpan.FromSeconds(expected)
+            }, time.Delays);
     }
 
     [TestMethod]
@@ -561,6 +603,17 @@ public sealed class TrapHandlerTests
 
         public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
+        public TimeSpan[] Delays
+        {
+            get
+            {
+                lock (_delays)
+                {
+                    return [.. _delays];
+                }
+            }
+        }
+
         public override long GetTimestamp()
         {
             return Interlocked.Read(ref _timestamp);
@@ -571,19 +624,13 @@ public sealed class TrapHandlerTests
             Interlocked.Add(ref _timestamp, elapsed.Ticks);
         }
 
-        public TimeSpan[] Delays
-        {
-            get
-            {
-                lock (_delays)
-                    return [.. _delays];
-            }
-        }
-
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
             lock (_delays)
+            {
                 _delays.Add(dueTime);
+            }
+
             Advance(dueTime);
             return base.CreateTimer(callback, state, TimeSpan.Zero, period);
         }

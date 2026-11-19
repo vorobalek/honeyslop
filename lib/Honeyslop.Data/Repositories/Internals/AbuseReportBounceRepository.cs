@@ -114,7 +114,7 @@ internal sealed class AbuseReportBounceRepository(ApplicationDbContext dbContext
         var pattern = search.Trim().ContainsPattern;
         return query.Where(x =>
             EF.Functions.ILike(x.Recipient, pattern, LikePatterns.Escape) ||
-            (x.Diagnostic != null && EF.Functions.ILike(x.Diagnostic, pattern, LikePatterns.Escape)));
+            x.Diagnostic != null && EF.Functions.ILike(x.Diagnostic, pattern, LikePatterns.Escape));
     }
 
     private static IQueryable<BouncedContact> Summarize(IQueryable<AbuseReportBounce> bounces)

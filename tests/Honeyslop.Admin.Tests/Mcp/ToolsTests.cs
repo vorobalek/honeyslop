@@ -41,7 +41,10 @@ public sealed class ToolsTests
 
         var change = await new Entries(entries.Object).CreateAsync("GET", "camera.example", "/SDK/webLanguage", "User-Agent: curl/8", null, "Hikvision");
 
-        CollectionAssert.AreEqual(new long[] { 5 }, change.Ids);
+        CollectionAssert.AreEqual(new long[]
+        {
+            5
+        }, change.Ids);
         Assert.AreEqual(new EntryRequestDto("GET", "camera.example", "/SDK/webLanguage", "User-Agent: curl/8", null), asked);
         entries.Verify(x => x.CreateAsync(It.IsAny<EntryRequestDto>(), "Hikvision", It.IsAny<CancellationToken>()));
     }

@@ -2,7 +2,6 @@ using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
-using MimeKit;
 
 namespace Honeyslop.Worker.Mail.Internals;
 

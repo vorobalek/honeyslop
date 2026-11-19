@@ -62,10 +62,16 @@ public sealed class SettingsServiceTests
     public async Task SaveAsync_ResponseDelayOutOfRange_IsRejected(int milliseconds)
     {
         var result = await Service(Viewers.Operator).SaveAsync(
-            HoneyslopSettings.Default with { ResponseDelayMilliseconds = milliseconds },
+            HoneyslopSettings.Default with
+            {
+                ResponseDelayMilliseconds = milliseconds
+            },
             CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { nameof(HoneyslopSettings.ResponseDelayMilliseconds) }, result.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            nameof(HoneyslopSettings.ResponseDelayMilliseconds)
+        }, result.Errors.Keys.ToArray());
         _settings.Verify(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -76,10 +82,18 @@ public sealed class SettingsServiceTests
     public async Task SaveAsync_WrongAutoDelayRange_IsRejected(int min, int max, string field)
     {
         var result = await Service(Viewers.Operator).SaveAsync(
-            HoneyslopSettings.Default with { AutoDelayEnabled = true, AutoDelayMinMilliseconds = min, AutoDelayMaxMilliseconds = max },
+            HoneyslopSettings.Default with
+            {
+                AutoDelayEnabled = true,
+                AutoDelayMinMilliseconds = min,
+                AutoDelayMaxMilliseconds = max
+            },
             CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { field }, result.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            field
+        }, result.Errors.Keys.ToArray());
         _settings.Verify(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

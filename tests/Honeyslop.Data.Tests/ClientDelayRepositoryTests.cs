@@ -1,3 +1,4 @@
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,10 @@ public sealed class ClientDelayRepositoryTests
         var changed = await GetAsync(ip);
         string[] all;
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             all = [.. (await Repository(scope).GetAllAsync(CancellationToken.None)).Select(x => x.ClientIp)];
+        }
+
         await SetAsync(ip, null, "operator", now.AddMinutes(2));
 
         Assert.Contains(ip, all);
@@ -38,7 +42,9 @@ public sealed class ClientDelayRepositoryTests
 
         int cleared;
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             cleared = await Repository(scope).ClearAsync(CancellationToken.None);
+        }
 
         Assert.IsGreaterThanOrEqualTo(1, cleared);
         Assert.IsNull(await GetAsync(ip));
@@ -50,7 +56,7 @@ public sealed class ClientDelayRepositoryTests
         await Repository(scope).SetAsync(ip, milliseconds, changedBy, now, CancellationToken.None);
     }
 
-    private static async Task<Entities.ClientDelay?> GetAsync(string ip)
+    private static async Task<ClientDelay?> GetAsync(string ip)
     {
         await using var scope = PostgresDatabase.CreateScope();
         return await Repository(scope).GetOrDefaultAsync(ip, CancellationToken.None);

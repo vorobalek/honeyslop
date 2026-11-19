@@ -1,8 +1,8 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Reports;
 using Honeyslop.Worker.Mail;
 using Honeyslop.Worker.Monitoring;
-using Honeyslop.Reports;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -87,9 +87,9 @@ internal sealed partial class ReportWorker(
         string[] blocked =
         [
             .. (await services
-                    .GetRequiredService<IBlockedAbuseContactRepository>()
-                    .GetAnyOfAsync(AbuseContactBlocklist.Candidates(report.Recipients), cancellationToken))
-                .Select(x => x.Contact)
+                .GetRequiredService<IBlockedAbuseContactRepository>()
+                .GetAnyOfAsync(AbuseContactBlocklist.Candidates(report.Recipients), cancellationToken))
+            .Select(x => x.Contact)
         ];
         string[] recipients = [.. report.Recipients.Where(x => !AbuseContactBlocklist.Blocks(blocked, x))];
         if (recipients.Length == 0)

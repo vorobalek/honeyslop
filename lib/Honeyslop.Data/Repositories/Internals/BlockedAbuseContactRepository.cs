@@ -91,6 +91,6 @@ internal sealed class BlockedAbuseContactRepository(ApplicationDbContext dbConte
         var pattern = search.Trim().ContainsPattern;
         return query.Where(x =>
             EF.Functions.ILike(x.Contact, pattern, LikePatterns.Escape) ||
-            (x.Note != null && EF.Functions.ILike(x.Note, pattern, LikePatterns.Escape)));
+            x.Note != null && EF.Functions.ILike(x.Note, pattern, LikePatterns.Escape));
     }
 }

@@ -1,10 +1,7 @@
 using System.Runtime.CompilerServices;
 using Honeyslop.Common;
 using Honeyslop.Data;
-using Honeyslop.Data.Delays;
 using Honeyslop.Data.Entities;
-using Honeyslop.Data.Providers;
-using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching;
 using Honeyslop.Trap.Caching.Internals;
 using Honeyslop.Trap.Configuration;
@@ -17,7 +14,6 @@ using Honeyslop.Trap.Hits.Internals;
 using Honeyslop.Trap.Options;
 using Honeyslop.Trap.Requests;
 using Honeyslop.Trap.Requests.Internals;
-using Honeyslop.Trap.Responses;
 using Honeyslop.Trap.Settings;
 using Honeyslop.Trap.Settings.Internals;
 using Microsoft.AspNetCore.HttpOverrides;

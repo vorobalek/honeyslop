@@ -55,8 +55,8 @@ internal sealed class DelayLearningJobRepository(ApplicationDbContext dbContext)
     {
         var worker = claimedBy.Truncate(Entry.ClaimedByMaxLength);
         Expression<Func<DelayLearningJob, bool>> claimable = x =>
-            (x.InWork && x.ClaimedAt < staleBefore) ||
-            (!x.InWork && !dbContext.DelayLearningJobs.Any(y => y.ClientIp == x.ClientIp && y.InWork));
+            x.InWork && x.ClaimedAt < staleBefore ||
+            !x.InWork && !dbContext.DelayLearningJobs.Any(y => y.ClientIp == x.ClientIp && y.InWork);
         var candidates = await dbContext
             .DelayLearningJobs
             .Where(claimable)

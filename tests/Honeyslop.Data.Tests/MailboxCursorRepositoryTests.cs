@@ -1,3 +1,4 @@
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +41,7 @@ public sealed class MailboxCursorRepositoryTests
         Assert.AreEqual(8L, (await GetAsync(folder))!.LastUid);
     }
 
-    private static async Task<Entities.MailboxCursor?> GetAsync(string folder)
+    private static async Task<MailboxCursor?> GetAsync(string folder)
     {
         await using var scope = PostgresDatabase.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<IMailboxCursorRepository>().GetOrDefaultAsync(folder, CancellationToken.None);

@@ -28,7 +28,12 @@ public static partial class AbuseContactBlocklist
         [
             .. addresses
                 .Select(x => x.Trim().ToLowerInvariant())
-                .SelectMany(x => x.IndexOf('@') is var at and > 0 ? [x, x[at..]] : new[] { x })
+                .SelectMany(x => x.IndexOf('@') is var at and > 0
+                    ? [x, x[at..]]
+                    : new[]
+                    {
+                        x
+                    })
                 .Distinct(StringComparer.Ordinal)
         ];
     }

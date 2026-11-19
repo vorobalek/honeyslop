@@ -19,15 +19,17 @@ public sealed class AbuseReportBounceRepositoryTests
 
         var added = new[]
         {
-            await AddAsync([Bounce(1, recipient, notification, now, "5.0.0", "retry timeout exceeded")]),
-            await AddAsync(
+            await AddAsync([Bounce(1, recipient, notification, now, "5.0.0", "retry timeout exceeded")]), await AddAsync(
             [
                 Bounce(1, recipient, notification, now, "5.0.0", "retry timeout exceeded"),
                 Bounce(1, $"other-{recipient}", notification, now, "5.1.1", "no such user")
             ])
         };
 
-        CollectionAssert.AreEqual(new[] { 1, 1 }, added);
+        CollectionAssert.AreEqual(new[]
+        {
+            1, 1
+        }, added);
         await using var scope = PostgresDatabase.CreateScope();
         var stored = await Repository(scope).GetContactsAsync([recipient, $"other-{recipient}"], CancellationToken.None);
         Assert.HasCount(2, stored);
@@ -97,7 +99,10 @@ public sealed class AbuseReportBounceRepositoryTests
         await using var scope = PostgresDatabase.CreateScope();
         var bounces = await Repository(scope).GetByReportAsync(reportId, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "abuse@early.example", "abuse@late.example" }, bounces.Select(x => x.Recipient).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@early.example", "abuse@late.example"
+        }, bounces.Select(x => x.Recipient).ToArray());
     }
 
     private static AbuseReportBounce Bounce(long reportId, string recipient, string notificationId, DateTimeOffset bouncedAt, string status, string? diagnostic)

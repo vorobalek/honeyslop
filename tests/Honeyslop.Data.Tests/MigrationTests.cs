@@ -66,7 +66,9 @@ public sealed class MigrationTests
             }
 
             await using (var command = new NpgsqlCommand("insert into setting (key, value, updated_at) values ('response_delay_seconds', '7', now())", connection))
+            {
                 await command.ExecuteNonQueryAsync();
+            }
         }
 
         await migrator.MigrateAsync("20261119180806_ef_millisecond_and_client_delays");

@@ -83,9 +83,12 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Channel);
         await using (var command = new NpgsqlCommand("listen honeyslop_reports", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IBlockedAbuseContactRepository>().AddAsync(
                 [
                     new BlockedAbuseContact
@@ -95,6 +98,7 @@ public sealed class NotificationTests
                     }
                 ],
                 CancellationToken.None);
+        }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains("honeyslop_reports"))
@@ -109,9 +113,12 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Channel);
         await using (var command = new NpgsqlCommand("listen honeyslop_reports", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IAbuseReportBounceRepository>().AddAsync(
                 [
                     new AbuseReportBounce
@@ -125,6 +132,7 @@ public sealed class NotificationTests
                     }
                 ],
                 CancellationToken.None);
+        }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains("honeyslop_reports"))
@@ -139,11 +147,15 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Channel);
         await using (var command = new NpgsqlCommand("listen honeyslop_clients", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IClientDelayRepository>()
                 .SetAsync($"203.0.113.{Random.Shared.Next(1, 254)}", 250, "operator", DateTimeOffset.UtcNow, CancellationToken.None);
+        }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains("honeyslop_clients"))
@@ -158,9 +170,12 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Channel);
         await using (var command = new NpgsqlCommand("listen honeyslop_clients", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IClientProbeRepository>().TryAddAsync(
                 new ClientProbe
                 {
@@ -170,6 +185,7 @@ public sealed class NotificationTests
                     UpdatedAt = DateTimeOffset.UtcNow
                 },
                 CancellationToken.None);
+        }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains("honeyslop_clients"))

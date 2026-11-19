@@ -111,7 +111,10 @@ public sealed class ClientsServiceTests
         var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
 
         Assert.AreEqual(ReportOutcome.Queued, request.Outcome);
-        CollectionAssert.AreEqual(new[] { "abuse@example.test" }, setup.Added!.Recipients);
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@example.test"
+        }, setup.Added!.Recipients);
     }
 
     [TestMethod]
@@ -125,8 +128,14 @@ public sealed class ClientsServiceTests
 
         var abuse = await setup.Service().GetAbuseAsync(Ip, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "abuse@bouncing.example" }, abuse!.BlockedRecipients);
-        CollectionAssert.AreEqual(new[] { "abuse@example.test" }, abuse.Recipients);
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@bouncing.example"
+        }, abuse!.BlockedRecipients);
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@example.test"
+        }, abuse.Recipients);
     }
 
     [TestMethod]
@@ -155,7 +164,10 @@ public sealed class ClientsServiceTests
 
         var bounced = abuse!.Bounces.Single();
         Assert.AreEqual(new BouncedContactDto("abuse@bouncing.example", 3, 2, Now, 22, "5.0.0", "retry timeout exceeded", true), bounced);
-        CollectionAssert.AreEquivalent(new[] { "abuse@bouncing.example", "abuse@example.test" }, setup.BounceLookups.Single());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "abuse@bouncing.example", "abuse@example.test"
+        }, setup.BounceLookups.Single());
     }
 
     [TestMethod]
@@ -181,7 +193,10 @@ public sealed class ClientsServiceTests
 
         var change = await setup.Service().SetResponseDelayAsync(ip, milliseconds, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { field }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            field
+        }, change.Errors.Keys.ToArray());
         setup.Delays.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -209,7 +224,10 @@ public sealed class ClientsServiceTests
 
         Assert.AreEqual(412, change.Changed);
         setup.Jobs.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Once);
-        CollectionAssert.AreEqual(new[] { "192.0.2.7", "2001:db8::1" }, queued);
+        CollectionAssert.AreEqual(new[]
+        {
+            "192.0.2.7", "2001:db8::1"
+        }, queued);
     }
 
     [TestMethod]

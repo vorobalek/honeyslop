@@ -7,7 +7,10 @@ public sealed class AbuseContactBlocklistTests
     public void Parse_SplitsTrimsLowersAndDropsRepeats()
     {
         CollectionAssert.AreEqual(
-            new[] { "abuse@bouncing.example", "@spam.example" },
+            new[]
+            {
+                "abuse@bouncing.example", "@spam.example"
+            },
             AbuseContactBlocklist.Parse([" Abuse@Bouncing.example;@spam.example\n\n abuse@bouncing.example, ", "@SPAM.example"]));
     }
 
@@ -27,7 +30,10 @@ public sealed class AbuseContactBlocklistTests
     public void Candidates_AreEachAddressAndItsDomain()
     {
         CollectionAssert.AreEqual(
-            new[] { "abuse@bouncing.example", "@bouncing.example", "noc@bouncing.example", "postmaster" },
+            new[]
+            {
+                "abuse@bouncing.example", "@bouncing.example", "noc@bouncing.example", "postmaster"
+            },
             AbuseContactBlocklist.Candidates([" Abuse@Bouncing.example", "noc@bouncing.example", "postmaster"]));
     }
 
