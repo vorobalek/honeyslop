@@ -127,6 +127,18 @@ public sealed class AdminHub(
         return entriesService.ExpireMatchingAsync(filter, Context.ConnectionAborted);
     }
 
+    [HubMethodName("regenerateEntries")]
+    public Task<EntryChangeDto> RegenerateEntriesAsync(long[] ids, string? guidance)
+    {
+        return entriesService.RegenerateAsync(ids, guidance, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("replaceEntries")]
+    public Task<EntryChangeDto> ReplaceEntriesAsync(long[] ids, EntryResponseDto response)
+    {
+        return entriesService.ReplaceAsync(ids, response, Context.ConnectionAborted);
+    }
+
     [HubMethodName("report")]
     public Task<ReportRequestDto> ReportAsync(string ip, string? senderName)
     {

@@ -458,6 +458,39 @@ public sealed class EntryRepositoryTests
         Assert.IsTrue(stored.ResponseHeaders.All(x => x.Name.Length == ResponseHeader.NameMaxLength && x.Value.Length == ResponseHeader.ValueMaxLength));
     }
 
+    [TestMethod]
+    public async Task ReplaceAsync_ExpiresTheActiveEntryOfTheKeyAndAddsTheReplacement()
+    {
+        var keyHash = RandomNumberGenerator.GetBytes(32);
+        var current = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready));
+        var replacement = PendingEntry(keyHash);
+        replacement.Guidance = "Answer as a Hikvision camera";
+        replacement.ChangedBy = "operator";
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.Repository().ReplaceAsync([replacement], DateTimeOffset.UtcNow, CancellationToken.None);
+
+        var expired = await GetAsync(current.Id);
+        var added = await GetAsync(replacement.Id);
+        Assert.AreEqual(EntryStatus.Expired, expired.Status);
+        Assert.AreEqual(EntryStatus.Pending, added.Status);
+        Assert.AreEqual("Answer as a Hikvision camera", added.Guidance);
+        Assert.AreEqual("operator", added.ChangedBy);
+        CollectionAssert.AreEqual(keyHash, added.KeyHash);
+    }
+
+    [TestMethod]
+    public async Task GetActiveAsync_LeavesOutExpiredEntries()
+    {
+        var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        var expired = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Expired));
+        await using var scope = PostgresDatabase.CreateScope();
+
+        var active = await scope.Repository().GetActiveAsync([ready.Id, expired.Id], CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { ready.Id }, active.Select(x => x.Id).ToArray());
+    }
+
     private static Entry PendingEntry(
         byte[] keyHash,
         EntryStatus status = EntryStatus.Pending,

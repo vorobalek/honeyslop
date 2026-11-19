@@ -26,6 +26,8 @@ public class Entry
     public const int RequestBodyMaxLength = 65536;
     public const int ResponseBodyMaxLength = 65536;
     public const int ResponseHeadersMaxCount = 30;
+    public const int GuidanceMaxLength = 2048;
+    public const int ChangedByMaxLength = 128;
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
@@ -95,4 +97,10 @@ public class Entry
     public DateTimeOffset? LastHitAt { get; set; }
 
     public DateTimeOffset? RequestedAt { get; set; }
+
+    [MaxLength(GuidanceMaxLength)]
+    public string? Guidance { get; set; }
+
+    [MaxLength(ChangedByMaxLength)]
+    public string? ChangedBy { get; set; }
 }

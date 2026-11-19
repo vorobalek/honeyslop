@@ -7,6 +7,6 @@ function reasonOf(error: unknown): string {
     return HUB_ERROR.exec(message)?.[1] ?? 'The server did not answer, try again.';
 }
 
-export function perform(action: () => Promise<void>): void {
-    action().catch((error: unknown) => postNotice(reasonOf(error)));
+export function perform(action: () => Promise<void>, report: (reason: string) => void = postNotice): void {
+    action().catch((error: unknown) => report(reasonOf(error)));
 }

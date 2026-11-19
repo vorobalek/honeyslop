@@ -3,6 +3,7 @@ using Honeyslop.Admin.Core.Contracts;
 using Honeyslop.Admin.Core.Enums;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Extensions;
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
@@ -54,4 +55,28 @@ public sealed class Entries(IEntriesService entriesService)
             throw new McpException("No filter given: pass everything=true to expire every entry.");
         return entriesService.ExpireMatchingAsync(filter, cancellationToken);
     }
+
+    [McpServerTool(Name = "regenerate_entries", Title = "Regenerate cached responses", Destructive = true, Idempotent = false)]
+    [Description("Expires these cached responses and queues each path to be generated again, optionally with guidance for the model such as the software to answer as. Expired entries are skipped. Returns the ids of the new entries, or what was wrong.")]
+    public Task<EntryChangeDto> RegenerateAsync(
+        [Description("Entry ids.")] long[] ids,
+        [Description("Guidance for the model, at most 2048 characters.")] string? guidance = null,
+        CancellationToken cancellationToken = default)
+    {
+        return entriesService.RegenerateAsync(ids, guidance, cancellationToken);
+    }
+
+    [McpServerTool(Name = "replace_entries", Title = "Write cached responses", Destructive = true, Idempotent = false)]
+    [Description("Expires these cached responses and serves the given response for each path instead. Headers the server sets itself, such as Content-Length, are refused; Content-Type defaults to text/html. Expired entries are skipped. Returns the ids of the new entries, or what was wrong.")]
+    public Task<EntryChangeDto> ReplaceAsync(
+        [Description("Entry ids.")] long[] ids,
+        [Description("HTTP status, 200 to 599.")] int status,
+        [Description("Response body.")] string body,
+        [Description("Response headers by name.")] Dictionary<string, string>? headers = null,
+        CancellationToken cancellationToken = default)
+    {
+        ResponseHeader[] list = [.. (headers ?? []).Select(x => new ResponseHeader { Name = x.Key, Value = x.Value })];
+        return entriesService.ReplaceAsync(ids, new EntryResponseDto(status, list, body), cancellationToken);
+    }
+
 }

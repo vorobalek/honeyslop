@@ -30,7 +30,7 @@ const ConfirmDialog: React.FC = () => {
             onClose={onClose}
         >
             <form>
-                <p className='confirm-question'>{pending?.question}</p>
+                <p className='dialog-title'>{pending?.question}</p>
                 <p className='hint'>{pending?.detail}</p>
                 <p className='hint'>{pending?.sender}</p>
                 <div className='actions'>

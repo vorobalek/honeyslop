@@ -33,6 +33,31 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
+    public Task<Entry[]> GetActiveAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .Entries
+            .AsNoTracking()
+            .Where(x => ids.Contains(x.Id) && x.Status != EntryStatus.Expired)
+            .OrderBy(x => x.Id)
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task ReplaceAsync(IReadOnlyCollection<Entry> replacements, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        foreach (var replacement in replacements)
+            Fit(replacement);
+        var keys = replacements.Select(x => x.KeyHash).ToArray();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext
+            .Entries
+            .Where(x => keys.Contains(x.KeyHash))
+            .ExpireAsync(now, cancellationToken);
+        await dbContext.Entries.AddRangeAsync(replacements, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken)
     {
         return dbContext
@@ -42,8 +67,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
 
     public async Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken)
     {
-        entry.RequestHeaders = entry.RequestHeaders?.Truncate(Entry.RequestHeadersMaxLength);
-        entry.RequestBody = entry.RequestBody?.Truncate(Entry.RequestBodyMaxLength);
+        Fit(entry);
         await dbContext.Entries.AddAsync(entry, cancellationToken);
         try
         {
@@ -202,16 +226,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         entry.Status = EntryStatus.Ready;
         entry.Error = null;
         entry.ResponseStatus = completed.ResponseStatus;
-        entry.ResponseHeaders =
-        [
-            .. completed.ResponseHeaders
-                .Take(Entry.ResponseHeadersMaxCount)
-                .Select(x => new ResponseHeader
-                {
-                    Name = x.Name.Truncate(ResponseHeader.NameMaxLength),
-                    Value = x.Value.Truncate(ResponseHeader.ValueMaxLength)
-                })
-        ];
+        entry.ResponseHeaders = Fit(completed.ResponseHeaders);
         entry.ResponseBody = completed.ResponseBody?.Truncate(Entry.ResponseBodyMaxLength);
         entry.Model = completed.Model?.Truncate(Entry.ModelMaxLength);
         entry.Generator = completed.Generator?.Truncate(Entry.GeneratorMaxLength);
@@ -431,4 +446,29 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 !dbContext.Requests.Any(y => y.EntryId == x.Id))
             .ExecuteDeleteAsync(cancellationToken);
     }
+
+    private static void Fit(Entry entry)
+    {
+        entry.RequestHeaders = entry.RequestHeaders?.Truncate(Entry.RequestHeadersMaxLength);
+        entry.RequestBody = entry.RequestBody?.Truncate(Entry.RequestBodyMaxLength);
+        entry.ResponseHeaders = Fit(entry.ResponseHeaders);
+        entry.ResponseBody = entry.ResponseBody?.Truncate(Entry.ResponseBodyMaxLength);
+        entry.Guidance = entry.Guidance?.Truncate(Entry.GuidanceMaxLength);
+        entry.ChangedBy = entry.ChangedBy?.Truncate(Entry.ChangedByMaxLength);
+    }
+
+    private static List<ResponseHeader> Fit(IEnumerable<ResponseHeader> headers)
+    {
+        return
+        [
+            .. headers
+                .Take(Entry.ResponseHeadersMaxCount)
+                .Select(x => new ResponseHeader
+                {
+                    Name = x.Name.Truncate(ResponseHeader.NameMaxLength),
+                    Value = x.Value.Truncate(ResponseHeader.ValueMaxLength)
+                })
+        ];
+    }
+
 }

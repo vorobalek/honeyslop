@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Honeyslop.Common;
 using Honeyslop.Data.Entities;
 
 namespace Honeyslop.Trap.Responses.Internals;
@@ -7,30 +8,6 @@ namespace Honeyslop.Trap.Responses.Internals;
 internal sealed partial class ResponseSanitizer : IResponseSanitizer
 {
     private const string DefaultContentType = "text/html; charset=utf-8";
-
-    private static readonly HashSet<string> DroppedHeaders = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Access-Control-Allow-Credentials",
-        "Alt-Svc",
-        "Clear-Site-Data",
-        "Connection",
-        "Content-Encoding",
-        "Content-Length",
-        "Content-Security-Policy",
-        "Content-Security-Policy-Report-Only",
-        "Date",
-        "Keep-Alive",
-        "Link",
-        "Proxy-Authenticate",
-        "Proxy-Connection",
-        "Refresh",
-        "Strict-Transport-Security",
-        "TE",
-        "Trailer",
-        "Transfer-Encoding",
-        "Upgrade",
-        "X-Content-Type-Options"
-    };
 
     public GeneratedResponse Sanitize(GeneratedResponse response, string host)
     {
@@ -45,7 +22,7 @@ internal sealed partial class ResponseSanitizer : IResponseSanitizer
                 break;
 
             var name = header.Name.Trim();
-            if (!HeaderNameRegex().IsMatch(name) || DroppedHeaders.Contains(name))
+            if (!HeaderNameRegex().IsMatch(name) || ReservedResponseHeaders.Contains(name))
                 continue;
 
             var value = SanitizeValue(header.Value);

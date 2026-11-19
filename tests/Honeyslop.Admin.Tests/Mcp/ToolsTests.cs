@@ -29,6 +29,30 @@ public sealed class ToolsTests
     }
 
     [TestMethod]
+    public async Task ReplaceAsync_PassesTheHeadersAsNamedPairs()
+    {
+        var entries = new Mock<IEntriesService>();
+        EntryResponseDto? asked = null;
+        entries
+            .Setup(x => x.ReplaceAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<EntryResponseDto>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyCollection<long>, EntryResponseDto, CancellationToken>((_, response, _) => asked = response)
+            .ReturnsAsync(new EntryChangeDto(new Dictionary<string, string>(), [9]));
+
+        var change = await new Entries(entries.Object).ReplaceAsync(
+            [3],
+            200,
+            "<?xml version=\"1.0\"?>",
+            new Dictionary<string, string> { ["Content-Type"] = "application/xml", ["Server"] = "App-webs/" });
+
+        CollectionAssert.AreEqual(new long[] { 9 }, change.Ids);
+        Assert.IsNotNull(asked);
+        Assert.AreEqual(200, asked.Status);
+        CollectionAssert.AreEqual(
+            new[] { "Content-Type: application/xml", "Server: App-webs/" },
+            asked.Headers.Select(x => $"{x.Name}: {x.Value}").ToArray());
+    }
+
+    [TestMethod]
     public async Task ListAsync_PassesEveryFilterAndTheSortThrough()
     {
         var requests = new Mock<IRequestsService>();

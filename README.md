@@ -1,9 +1,10 @@
 ## Honeyslop
 
-Catch-all for HTTP requests that no real route answers. A small language model writes what a misconfigured server for
-that host would plausibly return (a leaked `.env`, a `.git/config`, a WordPress login), once per method, host and path;
-the answer is cached in PostgreSQL and served to everyone who asks again. Every request is recorded, and the networks
-that scan can be sent an abuse report with their request log attached.
+Catch-all for HTTP requests that no real route answers. A small language model writes what the software a request probes
+for would return (a camera's device info, a leaked `.env`, a WordPress installer), once per method, host and path; the
+answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a comment
+for the model or writes it by hand. Every request is recorded, and the networks that scan can be sent an abuse report
+with their request log attached.
 
 ### Services
 

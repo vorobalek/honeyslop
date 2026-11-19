@@ -29,4 +29,6 @@ export interface EntryType {
     generatedAt: string | null;
     lastHitAt: string | null;
     requestedAt: string | null;
+    guidance: string | null;
+    changedBy: string | null;
 }

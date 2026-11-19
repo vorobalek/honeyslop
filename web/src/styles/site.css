@@ -273,7 +273,7 @@ button.danger-filled {
     font-weight: 600;
 }
 
-dialog.confirm {
+dialog {
     width: calc(100% - 32px);
     max-width: 480px;
     padding: 20px;
@@ -283,28 +283,83 @@ dialog.confirm {
     border-radius: 10px;
 }
 
-dialog.confirm::backdrop {
+dialog::backdrop {
     background: rgba(0, 0, 0, .45);
 }
 
-dialog.confirm form {
+dialog form {
     margin: 0;
 }
 
-.confirm-question {
+.dialog-title {
     margin: 0 0 8px;
     font-weight: 600;
     overflow-wrap: anywhere;
 }
 
-dialog.confirm .hint {
+dialog .hint {
     margin: 0 0 6px;
     overflow-wrap: anywhere;
 }
 
-dialog.confirm .actions {
+dialog .actions {
     justify-content: flex-end;
     margin: 16px 0 0;
+}
+
+dialog.change-response {
+    max-width: 760px;
+}
+
+dialog .setting {
+    margin-bottom: 14px;
+}
+
+.tabs {
+    display: flex;
+    gap: 16px;
+    margin: 4px 0 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+    margin-bottom: -1px;
+    padding: 6px 0;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.tabs button[aria-selected=true] {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+}
+
+.setting textarea, .setting input[type=number] {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 6px 8px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.setting input[type=number] {
+    width: 120px;
+}
+
+.setting textarea {
+    resize: vertical;
+}
+
+.setting textarea.mono {
+    font-family: var(--mono);
+    font-size: 13px;
 }
 
 button:disabled {

@@ -5,7 +5,7 @@ import { Watch } from '../../lib/watchStore';
 import { EntryViewType } from '../../types/entryViewType';
 import Link from '../Common/Link';
 import PageNotice from '../Common/PageNotice';
-import EntryExpireForm from './EntryExpireForm';
+import EntryActions from './EntryActions';
 import EntryHeading from './EntryHeading';
 import EntryMeta from './EntryMeta';
 import EntryOutput from './EntryOutput';
@@ -31,7 +31,12 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({ id, watch }) => {
             <PageNotice />
             <EntryStateNotice watch={watch} />
             <EntryHeading watch={watch} />
-            {state !== 'Expired' && <EntryExpireForm id={id} />}
+            {state !== 'Expired' && (
+                <EntryActions
+                    id={id}
+                    watch={watch}
+                />
+            )}
             <p>
                 <Link to={href('/requests', { EntryId: id })}>Every request answered with this entry →</Link>
             </p>

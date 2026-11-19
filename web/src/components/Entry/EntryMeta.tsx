@@ -45,6 +45,18 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
                     '—'
                 )}
             </dd>
+            {entry.changedBy && (
+                <>
+                    <dt>Changed by</dt>
+                    <dd>{entry.changedBy}</dd>
+                </>
+            )}
+            {entry.guidance && (
+                <>
+                    <dt>Comment</dt>
+                    <dd>{entry.guidance}</dd>
+                </>
+            )}
             {entry.error && (
                 <>
                     <dt>Error</dt>

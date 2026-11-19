@@ -1,5 +1,6 @@
 import { useSession } from '../../hooks/useSession';
 import { perform } from '../../lib/actions';
+import { ConfirmationRequest, confirmAction } from '../../lib/confirmation';
 import { invokeHub } from '../../lib/hubConnection';
 import { timeSpanSeconds } from '../../lib/time';
 import { MaintenanceType } from '../../types/maintenanceType';
@@ -10,6 +11,12 @@ import DurationSetting from './DurationSetting';
 import UserAgentSetting from './UserAgentSetting';
 import { FIELD_OF_ERROR, readSettingsForm } from './settingsFormData';
 import React, { useState, type FormEvent } from 'react';
+
+const SAVE_CONFIRMATION: ConfirmationRequest = {
+    question: 'Save the settings for everyone?',
+    detail: 'A shorter cache lifetime or history retention expires entries and deletes requests at the next maintenance run.',
+    button: 'Save',
+};
 
 type SettingsFormProps = {
     view: SettingsViewType;
@@ -22,7 +29,9 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
     const settings = view.settings;
     const save = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const result = await invokeHub<SettingsSaveType>('saveSettings', readSettingsForm(event.currentTarget));
+        const form = readSettingsForm(event.currentTarget);
+        if (!(await confirmAction(SAVE_CONFIRMATION))) return;
+        const result = await invokeHub<SettingsSaveType>('saveSettings', form);
         if (result.maintenance !== null) {
             onSaved(result.maintenance);
             return;
@@ -135,7 +144,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     label='Show everything read-only without signing in'
                     checked={settings.publicView}
                 >
-                    {`On: anyone can open this admin without signing in and see all of it, the request history with headers, bodies and client addresses included. Saving settings and expiring entries still take signing in. Off: every page asks to sign in.${session.signInEnabled ? '' : ' Sign-in is not configured, so this has no effect: the admin relies on the proxy in front of it.'}`}
+                    {`On: anyone can open this admin without signing in and see all of it, the request history with headers, bodies and client addresses included. Every change still takes signing in. Off: every page asks to sign in.${session.signInEnabled ? '' : ' Sign-in is not configured, so this has no effect: the admin relies on the proxy in front of it.'}`}
                 </CheckboxSetting>
 
                 <h2>Outbound requests</h2>
@@ -145,7 +154,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     error={errors.UserAgent}
                 />
 
-                <button type='submit'>Save</button>
+                <button
+                    type='submit'
+                    className='danger'
+                >
+                    Save
+                </button>
             </fieldset>
         </form>
     );

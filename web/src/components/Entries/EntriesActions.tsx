@@ -2,6 +2,7 @@ import { SelectionStore } from '../../lib/selectionStore';
 import { Watch } from '../../lib/watchStore';
 import { EntriesViewType } from '../../types/entriesViewType';
 import { EntryStateType } from '../../types/entryStateType';
+import ChangeSelectedButton from './ChangeSelectedButton';
 import EntriesCount from './EntriesCount';
 import ExpireAllButton from './ExpireAllButton';
 import ExpireMatchingButton from './ExpireMatchingButton';
@@ -24,6 +25,7 @@ const EntriesActions: React.FC<EntriesActionsProps> = ({ watch, selection, filte
     const filtered = filter.host !== null || filter.target !== null || filter.state !== null;
     return (
         <div className='actions'>
+            <ChangeSelectedButton selection={selection} />
             <ExpireSelectedButton selection={selection} />
             {filtered && (
                 <ExpireMatchingButton

@@ -172,6 +172,11 @@ namespace Honeyslop.Migrator.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
 
+                    b.Property<string>("ChangedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("changed_by");
+
                     b.Property<DateTimeOffset?>("ClaimedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("claimed_at");
@@ -211,6 +216,11 @@ namespace Honeyslop.Migrator.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("generator");
+
+                    b.Property<string>("Guidance")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("guidance");
 
                     b.Property<long>("Hits")
                         .HasColumnType("bigint")

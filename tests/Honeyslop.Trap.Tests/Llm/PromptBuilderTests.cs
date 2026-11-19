@@ -62,7 +62,7 @@ public sealed class PromptBuilderTests
     {
         var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, true);
 
-        StringAssert.Contains(prompt.System, "401 or 403 for a login wall");
+        StringAssert.Contains(prompt.System, "401 or 403 only where the software puts a login");
         Assert.DoesNotContain("Every request succeeds", prompt.System);
         Assert.DoesNotContain("{status_rules}", prompt.System);
     }
@@ -73,7 +73,32 @@ public sealed class PromptBuilderTests
         var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, false);
 
         StringAssert.Contains(prompt.System, "Every request succeeds");
-        Assert.DoesNotContain("401 or 403 for a login wall", prompt.System);
+        Assert.DoesNotContain("401 or 403 only where", prompt.System);
         Assert.DoesNotContain("{status_rules}", prompt.System);
     }
+
+    [TestMethod]
+    public void Build_WithGuidance_PassesTheOwnersRequestOnOneLine()
+    {
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/SDK/webLanguage",
+            Guidance = "Answer as a Hikvision camera.\r\nUse XML."
+        }, true);
+
+        StringAssert.Contains(prompt.System, "- The owner of this server asks for this response: Answer as a Hikvision camera. Use XML.\n\nReply with JSON only");
+        Assert.AreEqual("GET /SDK/webLanguage HTTP/1.1\nHost: a.test\n\n", prompt.User);
+    }
+
+    [TestMethod]
+    public void Build_WithoutGuidance_LeavesNoPlaceholder()
+    {
+        var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, true);
+
+        Assert.DoesNotContain("{guidance}", prompt.System);
+        Assert.DoesNotContain("owner of this server", prompt.System);
+    }
+
 }

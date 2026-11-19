@@ -22,8 +22,11 @@ type Budget = {
 const SHELL = ['App', 'Header', 'Navigation', 'LiveIndicator', 'Account', 'Footer', 'ConfirmDialog'];
 const STILL = [...SHELL, 'Main', 'Routes'];
 const STILL_BUT_DIALOG = STILL.filter((component) => component !== 'ConfirmDialog');
+const SHELL_BUT_DIALOG = SHELL.filter((component) => component !== 'ConfirmDialog');
 const TYPING: MeasureOptions = { quietMs: 50 };
 const ENTRY_LIST = ['EntriesPage', 'EntryFilters', 'EntriesActions', 'EntriesTable', 'EntriesTableRow'];
+const ENTRY_PAGE = ['EntryDetails', 'EntryHeading', 'EntryMeta', 'EntryRequest', 'EntryResponse', 'EntryActions'];
+const CHANGE_FIELDS = ['ResponseChangeTabs', 'GuidanceFields', 'ResponseFields'];
 
 const BUDGETS: Record<string, Budget> = {
     'cold load of the entries': { renders: 220, max: { App: 1, Header: 1, EntriesPage: 1, EntriesTableRow: 50 } },
@@ -31,9 +34,9 @@ const BUDGETS: Record<string, Budget> = {
     'apply the host filter': { renders: 60, forbidden: SHELL, max: { EntriesPage: 1, EntryFilters: 1 } },
     'reset the filter': { renders: 170, forbidden: SHELL, max: { EntriesPage: 1, EntryFilters: 2 } },
     'select an entry': {
-        renders: 3,
+        renders: 4,
         forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'],
-        max: { RowCheckbox: 1 },
+        max: { RowCheckbox: 1, ChangeSelectedButton: 1 },
     },
     'ask to expire the selected entry': {
         renders: 1,
@@ -45,8 +48,18 @@ const BUDGETS: Record<string, Budget> = {
         forbidden: [...STILL_BUT_DIALOG, ...ENTRY_LIST, 'ExpireSelectedButton', 'RowCheckbox'],
         max: { ConfirmDialog: 1 },
     },
-    'select every entry': { renders: 52, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
-    'clear the selection': { renders: 52, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
+    'open the change of the selected entry': {
+        renders: 5,
+        forbidden: [...STILL, ...ENTRY_LIST, 'ExpireSelectedButton', 'RowCheckbox'],
+        max: { ChangeSelectedButton: 1, ResponseChangeDialog: 1 },
+    },
+    'close the change of the selected entry': {
+        renders: 1,
+        forbidden: [...STILL, ...ENTRY_LIST, 'ExpireSelectedButton', 'RowCheckbox', 'ResponseChangeDialog'],
+        max: { ChangeSelectedButton: 1 },
+    },
+    'select every entry': { renders: 53, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
+    'clear the selection': { renders: 53, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
     'an entry is hit': {
         renders: 6,
         forbidden: [...STILL, 'EntriesPage', 'EntryFilters', 'EntriesActions', 'ListPager', 'RowCheckbox'],
@@ -60,11 +73,32 @@ const BUDGETS: Record<string, Budget> = {
         maxInstances: { RequestsTableRow: 1 },
     },
     'go to the generators': { renders: 40, forbidden: SHELL, max: { ClientSortHeader: 3 } },
-    'open an entry being generated': { renders: 20, forbidden: SHELL },
+    'open an entry being generated': { renders: 22, forbidden: SHELL },
     'the output streams': {
         renders: 2,
         forbidden: [...STILL, 'EntryDetails', 'EntryHeading', 'EntryMeta', 'EntryRequest', 'EntryResponse'],
         max: { EntryOutput: 1 },
+    },
+    'open the response change': {
+        renders: 5,
+        forbidden: [...STILL, ...ENTRY_PAGE, 'EntryExpireForm', 'EntryOutput'],
+        max: { EntryChangeButton: 1, ResponseChangeDialog: 1 },
+    },
+    'type a comment for the model': { idle: true },
+    'switch to writing the response': {
+        renders: 4,
+        forbidden: [...STILL, ...ENTRY_PAGE, 'EntryChangeButton', 'EntryExpireForm', 'EntryOutput'],
+        max: { ResponseChangeDialog: 1, ...Object.fromEntries(CHANGE_FIELDS.map((component) => [component, 1])) },
+    },
+    'ask to replace the response': {
+        renders: 2,
+        forbidden: [...STILL_BUT_DIALOG, ...ENTRY_PAGE, ...CHANGE_FIELDS, 'EntryChangeButton', 'EntryOutput'],
+        max: { ConfirmDialog: 1, ResponseChangeDialog: 1 },
+    },
+    'replace the response': {
+        renders: 40,
+        forbidden: SHELL_BUT_DIALOG,
+        max: { ConfirmDialog: 1, EntryDetails: 2, EntryChangeButton: 2 },
     },
     'go to the clients': { renders: 30, forbidden: SHELL },
     'sort the clients by requests': { renders: 85, forbidden: SHELL },
@@ -82,6 +116,16 @@ const BUDGETS: Record<string, Budget> = {
     },
     'go to the settings': { renders: 20, forbidden: SHELL },
     'type into a setting': { idle: true },
+    'ask to save the settings': {
+        renders: 1,
+        forbidden: [...STILL_BUT_DIALOG, 'SettingsPage', 'SettingsForm', 'PersonalSettingsForm'],
+        max: { ConfirmDialog: 1 },
+    },
+    'keep the settings': {
+        renders: 1,
+        forbidden: [...STILL_BUT_DIALOG, 'SettingsPage', 'SettingsForm', 'PersonalSettingsForm'],
+        max: { ConfirmDialog: 1 },
+    },
 };
 
 async function record(testInfo: TestInfo, name: string, report: RenderReport): Promise<void> {
@@ -174,6 +218,14 @@ test('render audit', async ({ browser }, testInfo) => {
             await page.locator('dialog.confirm button[value=cancel]').click();
             await page.locator('dialog.confirm:not([open])').waitFor({ state: 'attached' });
         });
+        await step(testInfo, page, 'open the change of the selected entry', async () => {
+            await page.locator('.actions button', { hasText: 'Change 1 selected' }).click();
+            await page.locator('dialog.change-response[open]').waitFor();
+        });
+        await step(testInfo, page, 'close the change of the selected entry', async () => {
+            await page.locator('dialog.change-response button', { hasText: 'Cancel' }).click();
+            await page.locator('dialog.change-response').waitFor({ state: 'detached' });
+        });
         await step(testInfo, page, 'select every entry', () => page.locator('thead .check input').check());
         await step(testInfo, page, 'clear the selection', () => page.locator('thead .check input').uncheck());
 
@@ -206,6 +258,39 @@ test('render audit', async ({ browser }, testInfo) => {
             await expect(page.locator('pre.code.body')).toContainText('streamed by the render audit');
         });
 
+        await step(testInfo, page, 'open the response change', async () => {
+            await page.locator('main .actions button', { hasText: 'Change response' }).click();
+            await page.locator('dialog.change-response[open]').waitFor();
+        });
+        await step(
+            testInfo,
+            page,
+            'type a comment for the model',
+            () => app.typeInto('#change-guidance', 'camera'),
+            TYPING,
+        );
+        await step(testInfo, page, 'switch to writing the response', async () => {
+            await page.locator('dialog [role=tab]', { hasText: 'Write the response' }).click();
+            await page.locator('#change-body').waitFor();
+        });
+        await page
+            .locator('#change-body')
+            .fill('<?xml version="1.0"?><userCheck><statusValue>200</statusValue></userCheck>');
+        await page.locator('#change-headers').fill('Content-Type: application/xml');
+        await step(testInfo, page, 'ask to replace the response', async () => {
+            await page.locator('dialog.change-response button[type=submit]').click();
+            await page.locator('dialog.confirm[open]').waitFor();
+        });
+        await step(testInfo, page, 'replace the response', async () => {
+            await page.locator('dialog.confirm button[value=confirm]').click();
+            await page.waitForURL(
+                (url) => url.pathname.startsWith('/entries/') && url.pathname !== `/entries/${generating}`,
+            );
+            await app.ready();
+            await expect(page.locator('h1 .badge')).toHaveText('ready');
+            await expect(page.locator('pre.code.body')).toContainText('<userCheck>');
+        });
+
         await step(testInfo, page, 'go to the clients', () => app.navigateTo('Clients', '/clients'));
         await step(testInfo, page, 'sort the clients by requests', async () => {
             await page.locator('select[name=Days]').selectOption('0');
@@ -229,6 +314,14 @@ test('render audit', async ({ browser }, testInfo) => {
 
         await step(testInfo, page, 'go to the settings', () => app.navigateTo('Settings', '/settings'));
         await step(testInfo, page, 'type into a setting', () => app.typeInto('#UserAgent', ' audit'), TYPING);
+        await step(testInfo, page, 'ask to save the settings', async () => {
+            await page.locator('fieldset.settings button.danger').click();
+            await page.locator('dialog.confirm[open]').waitFor();
+        });
+        await step(testInfo, page, 'keep the settings', async () => {
+            await page.locator('dialog.confirm button[value=cancel]').click();
+            await page.locator('dialog.confirm:not([open])').waitFor({ state: 'attached' });
+        });
     } finally {
         await app.close();
     }
