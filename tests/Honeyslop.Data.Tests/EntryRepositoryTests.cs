@@ -468,7 +468,7 @@ public sealed class EntryRepositoryTests
         replacement.ChangedBy = "operator";
 
         await using (var scope = PostgresDatabase.CreateScope())
-            await scope.Repository().ReplaceAsync([replacement], DateTimeOffset.UtcNow, CancellationToken.None);
+            Assert.IsTrue(await scope.Repository().TryReplaceAsync([replacement], DateTimeOffset.UtcNow, CancellationToken.None));
 
         var expired = await GetAsync(current.Id);
         var added = await GetAsync(replacement.Id);
@@ -477,6 +477,18 @@ public sealed class EntryRepositoryTests
         Assert.AreEqual("Answer as a Hikvision camera", added.Guidance);
         Assert.AreEqual("operator", added.ChangedBy);
         CollectionAssert.AreEqual(keyHash, added.KeyHash);
+    }
+
+    [TestMethod]
+    public async Task TryReplaceAsync_WhenTheKeyGetsAnotherActiveEntry_ChangesNothing()
+    {
+        var keyHash = RandomNumberGenerator.GetBytes(32);
+        var current = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready));
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            Assert.IsFalse(await scope.Repository().TryReplaceAsync([PendingEntry(keyHash), PendingEntry(keyHash)], DateTimeOffset.UtcNow, CancellationToken.None));
+
+        Assert.AreEqual(EntryStatus.Ready, (await GetAsync(current.Id)).Status);
     }
 
     [TestMethod]

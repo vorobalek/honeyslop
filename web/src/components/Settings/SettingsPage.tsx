@@ -4,7 +4,6 @@ import { useWatch } from '../../hooks/useWatch';
 import { useWatched, useWatchPresence, useWatchRevision } from '../../hooks/useWatched';
 import { refreshWatch } from '../../lib/watchStore';
 import { MaintenanceType } from '../../types/maintenanceType';
-import { SettingsViewType } from '../../types/settingsViewType';
 import PageNotice from '../Common/PageNotice';
 import Presence from '../Common/Presence';
 import PersonalSettingsForm from './PersonalSettingsForm';
@@ -18,7 +17,7 @@ type Saved = { kind: 'settings'; maintenance: MaintenanceType } | { kind: 'perso
 const SettingsPage: React.FC = () => {
     useTitle('Settings');
     const session = useSession();
-    const watch = useWatch<SettingsViewType>('watchSettings');
+    const watch = useWatch({ view: 'settings' });
     const presence = useWatchPresence(watch);
     const revision = useWatchRevision(watch);
     const view = useWatched(watch, (value) => value);

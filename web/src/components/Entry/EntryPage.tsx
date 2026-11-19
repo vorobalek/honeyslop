@@ -1,6 +1,5 @@
 import { useWatch } from '../../hooks/useWatch';
 import { useWatchPresence } from '../../hooks/useWatched';
-import { EntryViewType } from '../../types/entryViewType';
 import Presence from '../Common/Presence';
 import EntryDetails from './EntryDetails';
 import React from 'react';
@@ -10,7 +9,7 @@ type EntryPageProps = {
 };
 
 const EntryPage: React.FC<EntryPageProps> = ({ id }) => {
-    const watch = useWatch<EntryViewType>('watchEntry', id);
+    const watch = useWatch({ view: 'entry', id });
     const presence = useWatchPresence(watch);
     if (presence !== 'present') return <Presence presence={presence} />;
     return (

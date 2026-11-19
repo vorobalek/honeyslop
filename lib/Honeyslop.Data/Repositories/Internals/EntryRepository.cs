@@ -43,7 +43,7 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task ReplaceAsync(IReadOnlyCollection<Entry> replacements, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<bool> TryReplaceAsync(IReadOnlyCollection<Entry> replacements, DateTimeOffset now, CancellationToken cancellationToken)
     {
         foreach (var replacement in replacements)
             Fit(replacement);
@@ -54,8 +54,18 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => keys.Contains(x.KeyHash))
             .ExpireAsync(now, cancellationToken);
         await dbContext.Entries.AddRangeAsync(replacements, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.IsUniqueViolation)
+        {
+            dbContext.ChangeTracker.Clear();
+            return false;
+        }
+
         await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
     public Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken)

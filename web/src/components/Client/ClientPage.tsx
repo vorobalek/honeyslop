@@ -4,7 +4,6 @@ import { useWatch } from '../../hooks/useWatch';
 import { useWatchPresence } from '../../hooks/useWatched';
 import { REQUEST_COLUMNS, REQUEST_OUTCOMES } from '../../lib/constants';
 import { oneOf, pageParam, sortingParam, textParam } from '../../lib/listQuery';
-import { ClientType } from '../../types/clientType';
 import Link from '../Common/Link';
 import PageNotice from '../Common/PageNotice';
 import Presence from '../Common/Presence';
@@ -38,7 +37,7 @@ const ClientPage: React.FC<ClientPageProps> = ({ ip }) => {
         [ip, host, target, outcome],
     );
     const links = useMemo(() => ({ Host: host, Target: target, Outcome: outcome }), [host, target, outcome]);
-    const watch = useWatch<ClientType>('watchClient', ip);
+    const watch = useWatch({ view: 'client', ip });
     const presence = useWatchPresence(watch);
 
     if (presence !== 'present') return <Presence presence={presence} />;

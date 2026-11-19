@@ -18,7 +18,7 @@ const ReportsPage: React.FC = () => {
     useTitle('Reports');
     const query = useQuery();
     const sorting = useMemo(() => sortingParam(query, REPORT_COLUMNS), [query]);
-    const watch = useWatch<ReportsViewType>('watchReports', { sort: sorting, page: pageParam(query) });
+    const watch = useWatch({ view: 'reports', query: { sort: sorting, page: pageParam(query) } });
     const presence = useWatchPresence(watch);
     if (presence !== 'present') return <Presence presence={presence} />;
     return (

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Honeyslop.Admin.Core.Access;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Live.Contracts;
 using Honeyslop.Admin.Live.Enums;
@@ -13,6 +14,7 @@ internal sealed partial class PostgresNotificationListener(
     ILiveSubscriptions subscriptions,
     IJsonSerializer<GenerationOutputDto> outputSerializer,
     IGenerationOutputStore outputStore,
+    IPublicView publicView,
     TimeProvider timeProvider,
     ILogger<PostgresNotificationListener> logger) : BackgroundService
 {
@@ -31,7 +33,7 @@ internal sealed partial class PostgresNotificationListener(
                 await using var connection = new NpgsqlConnection(builder.ConnectionString);
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
-                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports;", connection))
+                await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports; listen honeyslop_settings;", connection))
                     await command.ExecuteNonQueryAsync(stoppingToken);
                 LogListening(logger);
                 subscriptions.PublishEverything();
@@ -50,7 +52,9 @@ internal sealed partial class PostgresNotificationListener(
 
     private void Dispatch(string channel, string payload)
     {
-        if (channel == "honeyslop_requests")
+        if (channel == "honeyslop_settings")
+            publicView.Reset();
+        else if (channel == "honeyslop_requests")
             subscriptions.Publish(new LiveChange(LiveTopic.Requests));
         else if (channel == "honeyslop_reports")
             subscriptions.Publish(new LiveChange(LiveTopic.Reports));

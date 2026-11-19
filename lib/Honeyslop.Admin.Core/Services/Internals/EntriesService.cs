@@ -114,7 +114,8 @@ internal sealed partial class EntriesService(
             return Refused("Entries", "None of these entries is active any more.");
         var now = await serverTime.GetNowAsync(cancellationToken);
         Entry[] replacements = [.. current.Select(x => replace(x, now))];
-        await entryRepository.ReplaceAsync(replacements, now, cancellationToken);
+        if (!await entryRepository.TryReplaceAsync(replacements, now, cancellationToken))
+            return Refused("Entries", "Another change to these entries got there first, reload them and try again.");
         return new EntryChangeDto(new Dictionary<string, string>(), [.. replacements.Select(x => x.Id)]);
     }
 

@@ -56,6 +56,24 @@ public sealed class SettingsRepositoryTests
         Assert.IsNull(cleared.User?.SenderName);
     }
 
+    [TestMethod]
+    public async Task SaveAsync_FromSeveralPlacesAtOnce_KeepsOneOfTheValues()
+    {
+        var user = $"user-{Unique.String(8)}";
+        var names = Enumerable.Range(0, 6).Select(i => $"Example Researcher {i}").ToArray();
+        var go = new TaskCompletionSource();
+
+        var saving = names.Select(name => Task.Run(async () =>
+        {
+            await go.Task;
+            await SaveAsync(new UserSettings { UserId = user, SenderName = name }, DateTimeOffset.UtcNow);
+        })).ToArray();
+        go.SetResult();
+        await Task.WhenAll(saving);
+
+        CollectionAssert.Contains(names, (await GetAsync(user)).User?.SenderName);
+    }
+
     private static async Task SaveAsync(UserSettings settings, DateTimeOffset now)
     {
         await using var scope = PostgresDatabase.CreateScope();

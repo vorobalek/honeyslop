@@ -16,7 +16,6 @@ using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.SignalR;
 
 await Host
@@ -43,13 +42,11 @@ await Host
                 .AddSingleton<LiveSubscriptions>()
                 .AddSingleton<ILiveSubscriptions>(serviceProvider => serviceProvider.GetRequiredService<LiveSubscriptions>())
                 .AddHostedService(serviceProvider => serviceProvider.GetRequiredService<LiveSubscriptions>())
+                .AddLiveWatches()
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<PostgresNotificationListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))
                 .AddHealthChecks();
-            services
-                .AddDataProtection()
-                .UseEphemeralDataProtectionProvider();
             services
                 .AddOptions<CountryOptions>()
                 .Configure(x => x.DatabasePath = AppConfiguration.GeoIpDatabase);
@@ -80,7 +77,11 @@ await Host
             });
             services
                 .AddSignalR(options => options.AddFilter<AdminHubFilter>())
-                .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+                .AddJsonProtocol(options =>
+                {
+                    options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    options.PayloadSerializerOptions.AllowOutOfOrderMetadataProperties = true;
+                });
         })
         .Configure(app => app
             .UseMiddleware<SecurityHeadersMiddleware>()
@@ -96,7 +97,7 @@ await Host
             .UseEndpoints(endpoints =>
             {
                 endpoints
-                    .MapHub<AdminHub>("/hub", options => options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets)
+                    .MapHub<AdminHub>("/hub")
                     .AllowAnonymous();
                 endpoints.MapGet("/clients/{ip}/archive", ContentEndpoints.ArchiveAsync);
                 endpoints.MapGet("/entries/{id:long}/preview", ContentEndpoints.PreviewAsync);

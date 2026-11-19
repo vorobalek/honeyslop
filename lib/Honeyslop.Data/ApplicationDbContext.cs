@@ -37,5 +37,10 @@ public sealed partial class ApplicationDbContext(DbContextOptions<ApplicationDbC
             .HasDatabaseName("ix_abuse_report_client_ip_pending")
             .IsUnique()
             .HasFilter($"status = {(int)AbuseReportStatus.Pending}");
+        modelBuilder
+            .Entity<ResourceLock>()
+            .HasData(
+                new ResourceLock { Name = ResourceLock.DataProtectionKeys },
+                new ResourceLock { Name = ResourceLock.Settings });
     }
 }

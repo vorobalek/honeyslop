@@ -6,9 +6,9 @@ using Honeyslop.Admin.Views;
 
 namespace Honeyslop.Admin.Live.Internals;
 
-internal sealed partial class LiveSubscription(
-    string connectionId,
-    int watchId,
+internal sealed partial class LiveView(
+    string group,
+    string key,
     ClaimsPrincipal user,
     LiveInterest interest,
     Func<IViewBuilder, CancellationToken, Task<object?>> build,
@@ -28,7 +28,11 @@ internal sealed partial class LiveSubscription(
     private readonly CancellationTokenSource _stop = new();
     private int _state;
 
+    public string Group => group;
+
     public LiveInterest Interest => interest;
+
+    public HashSet<string> Members { get; } = [];
 
     public void Invalidate()
     {
@@ -71,20 +75,20 @@ internal sealed partial class LiveSubscription(
             scope.ServiceProvider.GetRequiredService<IViewerScope>().Use(user);
             var view = await build(scope.ServiceProvider.GetRequiredService<IViewBuilder>(), cancellationToken);
             await (view is null
-                ? sender.SendAsync(connectionId, Missing, [watchId], cancellationToken)
-                : sender.SendAsync(connectionId, Update, [watchId, view], cancellationToken));
+                ? sender.SendAsync(group, Missing, [key], cancellationToken)
+                : sender.SendAsync(group, Update, [key, view], cancellationToken));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (AccessDeniedException exception)
         {
-            await TrySendAsync(Denied, [watchId, exception.Message], cancellationToken);
+            await TrySendAsync(Denied, [key, exception.Message], cancellationToken);
         }
         catch (Exception exception)
         {
-            LogFailed(logger, exception, watchId);
-            await TrySendAsync(Failed, [watchId], cancellationToken);
+            LogFailed(logger, exception, key);
+            await TrySendAsync(Failed, [key], cancellationToken);
         }
     }
 
@@ -92,14 +96,14 @@ internal sealed partial class LiveSubscription(
     {
         try
         {
-            await sender.SendAsync(connectionId, method, arguments, cancellationToken);
+            await sender.SendAsync(group, method, arguments, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            LogFailed(logger, exception, watchId);
+            LogFailed(logger, exception, key);
         }
     }
 
-    [LoggerMessage(LogLevel.Warning, "Live view {WatchId} failed to refresh")]
-    static partial void LogFailed(ILogger logger, Exception exception, int watchId);
+    [LoggerMessage(LogLevel.Warning, "Live view {Key} failed to refresh")]
+    static partial void LogFailed(ILogger logger, Exception exception, string key);
 }

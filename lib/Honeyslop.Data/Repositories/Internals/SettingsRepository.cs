@@ -2,6 +2,7 @@ using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Converters;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Entities.Infrastructure;
+using Honeyslop.Data.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Honeyslop.Data.Repositories.Internals;
@@ -31,6 +32,8 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
 
     public async Task SaveAsync(HoneyslopSettings settings, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockAsync(ResourceLock.Settings, cancellationToken);
         var existing = await dbContext
             .Settings
             .ToDictionaryAsync(x => x.Key, cancellationToken);
@@ -41,10 +44,13 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             (key, value) => new Setting { Key = key, Value = value, UpdatedAt = now },
             now);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task SaveAsync(UserSettings settings, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.LockAsync(ResourceLock.Settings, cancellationToken);
         var existing = await dbContext
             .UserSettings
             .Where(x => x.UserId == settings.UserId)
@@ -56,6 +62,7 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             (key, value) => new UserSetting { UserId = settings.UserId, Key = key, Value = value, UpdatedAt = now },
             now);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static void Apply<TRow>(

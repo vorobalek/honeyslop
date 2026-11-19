@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
-using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Honeyslop.Admin.Live.Contracts;
-using Honeyslop.Admin.Views;
 
 namespace Honeyslop.Admin.Live.Internals;
 
@@ -13,51 +13,69 @@ internal sealed class LiveSubscriptions(
 {
     private static readonly TimeSpan PeriodicInterval = TimeSpan.FromSeconds(5);
 
-    private readonly ConcurrentDictionary<(string ConnectionId, int WatchId), LiveSubscription> _subscriptions = new();
+    private readonly Lock _lock = new();
+    private readonly Dictionary<string, LiveView> _views = [];
+    private readonly Dictionary<(string ConnectionId, string Key), LiveView> _memberships = [];
 
-    public int Count => _subscriptions.Count;
-
-    public void Watch(
-        string connectionId,
-        int watchId,
-        ClaimsPrincipal user,
-        LiveInterest interest,
-        Func<IViewBuilder, CancellationToken, Task<object?>> build)
+    public int Count
     {
-        var subscription = new LiveSubscription(connectionId, watchId, user, interest, build, scopeFactory, sender, logger);
-        _subscriptions.AddOrUpdate(
-            (connectionId, watchId),
-            subscription,
-            (_, previous) =>
-            {
-                previous.Dispose();
-                return subscription;
-            });
-        subscription.Invalidate();
+        get
+        {
+            lock (_lock)
+                return _views.Count;
+        }
     }
 
-    public void Unwatch(string connectionId, int watchId)
+    public async Task WatchAsync(LiveWatch watch, CancellationToken cancellationToken)
     {
-        if (_subscriptions.TryRemove((connectionId, watchId), out var subscription))
-            subscription.Dispose();
+        var group = GroupOf(watch);
+        LiveView view;
+        LiveView? left;
+        lock (_lock)
+        {
+            left = Leave(watch.ConnectionId, watch.Key, group);
+            if (!_views.TryGetValue(group, out view!))
+            {
+                view = new LiveView(group, watch.Key, watch.User, watch.Interest, watch.Build, scopeFactory, sender, logger);
+                _views[group] = view;
+            }
+
+            view.Members.Add(watch.ConnectionId);
+            _memberships[(watch.ConnectionId, watch.Key)] = view;
+        }
+
+        if (left is not null)
+            await sender.LeaveAsync(watch.ConnectionId, left.Group, cancellationToken);
+        await sender.JoinAsync(watch.ConnectionId, group, cancellationToken);
+        view.Invalidate();
+    }
+
+    public async Task UnwatchAsync(string connectionId, string key, CancellationToken cancellationToken)
+    {
+        LiveView? left;
+        lock (_lock)
+            left = Leave(connectionId, key, null);
+        if (left is not null)
+            await sender.LeaveAsync(connectionId, left.Group, cancellationToken);
     }
 
     public void Drop(string connectionId)
     {
-        foreach (var key in _subscriptions.Keys.Where(x => x.ConnectionId == connectionId))
-            Unwatch(key.ConnectionId, key.WatchId);
+        lock (_lock)
+            foreach (var membership in _memberships.Keys.Where(x => x.ConnectionId == connectionId).ToArray())
+                Leave(membership.ConnectionId, membership.Key, null);
     }
 
     public void Publish(LiveChange change)
     {
-        foreach (var subscription in _subscriptions.Values.Where(x => x.Interest.Matches(change)))
-            subscription.Invalidate();
+        foreach (var view in Snapshot(x => x.Interest.Matches(change)))
+            view.Invalidate();
     }
 
     public void PublishEverything()
     {
-        foreach (var subscription in _subscriptions.Values)
-            subscription.Invalidate();
+        foreach (var view in Snapshot(_ => true))
+            view.Invalidate();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -66,11 +84,36 @@ internal sealed class LiveSubscriptions(
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
-                foreach (var subscription in _subscriptions.Values.Where(x => x.Interest.Periodic))
-                    subscription.Invalidate();
+                foreach (var view in Snapshot(x => x.Interest.Periodic))
+                    view.Invalidate();
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
+    }
+
+    private LiveView? Leave(string connectionId, string key, string? stayIn)
+    {
+        if (!_memberships.TryGetValue((connectionId, key), out var view) || view.Group == stayIn)
+            return null;
+        _memberships.Remove((connectionId, key));
+        view.Members.Remove(connectionId);
+        if (view.Members.Count > 0)
+            return view;
+        _views.Remove(view.Group);
+        view.Dispose();
+        return view;
+    }
+
+    private LiveView[] Snapshot(Func<LiveView, bool> predicate)
+    {
+        lock (_lock)
+            return [.. _views.Values.Where(predicate)];
+    }
+
+    private static string GroupOf(LiveWatch watch)
+    {
+        var signature = JsonSerializer.Serialize(new[] { watch.Audience, watch.Key, JsonSerializer.Serialize(watch.Request) });
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(signature)));
     }
 }

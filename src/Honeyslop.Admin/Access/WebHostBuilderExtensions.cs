@@ -20,6 +20,7 @@ public static class WebHostBuilderExtensions
             return builder.ConfigureServices(services =>
             {
                 services
+                    .AddSharedDataProtection()
                     .AddSingleton<IAuthorizationHandler, AccessHandler>()
                     .Configure<ForwardedHeadersOptions>(options =>
                     {

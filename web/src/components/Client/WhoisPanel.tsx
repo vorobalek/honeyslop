@@ -1,7 +1,6 @@
 import { useWatchLater } from '../../hooks/useWatchLater';
 import { useWatchPresence, useWatchRevision } from '../../hooks/useWatched';
 import { refreshWatch } from '../../lib/watchStore';
-import { ClientAbuseType } from '../../types/clientAbuseType';
 import WhoisSection from './WhoisSection';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -10,7 +9,7 @@ type WhoisPanelProps = {
 };
 
 const WhoisPanel: React.FC<WhoisPanelProps> = ({ ip }) => {
-    const [watch, loaded] = useWatchLater<ClientAbuseType>('watchClientAbuse', ip);
+    const [watch, loaded] = useWatchLater({ view: 'clientAbuse', ip });
     const presence = useWatchPresence(watch);
     const revision = useWatchRevision(watch);
     const [retrying, setRetrying] = useState(false);

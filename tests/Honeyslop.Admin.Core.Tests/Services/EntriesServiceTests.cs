@@ -23,7 +23,7 @@ public sealed class EntriesServiceTests
     public void Initialize()
     {
         _entries
-            .Setup(x => x.ReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Callback<IReadOnlyCollection<Entry>, DateTimeOffset, CancellationToken>((replacements, _, _) =>
             {
                 _replacements = [.. replacements];
@@ -31,7 +31,7 @@ public sealed class EntriesServiceTests
                 foreach (var replacement in _replacements)
                     replacement.Id = ++id;
             })
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
     }
 
     [TestMethod]
@@ -58,6 +58,21 @@ public sealed class EntriesServiceTests
     }
 
     [TestMethod]
+    public async Task RegenerateAsync_WhenAnotherChangeGetsThereFirst_IsRefused()
+    {
+        Active(Ready(1, "/SDK/webLanguage"));
+        _entries
+            .Setup(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var change = await Service(Viewers.Operator).RegenerateAsync([1], null, CancellationToken.None);
+
+        Assert.IsFalse(change.Changed);
+        CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
+        Assert.IsEmpty(change.Ids);
+    }
+
+    [TestMethod]
     public async Task RegenerateAsync_WhenEveryEntryHasExpired_ChangesNothing()
     {
         Active();
@@ -66,7 +81,7 @@ public sealed class EntriesServiceTests
 
         Assert.IsFalse(change.Changed);
         CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
-        _entries.Verify(x => x.ReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+        _entries.Verify(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestMethod]
@@ -82,7 +97,7 @@ public sealed class EntriesServiceTests
         Assert.IsFalse(change.Changed);
         CollectionAssert.AreEquivalent(new[] { "Status", "Headers" }, change.Errors.Keys.ToArray());
         StringAssert.Contains(change.Errors["Headers"], "Content-Length is set by the server");
-        _entries.Verify(x => x.ReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+        _entries.Verify(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestMethod]

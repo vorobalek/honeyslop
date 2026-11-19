@@ -20,7 +20,7 @@ const ClientsPage: React.FC = () => {
     const days = numberParam(query, 'Days') ?? 7;
     const sorting = useMemo(() => sortingParam(query, CLIENT_COLUMNS), [query]);
     const links = useMemo(() => ({ Days: days }), [days]);
-    const watch = useWatch<ClientsViewType>('watchClients', { days, sort: sorting, page: pageParam(query) });
+    const watch = useWatch({ view: 'clients', query: { days, sort: sorting, page: pageParam(query) } });
     const presence = useWatchPresence(watch);
     if (presence !== 'present') return <Presence presence={presence} />;
     return (

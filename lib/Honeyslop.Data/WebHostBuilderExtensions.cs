@@ -20,6 +20,7 @@ public static class WebHostBuilderExtensions
                 .AddScoped<IClientWhoisRepository, ClientWhoisRepository>()
                 .AddScoped<IAbuseReportRepository, AbuseReportRepository>()
                 .AddScoped<IServerTimeRepository, ServerTimeRepository>()
+                .AddScoped<IDataProtectionKeyRepository, DataProtectionKeyRepository>()
                 .AddDbContext<ApplicationDbContext>(optionsBuilder => optionsBuilder
                     .UseNpgsql(
                         connectionString ?? context.Configuration.GetConnectionString("Default"),

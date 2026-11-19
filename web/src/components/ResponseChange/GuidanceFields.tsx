@@ -20,7 +20,7 @@ const GuidanceFields: React.FC<GuidanceFieldsProps> = ({ active, guidance, error
                 name='Guidance'
                 rows={5}
                 maxLength={GUIDANCE_MAX_LENGTH}
-                placeholder='Answer as a Hikvision DS-2CD2032-I camera on firmware V5.4.0 build 160530'
+                placeholder='Which software and version to answer as, and what to show'
                 defaultValue={guidance ?? ''}
             />
             {error && <span className='error'>{error}</span>}

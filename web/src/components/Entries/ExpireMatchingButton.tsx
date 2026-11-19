@@ -8,13 +8,13 @@ import { navigate } from '../../lib/navigation';
 import { postNotice } from '../../lib/noticeStore';
 import { Watch } from '../../lib/watchStore';
 import { EntriesViewType } from '../../types/entriesViewType';
-import { EntriesFilter } from './EntriesActions';
+import { EntryFilterType } from '../../types/entryFilterType';
 import { expiredNotice } from './expiredNotice';
 import React, { type FormEvent } from 'react';
 
 type ExpireMatchingButtonProps = {
     watch: Watch<EntriesViewType>;
-    filter: EntriesFilter;
+    filter: EntryFilterType;
 };
 
 const ExpireMatchingButton: React.FC<ExpireMatchingButtonProps> = ({ watch, filter }) => {

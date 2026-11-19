@@ -11,4 +11,6 @@ public partial class ApplicationDbContext
     public required DbSet<ClientWhois> ClientWhois { get; set; }
     public required DbSet<AbuseReport> AbuseReports { get; set; }
     public required DbSet<UserSetting> UserSettings { get; set; }
+    public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+    public required DbSet<ResourceLock> ResourceLocks { get; set; }
 }

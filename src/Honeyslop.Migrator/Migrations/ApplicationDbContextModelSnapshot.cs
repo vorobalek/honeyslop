@@ -159,6 +159,39 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("client_whois", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.DataProtectionKey", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset?>("ActivationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activation_date");
+
+                    b.Property<DateTimeOffset?>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiration_date");
+
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("friendly_name");
+
+                    b.Property<string>("Xml")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("xml");
+
+                    b.HasKey("Id")
+                        .HasName("pk_data_protection_key");
+
+                    b.ToTable("data_protection_key", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.Entry", b =>
                 {
                     b.Property<long>("Id")
@@ -407,6 +440,35 @@ namespace Honeyslop.Migrator.Migrations
                         .HasDatabaseName("ix_request_client_ip_received_at");
 
                     b.ToTable("request", "public");
+                });
+
+            modelBuilder.Entity("Honeyslop.Data.Entities.ResourceLock", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
+                    b.Property<long>("Attempts")
+                        .HasColumnType("bigint")
+                        .HasColumnName("attempts");
+
+                    b.HasKey("Name")
+                        .HasName("pk_resource_lock");
+
+                    b.ToTable("resource_lock", "public");
+
+                    b.HasData(
+                        new
+                        {
+                            Name = "data_protection_keys",
+                            Attempts = 0L
+                        },
+                        new
+                        {
+                            Name = "settings",
+                            Attempts = 0L
+                        });
                 });
 
             modelBuilder.Entity("Honeyslop.Data.Entities.Setting", b =>

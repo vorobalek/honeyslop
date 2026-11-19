@@ -1,3 +1,4 @@
+import { WatchNameType, WatchRequestType } from '../types/watchRequestType';
 import { isConnected, onHubEvent, onOnline, sendToHub } from './hubConnection';
 import { replaceEqualDeep } from './structuralSharing';
 
@@ -8,9 +9,7 @@ type Listener = () => void;
 
 export type Watch<T> = {
     readonly key: string;
-    readonly method: string;
-    readonly args: readonly unknown[];
-    readonly id: number;
+    readonly request: WatchRequestType;
     readonly ready: Promise<void>;
     value: T | undefined;
     loaded: boolean;
@@ -26,17 +25,15 @@ type Entry = Watch<unknown> & {
 };
 
 const watches = new Map<string, Entry>();
-const byId = new Map<number, Entry>();
-const latestByMethod = new Map<string, unknown>();
+const latestByView = new Map<WatchNameType, unknown>();
 const pendingListeners = new Set<Listener>();
-let nextId = 1;
 
 function notifyPending(): void {
     for (const listener of pendingListeners) listener();
 }
 
 function subscribe(entry: Entry): void {
-    if (!document.hidden) sendToHub(entry.method, entry.id, ...entry.args);
+    if (!document.hidden) sendToHub('watch', entry.key, entry.request);
 }
 
 function settle(entry: Entry, apply: (entry: Entry) => void): void {
@@ -54,24 +51,23 @@ function scheduleRelease(entry: Entry, delay: number): void {
     entry.releaseTimer = window.setTimeout(() => {
         if (entry.refs > 0 || watches.get(entry.key) !== entry) return;
         watches.delete(entry.key);
-        byId.delete(entry.id);
-        sendToHub('unwatch', entry.id);
+        sendToHub('unwatch', entry.key);
         notifyPending();
     }, delay);
 }
 
-onHubEvent('update', (id: number, value: unknown) => {
-    const entry = byId.get(id);
+onHubEvent('update', (key: string, value: unknown) => {
+    const entry = watches.get(key);
     if (entry === undefined) return;
     settle(entry, (target) => {
-        target.value = replaceEqualDeep(target.value ?? latestByMethod.get(target.method), value);
+        target.value = replaceEqualDeep(target.value ?? latestByView.get(target.request.view), value);
         target.failed = false;
-        latestByMethod.set(target.method, target.value);
+        latestByView.set(target.request.view, target.value);
     });
 });
 
-onHubEvent('missing', (id: number) => {
-    const entry = byId.get(id);
+onHubEvent('missing', (key: string) => {
+    const entry = watches.get(key);
     if (entry === undefined) return;
     settle(entry, (target) => {
         target.value = undefined;
@@ -79,8 +75,8 @@ onHubEvent('missing', (id: number) => {
     });
 });
 
-onHubEvent('failed', (id: number) => {
-    const entry = byId.get(id);
+onHubEvent('failed', (key: string) => {
+    const entry = watches.get(key);
     if (entry === undefined) return;
     settle(entry, (target) => {
         target.failed = true;
@@ -96,22 +92,20 @@ onOnline(() => {
 document.addEventListener('visibilitychange', () => {
     if (!isConnected()) return;
     for (const entry of watches.values()) {
-        if (document.hidden) sendToHub('unwatch', entry.id);
+        if (document.hidden) sendToHub('unwatch', entry.key);
         else subscribe(entry);
     }
 });
 
-export function acquireWatch<T>(method: string, args: readonly unknown[]): Watch<T> {
-    const key = `${method}:${JSON.stringify(args)}`;
+export function acquireWatch<T>(request: WatchRequestType): Watch<T> {
+    const key = JSON.stringify(request);
     let entry = watches.get(key);
     if (entry === undefined) {
         let resolve: () => void = () => {};
         const ready = new Promise<void>((done) => (resolve = done));
         entry = {
             key,
-            method,
-            args,
-            id: nextId++,
+            request,
             ready,
             value: undefined,
             loaded: false,
@@ -123,7 +117,6 @@ export function acquireWatch<T>(method: string, args: readonly unknown[]): Watch
             releaseTimer: 0,
         };
         watches.set(key, entry);
-        byId.set(entry.id, entry);
         scheduleRelease(entry, UNUSED_DELAY);
         notifyPending();
         if (isConnected()) subscribe(entry);

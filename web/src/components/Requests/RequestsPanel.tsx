@@ -1,7 +1,8 @@
 import { useWatch } from '../../hooks/useWatch';
 import { useWatchPresence } from '../../hooks/useWatched';
 import { QueryValues } from '../../lib/listQuery';
-import { RequestOutcomeType } from '../../types/requestOutcomeType';
+import { RequestColumnType } from '../../types/requestColumnType';
+import { RequestFilterType } from '../../types/requestFilterType';
 import { RequestsViewType } from '../../types/requestsViewType';
 import { SortingType } from '../../types/sortingType';
 import ListPager from '../Common/ListPager';
@@ -10,26 +11,18 @@ import RequestsCount from './RequestsCount';
 import RequestsTable from './RequestsTable';
 import React from 'react';
 
-export type RequestsFilter = {
-    clientIp: string | null;
-    host: string | null;
-    target: string | null;
-    outcome: RequestOutcomeType | null;
-    entryId: number | null;
-};
-
 type RequestsPanelProps = {
     path: string;
-    filter: RequestsFilter;
+    filter: RequestFilterType;
     links: QueryValues;
-    sorting: SortingType<string> | null;
+    sorting: SortingType<RequestColumnType> | null;
     page: number;
 };
 
 const selectRequests = (view: RequestsViewType) => view.requests;
 
 const RequestsPanel: React.FC<RequestsPanelProps> = ({ path, filter, links, sorting, page }) => {
-    const watch = useWatch<RequestsViewType>('watchRequests', { filter, sort: sorting, page });
+    const watch = useWatch({ view: 'requests', query: { filter, sort: sorting, page } });
     const presence = useWatchPresence(watch);
     if (presence !== 'present') return <Presence presence={presence} />;
     return (

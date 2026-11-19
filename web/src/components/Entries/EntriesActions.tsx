@@ -1,7 +1,7 @@
 import { SelectionStore } from '../../lib/selectionStore';
 import { Watch } from '../../lib/watchStore';
 import { EntriesViewType } from '../../types/entriesViewType';
-import { EntryStateType } from '../../types/entryStateType';
+import { EntryFilterType } from '../../types/entryFilterType';
 import ChangeSelectedButton from './ChangeSelectedButton';
 import EntriesCount from './EntriesCount';
 import ExpireAllButton from './ExpireAllButton';
@@ -9,16 +9,10 @@ import ExpireMatchingButton from './ExpireMatchingButton';
 import ExpireSelectedButton from './ExpireSelectedButton';
 import React from 'react';
 
-export type EntriesFilter = {
-    host: string | null;
-    target: string | null;
-    state: EntryStateType | null;
-};
-
 type EntriesActionsProps = {
     watch: Watch<EntriesViewType>;
     selection: SelectionStore;
-    filter: EntriesFilter;
+    filter: EntryFilterType;
 };
 
 const EntriesActions: React.FC<EntriesActionsProps> = ({ watch, selection, filter }) => {

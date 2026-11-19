@@ -32,7 +32,7 @@ const EntriesPage: React.FC = () => {
     );
     const filter = useMemo(() => ({ host: host || null, target: target || null, state }), [host, target, state]);
     const links = useMemo(() => ({ Host: host, Target: target, State: state }), [host, target, state]);
-    const watch = useWatch<EntriesViewType>('watchEntries', { filter, sort: sorting, page });
+    const watch = useWatch({ view: 'entries', query: { filter, sort: sorting, page } });
     const presence = useWatchPresence(watch);
     const selection = useMemo(() => createSelectionStore(), []);
     useEffect(() => selection.replace([]), [watch, selection]);
