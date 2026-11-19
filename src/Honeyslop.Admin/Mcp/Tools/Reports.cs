@@ -24,9 +24,24 @@ public sealed class Reports(IReportsService reportsService)
     }
 
     [McpServerTool(Name = "get_report", Title = "Get an abuse report", ReadOnly = true, Idempotent = true)]
-    [Description("One abuse report with its letter, sender, Message-ID, attachment size and the last error.")]
+    [Description("One abuse report with its letter, sender, Message-ID, attachment size, the last error and the bounces that came back for it.")]
     public async Task<ReportDetailsDto> GetAsync([Description("Report id.")] long id, CancellationToken cancellationToken = default)
     {
         return await reportsService.GetAsync(id, cancellationToken) ?? throw new McpException($"There is no report {id}.");
+    }
+
+    [McpServerTool(Name = "list_bounced_contacts", Title = "List bounced abuse contacts", ReadOnly = true, Idempotent = true)]
+    [Description(
+        "Abuse addresses whose mail servers sent our reports back, latest bounce first, 50 per page: how many bounces and reports, the last status code and the server's answer, and whether the address is blocked already. Status 5.x.x is a permanent failure, 4.x.x a delay. block_abuse_contacts stops reporting to an address.")]
+    public Task<BouncedContactsPageDto> ListBouncedContactsAsync(
+        [Description("Only bounces from the last N days, 0 for all time.")]
+        int days = 0,
+        [Description("Part of the address or of the server's answer.")]
+        string? search = null,
+        [Description("Zero-based page number.")]
+        int page = 0,
+        CancellationToken cancellationToken = default)
+    {
+        return reportsService.GetBouncedContactsAsync(new BouncedContactsQuery(days, search, page), cancellationToken);
     }
 }

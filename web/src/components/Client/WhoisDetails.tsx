@@ -1,4 +1,5 @@
 import { display } from '../../lib/time';
+import { BouncedContactType } from '../../types/bouncedContactType';
 import { WhoisType } from '../../types/whoisType';
 import AbuseContacts from './AbuseContacts';
 import WhoisOrigins from './WhoisOrigins';
@@ -9,9 +10,10 @@ type WhoisDetailsProps = {
     whois: WhoisType;
     recipients: readonly string[];
     blocked: readonly string[];
+    bounces: readonly BouncedContactType[];
 };
 
-const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients, blocked }) => (
+const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients, blocked, bounces }) => (
     <>
         <dl className='meta'>
             <dt>Routed as</dt>
@@ -31,6 +33,7 @@ const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients, bloc
                     <AbuseContacts
                         recipients={recipients}
                         blocked={blocked}
+                        bounces={bounces}
                     />
                 )}
             </dd>

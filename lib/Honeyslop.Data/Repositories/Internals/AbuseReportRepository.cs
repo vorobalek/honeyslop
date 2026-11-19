@@ -47,6 +47,15 @@ internal sealed class AbuseReportRepository(ApplicationDbContext dbContext) : IA
             .ToArrayAsync(cancellationToken);
     }
 
+    public Task<AbuseReport[]> GetByMessageIdsAsync(IReadOnlyCollection<string> messageIds, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .AbuseReports
+            .AsNoTracking()
+            .Where(x => x.MessageId != null && messageIds.Contains(x.MessageId))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public Task<AbuseReport[]> GetPageAsync(
         ReportOrder order,
         SortDirection direction,

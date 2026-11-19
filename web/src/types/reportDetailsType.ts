@@ -1,4 +1,5 @@
 import { CountryType } from './countryType';
+import { ReportBounceType } from './reportBounceType';
 import { ReportType } from './reportType';
 
 export interface ReportDetailsType {
@@ -8,4 +9,5 @@ export interface ReportDetailsType {
     messageId: string | null;
     from: string | null;
     fromIsExpected: boolean;
+    bounces: ReportBounceType[];
 }

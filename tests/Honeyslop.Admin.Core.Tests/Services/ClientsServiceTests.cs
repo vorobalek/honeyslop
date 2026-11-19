@@ -130,6 +130,35 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
+    public async Task GetAbuseAsync_ShowsHowTheContactsBounced()
+    {
+        var setup = new Setup
+        {
+            Contacts = ["Abuse@Bouncing.example", "abuse@example.test"],
+            Blocked = ["@bouncing.example"],
+            Bounced =
+            [
+                new BouncedContact
+                {
+                    Recipient = "abuse@bouncing.example",
+                    Bounces = 3,
+                    Reports = 2,
+                    LastBouncedAt = Now,
+                    LastReportId = 22,
+                    LastStatus = "5.0.0",
+                    LastDiagnostic = "retry timeout exceeded"
+                }
+            ]
+        };
+
+        var abuse = await setup.Service().GetAbuseAsync(Ip, CancellationToken.None);
+
+        var bounced = abuse!.Bounces.Single();
+        Assert.AreEqual(new BouncedContactDto("abuse@bouncing.example", 3, 2, Now, 22, "5.0.0", "retry timeout exceeded", true), bounced);
+        CollectionAssert.AreEquivalent(new[] { "abuse@bouncing.example", "abuse@example.test" }, setup.BounceLookups.Single());
+    }
+
+    [TestMethod]
     public async Task ReportAsync_NewRequestsSinceTheLastReport_QueuesAFollowUpSignedWithTheGivenName()
     {
         var setup = new Setup
@@ -214,6 +243,8 @@ public sealed class ClientsServiceTests
         public string[] Contacts { get; init; } = ["abuse@example.test"];
         public string? PersonalSenderName { get; init; }
         public string[] Blocked { get; init; } = [];
+        public BouncedContact[] Bounced { get; init; } = [];
+        public List<string[]> BounceLookups { get; } = [];
         public Mock<IAbuseReportRepository> Repository { get; } = new();
         public AbuseReport? Added { get; private set; }
 
@@ -259,12 +290,18 @@ public sealed class ClientsServiceTests
                         Contact = x
                     })
                 ]);
+            var bounces = new Mock<IAbuseReportBounceRepository>();
+            bounces
+                .Setup(x => x.GetContactsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .Callback<IReadOnlyCollection<string>, CancellationToken>((recipients, _) => BounceLookups.Add([.. recipients]))
+                .ReturnsAsync(() => Bounced);
             return new ClientsService(
                 requests.Object,
                 Mock.Of<IEntryRepository>(),
                 Repository.Object,
                 settings.Object,
                 blocked.Object,
+                bounces.Object,
                 Mock.Of<IRequestArchiveBuilder>(),
                 Mock.Of<ICountryLookup>(),
                 whois.Object,

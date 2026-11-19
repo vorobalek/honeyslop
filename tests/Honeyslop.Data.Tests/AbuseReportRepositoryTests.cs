@@ -130,6 +130,23 @@ public sealed class AbuseReportRepositoryTests
             Assert.AreEqual(1, after[state] - before[state], state.ToString());
     }
 
+    [TestMethod]
+    public async Task GetByMessageIdsAsync_FindsSentReportsByTheirMessageId()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var messageId = $"report-{Unique.String(8)}@example.test";
+        var report = Report(UniqueIp(), now);
+        report.Status = AbuseReportStatus.Sent;
+        report.MessageId = messageId;
+        await AddAsync(report);
+        await AddAsync(Report(UniqueIp(), now));
+
+        await using var scope = PostgresDatabase.CreateScope();
+        var found = await scope.Reports().GetByMessageIdsAsync([messageId, "unknown@example.test"], CancellationToken.None);
+
+        Assert.AreEqual(report.Id, found.Single().Id);
+    }
+
     private static async Task DrainAsync(DateTimeOffset now)
     {
         var future = now.AddYears(100);

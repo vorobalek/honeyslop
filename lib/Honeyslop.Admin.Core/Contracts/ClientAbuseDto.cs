@@ -7,7 +7,8 @@ public sealed record ClientAbuseDto(string Ip,
     ReportDto[] Reports,
     int NewSinceLastSent,
     AbuseDraftDto? Draft,
-    string[] BlockedRecipients)
+    string[] BlockedRecipients,
+    BouncedContactDto[] Bounces)
 {
     public string[] Recipients => [.. (Whois?.AbuseContacts ?? []).Except(BlockedRecipients)];
     public ReportDto? LastReport => Reports.FirstOrDefault();

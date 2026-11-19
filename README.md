@@ -5,7 +5,7 @@ for would return (a camera's device info, a leaked `.env`, a WordPress installer
 answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a comment
 for the model or writes it by hand. Entries can also be made by hand before anyone asks, and responses can be held back
 by a delay to keep scanners waiting. Every request is recorded, and the networks that scan can be sent an abuse report
-with their request log attached.
+with their request log attached; the reports that bounce show up next to the addresses that bounced them.
 
 ### Services
 
@@ -13,7 +13,7 @@ with their request log attached.
 | ------------------------ | --------------------------------------------------------------------------- |
 | `src/Honeyslop.Trap`     | The catch-all, with a generation queue shared by all instances              |
 | `src/Honeyslop.Admin`    | Admin web app from `web/` (React, updated live over SignalR), MCP at `/mcp` |
-| `src/Honeyslop.Reporter` | Mails queued abuse reports                                                  |
+| `src/Honeyslop.Reporter` | Mails queued abuse reports and reads their bounces from a mailbox           |
 | `src/Honeyslop.Migrator` | Creates the database and applies migrations                                 |
 | `llm/`, `model/`         | `llama-server` and the Qwen3-4B model images                                |
 
@@ -46,13 +46,17 @@ with their request log attached.
 | `MAINTENANCE_INTERVAL_SECONDS`                                     | `60`                                                  | Expiration and pruning                                                       |
 | `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_SECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
 
-| Reporter                                      | Default       |                                  |
-| --------------------------------------------- | ------------- | -------------------------------- |
-| `DB_CONNECTION_STRING`                        |               | PostgreSQL                       |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`     | `587`, `true` |                                  |
-| `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` |               |                                  |
-| `MAX_ATTACHED_REQUESTS`                       | `50000`       | Requests in the attached archive |
-| `MANAGEMENT_PORT`                             | `8081`        | Health and metrics               |
+| Reporter                                      | Default       |                                                             |
+| --------------------------------------------- | ------------- | ----------------------------------------------------------- |
+| `DB_CONNECTION_STRING`                        |               | PostgreSQL                                                  |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`     | `587`, `true` |                                                             |
+| `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` |               |                                                             |
+| `MAX_ATTACHED_REQUESTS`                       | `50000`       | Requests in the attached archive                            |
+| `IMAP_HOST`, `IMAP_PORT`                      | `993`         | Mailbox that receives the bounces; without it none are read |
+| `IMAP_USERNAME`, `IMAP_PASSWORD`              |               |                                                             |
+| `IMAP_FOLDERS`                                | `INBOX`       | Comma-separated folders to read                             |
+| `IMAP_POLL_SECONDS`                           | `300`         |                                                             |
+| `MANAGEMENT_PORT`                             | `8081`        | Health and metrics                                          |
 
 Cache lifetimes, generation limits, request retention, the public view, the default response delay and the abuse
 addresses that never get reports are edited in the admin or over MCP.

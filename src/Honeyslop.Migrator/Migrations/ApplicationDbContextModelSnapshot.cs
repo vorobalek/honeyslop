@@ -137,6 +137,74 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("abuse_report", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.AbuseReportBounce", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("BouncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bounced_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Diagnostic")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("diagnostic");
+
+                    b.Property<string>("Mta")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("mta");
+
+                    b.Property<string>("NotificationId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("notification_id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient");
+
+                    b.Property<long>("ReportId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("report_id");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_abuse_report_bounce");
+
+                    b.HasIndex("ReportId")
+                        .HasDatabaseName("ix_abuse_report_bounce_report_id");
+
+                    b.HasIndex("NotificationId", "Recipient")
+                        .IsUnique()
+                        .HasDatabaseName("ix_abuse_report_bounce_notification_id_recipient");
+
+                    b.HasIndex("Recipient", "BouncedAt")
+                        .HasDatabaseName("ix_abuse_report_bounce_recipient_bounced_at");
+
+                    b.ToTable("abuse_report_bounce", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.BlockedAbuseContact", b =>
                 {
                     b.Property<string>("Contact")
@@ -386,6 +454,31 @@ namespace Honeyslop.Migrator.Migrations
                         .HasDatabaseName("ix_entry_status");
 
                     b.ToTable("entry", "public");
+                });
+
+            modelBuilder.Entity("Honeyslop.Data.Entities.MailboxCursor", b =>
+                {
+                    b.Property<string>("Folder")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("folder");
+
+                    b.Property<long>("LastUid")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_uid");
+
+                    b.Property<long>("UidValidity")
+                        .HasColumnType("bigint")
+                        .HasColumnName("uid_validity");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Folder")
+                        .HasName("pk_mailbox_cursor");
+
+                    b.ToTable("mailbox_cursor", "public");
                 });
 
             modelBuilder.Entity("Honeyslop.Data.Entities.RequestRecord", b =>

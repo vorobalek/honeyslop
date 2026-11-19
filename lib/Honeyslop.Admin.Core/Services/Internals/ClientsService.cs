@@ -23,6 +23,7 @@ internal sealed partial class ClientsService(
     IAbuseReportRepository abuseReportRepository,
     ISettingsRepository settingsRepository,
     IBlockedAbuseContactRepository blockedContactRepository,
+    IAbuseReportBounceRepository bounceRepository,
     IRequestArchiveBuilder archiveBuilder,
     ICountryLookup countryLookup,
     IWhoisLookup whoisLookup,
@@ -74,7 +75,17 @@ internal sealed partial class ClientsService(
         }
 
         var blocked = await BlockedContactsAsync(whois, cancellationToken);
-        return new ClientAbuseDto(ip, whois, [.. reports.Select(x => x.ToRow(access.Viewer))], newSinceLastSent, draft, blocked);
+        var bounces = whois is { AbuseContacts.Length: > 0 }
+            ? await bounceRepository.GetContactsAsync([.. whois.AbuseContacts.Select(x => x.Trim().ToLowerInvariant())], cancellationToken)
+            : [];
+        return new ClientAbuseDto(
+            ip,
+            whois,
+            [.. reports.Select(x => x.ToRow(access.Viewer))],
+            newSinceLastSent,
+            draft,
+            blocked,
+            [.. bounces.Select(x => x.ToDto([.. blocked.Select(y => y.ToLowerInvariant())]))]);
     }
 
     public async Task<RequestLogArchive?> GetArchiveAsync(string ip, CancellationToken cancellationToken)

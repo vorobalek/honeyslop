@@ -8,4 +8,5 @@ public interface IReportsService
 
     Task<ReportsPageDto> GetPageAsync(ReportsQuery query, CancellationToken cancellationToken);
     Task<ReportDetailsDto?> GetAsync(long id, CancellationToken cancellationToken);
+    Task<BouncedContactsPageDto> GetBouncedContactsAsync(BouncedContactsQuery query, CancellationToken cancellationToken);
 }

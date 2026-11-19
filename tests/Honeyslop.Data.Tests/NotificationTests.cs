@@ -102,6 +102,36 @@ public sealed class NotificationTests
     }
 
     [TestMethod]
+    public async Task Bounces_AreAnnouncedAsReportChanges()
+    {
+        await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);
+        await connection.OpenAsync();
+        var received = new List<string>();
+        connection.Notification += (_, notification) => received.Add(notification.Channel);
+        await using (var command = new NpgsqlCommand("listen honeyslop_reports", connection))
+            await command.ExecuteNonQueryAsync();
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<IAbuseReportBounceRepository>().AddAsync(
+                [
+                    new AbuseReportBounce
+                    {
+                        ReportId = 1,
+                        Recipient = $"abuse@{Unique.String(8)}.example",
+                        Action = BounceAction.Failed,
+                        NotificationId = Unique.String(12),
+                        BouncedAt = DateTimeOffset.UtcNow,
+                        CreatedAt = DateTimeOffset.UtcNow
+                    }
+                ],
+                CancellationToken.None);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!received.Contains("honeyslop_reports"))
+            await connection.WaitAsync(timeout.Token);
+    }
+
+    [TestMethod]
     public async Task GenerationOutput_IsAnnouncedWithItsContent()
     {
         await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);

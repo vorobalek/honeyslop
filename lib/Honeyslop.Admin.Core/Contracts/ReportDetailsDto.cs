@@ -5,4 +5,5 @@ public sealed record ReportDetailsDto(ReportDto Report,
     string Body,
     string? MessageId,
     string? From,
-    bool FromIsExpected);
+    bool FromIsExpected,
+    ReportBounceDto[] Bounces);

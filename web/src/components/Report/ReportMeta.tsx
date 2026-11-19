@@ -3,6 +3,7 @@ import { countOf } from '../../lib/numbers';
 import { display } from '../../lib/time';
 import { ReportDetailsType } from '../../types/reportDetailsType';
 import ClientIp from '../Common/ClientIp';
+import ReportBounces from './ReportBounces';
 import React from 'react';
 
 type ReportMetaProps = {
@@ -54,6 +55,14 @@ const ReportMeta: React.FC<ReportMetaProps> = ({ details }) => {
                 <>
                     <dt>Error</dt>
                     <dd className='error'>{report.error}</dd>
+                </>
+            )}
+            {details.bounces.length > 0 && (
+                <>
+                    <dt>Bounced</dt>
+                    <dd>
+                        <ReportBounces bounces={details.bounces} />
+                    </dd>
                 </>
             )}
         </dl>
