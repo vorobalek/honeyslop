@@ -20,9 +20,9 @@ public sealed class LiveSubscriptionsTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
     private static readonly ClaimsPrincipal Anonymous = new();
+    private readonly ConcurrentDictionary<string, string> _groupOf = new();
 
     private readonly Channel<(string Group, string Method, object?[] Arguments)> _sent = Channel.CreateUnbounded<(string, string, object?[])>();
-    private readonly ConcurrentDictionary<string, string> _groupOf = new();
     private readonly List<ClaimsPrincipal> _viewers = [];
     private LiveSubscriptions _subscriptions = null!;
 
@@ -33,7 +33,9 @@ public sealed class LiveSubscriptionsTests
         viewerScope.Setup(x => x.Use(It.IsAny<ClaimsPrincipal>())).Callback<ClaimsPrincipal>(user =>
         {
             lock (_viewers)
+            {
                 _viewers.Add(user);
+            }
         });
         var services = new ServiceCollection()
             .AddSingleton(viewerScope.Object)
@@ -69,8 +71,14 @@ public sealed class LiveSubscriptionsTests
         var message = await NextAsync();
         Assert.AreEqual(_groupOf["a"], message.Group);
         Assert.AreEqual(LiveView.Update, message.Method);
-        CollectionAssert.AreEqual(new object?[] { "entries:[]", "view" }, message.Arguments);
-        CollectionAssert.AreEqual(new[] { user }, _viewers);
+        CollectionAssert.AreEqual(new object?[]
+        {
+            "entries:[]", "view"
+        }, message.Arguments);
+        CollectionAssert.AreEqual(new[]
+        {
+            user
+        }, _viewers);
     }
 
     [TestMethod]
@@ -118,7 +126,10 @@ public sealed class LiveSubscriptionsTests
         _subscriptions.Publish(new LiveChange(LiveTopic.Outputs, 7));
         await NextAsync();
 
-        CollectionAssert.AreEqual(new[] { 2, 1, 2 }, builds);
+        CollectionAssert.AreEqual(new[]
+        {
+            2, 1, 2
+        }, builds);
         Assert.IsFalse(_sent.Reader.TryRead(out _));
     }
 
@@ -169,7 +180,10 @@ public sealed class LiveSubscriptionsTests
 
         var message = await NextAsync();
         Assert.AreEqual(LiveView.Missing, message.Method);
-        CollectionAssert.AreEqual(new object?[] { "entry 3" }, message.Arguments);
+        CollectionAssert.AreEqual(new object?[]
+        {
+            "entry 3"
+        }, message.Arguments);
     }
 
     [TestMethod]
@@ -179,7 +193,10 @@ public sealed class LiveSubscriptionsTests
 
         var message = await NextAsync();
         Assert.AreEqual(LiveView.Denied, message.Method);
-        CollectionAssert.AreEqual(new object?[] { "settings", "Sign in." }, message.Arguments);
+        CollectionAssert.AreEqual(new object?[]
+        {
+            "settings", "Sign in."
+        }, message.Arguments);
     }
 
     private static LiveWatch Watch(

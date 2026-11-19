@@ -14,15 +14,17 @@ internal sealed class LiveSubscriptions(
     private static readonly TimeSpan PeriodicInterval = TimeSpan.FromSeconds(5);
 
     private readonly Lock _lock = new();
-    private readonly Dictionary<string, LiveView> _views = [];
     private readonly Dictionary<(string ConnectionId, string Key), LiveView> _memberships = [];
+    private readonly Dictionary<string, LiveView> _views = [];
 
     public int Count
     {
         get
         {
             lock (_lock)
+            {
                 return _views.Count;
+            }
         }
     }
 
@@ -54,7 +56,10 @@ internal sealed class LiveSubscriptions(
     {
         LiveView? left;
         lock (_lock)
+        {
             left = Leave(connectionId, key, null);
+        }
+
         if (left is not null)
             await sender.LeaveAsync(connectionId, left.Group, cancellationToken);
     }
@@ -62,8 +67,10 @@ internal sealed class LiveSubscriptions(
     public void Drop(string connectionId)
     {
         lock (_lock)
+        {
             foreach (var membership in _memberships.Keys.Where(x => x.ConnectionId == connectionId).ToArray())
                 Leave(membership.ConnectionId, membership.Key, null);
+        }
     }
 
     public void Publish(LiveChange change)
@@ -108,12 +115,17 @@ internal sealed class LiveSubscriptions(
     private LiveView[] Snapshot(Func<LiveView, bool> predicate)
     {
         lock (_lock)
+        {
             return [.. _views.Values.Where(predicate)];
+        }
     }
 
     private static string GroupOf(LiveWatch watch)
     {
-        var signature = JsonSerializer.Serialize(new[] { watch.Audience, watch.Key, JsonSerializer.Serialize(watch.Request) });
+        var signature = JsonSerializer.Serialize(new[]
+        {
+            watch.Audience, watch.Key, JsonSerializer.Serialize(watch.Request)
+        });
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(signature)));
     }
 }

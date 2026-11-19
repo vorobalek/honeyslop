@@ -18,7 +18,10 @@ public static class AbuseLetters
     {
         var network = whois is null
             ? string.Empty
-            : string.Join(", ", new[] { whois.Prefix ?? whois.Network }
+            : string.Join(", ", new[]
+                {
+                    whois.Prefix ?? whois.Network
+                }
                 .Concat(whois.Origins.Select(x => $"AS{x.Asn} {x.Holder}".TrimEnd()))
                 .Where(x => !string.IsNullOrEmpty(x)));
         var builder = new StringBuilder()

@@ -56,9 +56,11 @@ public sealed class EntryRepositoryTests
     {
         var future = DateTimeOffset.UtcNow.AddYears(100);
         await using (var drain = PostgresDatabase.CreateScope())
+        {
             while (await drain.Repository().TryClaimNextAsync("drain", future, future, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, 3, CancellationToken.None) is not null)
             {
             }
+        }
 
         var oldest = await AddAsync(QueuedEntry(future));
         var older = await AddAsync(QueuedEntry(future.AddMinutes(1)));
@@ -71,7 +73,10 @@ public sealed class EntryRepositoryTests
         for (var index = 0; index < 4; index++)
             claimed.Add(await scope.Repository().TryClaimNextAsync("worker", future.AddMinutes(30), future.AddMinutes(29), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, 3, CancellationToken.None));
 
-        CollectionAssert.AreEqual(new long?[] { fresh.Id, retried.Id, oldest.Id, older.Id }, claimed);
+        CollectionAssert.AreEqual(new long?[]
+        {
+            fresh.Id, retried.Id, oldest.Id, older.Id
+        }, claimed);
     }
 
     [TestMethod]
@@ -87,8 +92,10 @@ public sealed class EntryRepositoryTests
 
         var claimed = new List<long>();
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             while (await scope.Repository().TryClaimNextAsync("worker", future, future.AddMinutes(-1), future.AddMinutes(-15), future.AddMinutes(-1), 3, CancellationToken.None) is { } id)
                 claimed.Add(id);
+        }
 
         CollectionAssert.Contains(claimed, stale.Id);
         CollectionAssert.Contains(claimed, retry.Id);
@@ -108,7 +115,10 @@ public sealed class EntryRepositoryTests
 
         var finished = await scope.Repository().GetFinishedAsync([pending.Id, ready.Id, failed.Id], CancellationToken.None);
 
-        CollectionAssert.AreEquivalent(new[] { ready.Id, failed.Id }, finished.Select(x => x.Id).ToArray());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            ready.Id, failed.Id
+        }, finished.Select(x => x.Id).ToArray());
     }
 
     [TestMethod]
@@ -116,6 +126,7 @@ public sealed class EntryRepositoryTests
     {
         var entry = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32)));
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.Repository().CompleteAsync(
                 new Entry
                 {
@@ -123,8 +134,16 @@ public sealed class EntryRepositoryTests
                     ResponseStatus = 401,
                     ResponseHeaders =
                     [
-                        new ResponseHeader { Name = "Set-Cookie", Value = "a=1" },
-                        new ResponseHeader { Name = "Set-Cookie", Value = "b=2" }
+                        new ResponseHeader
+                        {
+                            Name = "Set-Cookie",
+                            Value = "a=1"
+                        },
+                        new ResponseHeader
+                        {
+                            Name = "Set-Cookie",
+                            Value = "b=2"
+                        }
                     ],
                     ResponseBody = "<h1>Unauthorized</h1>",
                     Model = "honeyslop",
@@ -136,13 +155,17 @@ public sealed class EntryRepositoryTests
                 "test",
                 DateTimeOffset.UtcNow,
                 CancellationToken.None);
+        }
 
         var completed = await GetByKeyAsync(entry.KeyHash);
 
         Assert.AreEqual(EntryStatus.Ready, completed.Status);
         Assert.AreEqual(401, completed.ResponseStatus);
         Assert.AreEqual("<h1>Unauthorized</h1>", completed.ResponseBody);
-        CollectionAssert.AreEqual(new[] { "a=1", "b=2" }, completed.ResponseHeaders.Select(x => x.Value).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "a=1", "b=2"
+        }, completed.ResponseHeaders.Select(x => x.Value).ToArray());
         Assert.AreEqual(120, completed.CompletionTokens);
         Assert.AreEqual("honeyslop", completed.Model);
         Assert.AreEqual("llm-0", completed.Generator);
@@ -155,7 +178,13 @@ public sealed class EntryRepositoryTests
         var entry = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32)));
         await using var scope = PostgresDatabase.CreateScope();
 
-        var stored = await scope.Repository().CompleteAsync(new Entry { Id = entry.Id, ResponseStatus = 200, ResponseBody = "late", GenerationMs = 1 }, "someone-else", DateTimeOffset.UtcNow, CancellationToken.None);
+        var stored = await scope.Repository().CompleteAsync(new Entry
+        {
+            Id = entry.Id,
+            ResponseStatus = 200,
+            ResponseBody = "late",
+            GenerationMs = 1
+        }, "someone-else", DateTimeOffset.UtcNow, CancellationToken.None);
         await scope.Repository().FailAsync(entry.Id, "someone-else", "late", DateTimeOffset.UtcNow, CancellationToken.None);
         await scope.Repository().RequeueAsync(entry.Id, "someone-else", "late", DateTimeOffset.UtcNow, CancellationToken.None);
 
@@ -280,7 +309,9 @@ public sealed class EntryRepositoryTests
         var wildcardMatch = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), host: host, target: "/100xxdone"));
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.Repository().ExpireMatchingAsync(host, "100%_", null, DateTimeOffset.UtcNow, CancellationToken.None);
+        }
 
         Assert.AreEqual(EntryStatus.Expired, (await GetAsync(literal.Id)).Status);
         Assert.AreEqual(EntryStatus.Pending, (await GetAsync(wildcardMatch.Id)).Status);
@@ -291,22 +322,34 @@ public sealed class EntryRepositoryTests
     {
         var host = Unique.Host();
         var keyHash = RandomNumberGenerator.GetBytes(32);
-        var old = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready, host: host));
+        var old = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready, host));
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             Assert.AreEqual(1, await scope.Repository().ExpireAsync([old.Id], DateTimeOffset.UtcNow, CancellationToken.None));
+        }
+
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             Assert.IsNull(await scope.Repository().GetByKeyHashOrDefaultAsync(keyHash, CancellationToken.None));
+        }
+
         var current = await AddAsync(PendingEntry(keyHash, host: host));
 
         await using var readScope = PostgresDatabase.CreateScope();
         Assert.AreEqual(current.Id, (await GetByKeyAsync(keyHash)).Id);
         Assert.AreEqual(EntryStatus.Expired, (await GetAsync(old.Id)).Status);
         CollectionAssert.AreEqual(
-            new[] { current.Id },
+            new[]
+            {
+                current.Id
+            },
             (await readScope.Repository().GetPageAsync(host, null, null, EntryOrder.Id, SortDirection.Desc, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
         CollectionAssert.AreEqual(
-            new[] { old.Id },
+            new[]
+            {
+                old.Id
+            },
             (await readScope.Repository().GetPageAsync(host, null, EntryState.Expired, EntryOrder.Id, SortDirection.Desc, 0, 10, CancellationToken.None)).Select(x => x.Id).ToArray());
     }
 
@@ -380,12 +423,25 @@ public sealed class EntryRepositoryTests
     public async Task GetGeneratorStatisticsAsync_GroupsGeneratedEntriesByModelServerEvenOnceExpired()
     {
         var generator = $"llm-{Unique.String(8)}";
-        foreach (var (ms, tokens) in new[] { (1000, 100), (3000, 300) })
+        foreach (var (ms, tokens) in new[]
+                 {
+                     (1000, 100), (3000, 300)
+                 })
         {
             var entry = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32)));
             await using var scope = PostgresDatabase.CreateScope();
             await scope.Repository().CompleteAsync(
-                new Entry { Id = entry.Id, ResponseStatus = 200, ResponseBody = "ok", Model = "honeyslop", Generator = generator, PromptTokens = 10, CompletionTokens = tokens, GenerationMs = ms },
+                new Entry
+                {
+                    Id = entry.Id,
+                    ResponseStatus = 200,
+                    ResponseBody = "ok",
+                    Model = "honeyslop",
+                    Generator = generator,
+                    PromptTokens = 10,
+                    CompletionTokens = tokens,
+                    GenerationMs = ms
+                },
                 "test",
                 DateTimeOffset.UtcNow,
                 CancellationToken.None);
@@ -430,6 +486,7 @@ public sealed class EntryRepositoryTests
         pending.RequestBody = new string('b', Entry.RequestBodyMaxLength + 10);
         var entry = await AddAsync(pending);
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.Repository().CompleteAsync(
                 new Entry
                 {
@@ -448,6 +505,7 @@ public sealed class EntryRepositoryTests
                 "test",
                 DateTimeOffset.UtcNow,
                 CancellationToken.None);
+        }
 
         var stored = await GetAsync(entry.Id);
 
@@ -468,7 +526,9 @@ public sealed class EntryRepositoryTests
         replacement.ChangedBy = "operator";
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             Assert.IsTrue(await scope.Repository().TryReplaceAsync([replacement], DateTimeOffset.UtcNow, CancellationToken.None));
+        }
 
         var expired = await GetAsync(current.Id);
         var added = await GetAsync(replacement.Id);
@@ -486,7 +546,9 @@ public sealed class EntryRepositoryTests
         var current = await AddAsync(PendingEntry(keyHash, EntryStatus.Ready));
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             Assert.IsFalse(await scope.Repository().TryReplaceAsync([PendingEntry(keyHash), PendingEntry(keyHash)], DateTimeOffset.UtcNow, CancellationToken.None));
+        }
 
         Assert.AreEqual(EntryStatus.Ready, (await GetAsync(current.Id)).Status);
     }
@@ -500,7 +562,10 @@ public sealed class EntryRepositoryTests
 
         var active = await scope.Repository().GetActiveAsync([ready.Id, expired.Id], CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { ready.Id }, active.Select(x => x.Id).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            ready.Id
+        }, active.Select(x => x.Id).ToArray());
     }
 
     private static Entry PendingEntry(

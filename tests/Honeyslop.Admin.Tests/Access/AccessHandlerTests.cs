@@ -44,7 +44,13 @@ public sealed class AccessHandlerTests
     private static async Task<bool> AuthorizeAsync(ClaimsPrincipal user, string method, bool publicView)
     {
         var requirement = new AccessRequirement();
-        var httpContext = new DefaultHttpContext { Request = { Method = method } };
+        var httpContext = new DefaultHttpContext
+        {
+            Request =
+            {
+                Method = method
+            }
+        };
         var context = new AuthorizationHandlerContext([requirement], user, httpContext);
         await new AccessHandler(new FixedPublicView(publicView)).HandleAsync(context);
         return context.HasSucceeded;

@@ -40,7 +40,13 @@ public sealed partial class ApplicationDbContext(DbContextOptions<ApplicationDbC
         modelBuilder
             .Entity<ResourceLock>()
             .HasData(
-                new ResourceLock { Name = ResourceLock.DataProtectionKeys },
-                new ResourceLock { Name = ResourceLock.Settings });
+                new ResourceLock
+                {
+                    Name = ResourceLock.DataProtectionKeys
+                },
+                new ResourceLock
+                {
+                    Name = ResourceLock.Settings
+                });
     }
 }

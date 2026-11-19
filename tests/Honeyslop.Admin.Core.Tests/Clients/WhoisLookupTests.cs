@@ -59,7 +59,10 @@ public sealed class WhoisLookupTests
     [TestMethod]
     public async Task LookupAsync_RipeStatFailsOnAStaleAnswer_ShowsTheStaleOne()
     {
-        var handler = new RipeStatHandler { Status = HttpStatusCode.ServiceUnavailable };
+        var handler = new RipeStatHandler
+        {
+            Status = HttpStatusCode.ServiceUnavailable
+        };
         var repository = new StoredWhois();
         repository.Store("8.8.8.8", Stored("stored/24"), Now.AddDays(-3));
 
@@ -71,7 +74,10 @@ public sealed class WhoisLookupTests
     [TestMethod]
     public async Task LookupAsync_RipeStatFailsWithNothingStored_Throws()
     {
-        var handler = new RipeStatHandler { Status = HttpStatusCode.ServiceUnavailable };
+        var handler = new RipeStatHandler
+        {
+            Status = HttpStatusCode.ServiceUnavailable
+        };
 
         await Assert.ThrowsExactlyAsync<HttpRequestException>(() =>
             Lookup(handler, new StoredWhois()).LookupAsync("8.8.8.8", CancellationToken.None));
@@ -112,11 +118,6 @@ public sealed class WhoisLookupTests
     {
         public Dictionary<string, ClientWhois> Rows { get; } = [];
 
-        public void Store(string clientIp, WhoisDto info, DateTimeOffset updatedAt)
-        {
-            Rows[clientIp] = new ClientWhois { ClientIp = clientIp, Info = JsonSerializer.Serialize(info), UpdatedAt = updatedAt };
-        }
-
         public Task<ClientWhois?> GetOrDefaultAsync(string clientIp, CancellationToken cancellationToken)
         {
             return Task.FromResult(Rows.GetValueOrDefault(clientIp));
@@ -124,8 +125,23 @@ public sealed class WhoisLookupTests
 
         public Task SaveAsync(string clientIp, string info, DateTimeOffset now, CancellationToken cancellationToken)
         {
-            Rows[clientIp] = new ClientWhois { ClientIp = clientIp, Info = info, UpdatedAt = now };
+            Rows[clientIp] = new ClientWhois
+            {
+                ClientIp = clientIp,
+                Info = info,
+                UpdatedAt = now
+            };
             return Task.CompletedTask;
+        }
+
+        public void Store(string clientIp, WhoisDto info, DateTimeOffset updatedAt)
+        {
+            Rows[clientIp] = new ClientWhois
+            {
+                ClientIp = clientIp,
+                Info = JsonSerializer.Serialize(info),
+                UpdatedAt = updatedAt
+            };
         }
     }
 
@@ -142,6 +158,7 @@ public sealed class WhoisLookupTests
                 Requests.Add(request.RequestUri!);
                 UserAgents.Add(request.Headers.UserAgent.ToString());
             }
+
             var body = request.RequestUri!.AbsolutePath switch
             {
                 "/data/prefix-overview/data.json" => RipeStatFixtures.PrefixOverview,

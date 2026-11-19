@@ -3,7 +3,6 @@ using Honeyslop.Admin.Core.Contracts;
 using Honeyslop.Admin.Core.Exceptions;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Core.Services.Internals;
-using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
@@ -42,7 +41,10 @@ public sealed class EntriesServiceTests
         var change = await Service(Viewers.Operator).RegenerateAsync([1, 2, 3], "  Answer as a Hikvision camera  ", CancellationToken.None);
 
         Assert.IsTrue(change.Changed);
-        CollectionAssert.AreEqual(new long[] { 101, 102 }, change.Ids);
+        CollectionAssert.AreEqual(new long[]
+        {
+            101, 102
+        }, change.Ids);
         Assert.HasCount(2, _replacements);
         foreach (var replacement in _replacements)
         {
@@ -68,7 +70,10 @@ public sealed class EntriesServiceTests
         var change = await Service(Viewers.Operator).RegenerateAsync([1], null, CancellationToken.None);
 
         Assert.IsFalse(change.Changed);
-        CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "Entries"
+        }, change.Errors.Keys.ToArray());
         Assert.IsEmpty(change.Ids);
     }
 
@@ -80,7 +85,10 @@ public sealed class EntriesServiceTests
         var change = await Service(Viewers.Operator).RegenerateAsync([1], null, CancellationToken.None);
 
         Assert.IsFalse(change.Changed);
-        CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "Entries"
+        }, change.Errors.Keys.ToArray());
         _entries.Verify(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -91,11 +99,20 @@ public sealed class EntriesServiceTests
 
         var change = await Service(Viewers.Operator).ReplaceAsync(
             [1],
-            new EntryResponseDto(99, [new ResponseHeader { Name = "Content-Length", Value = "5" }], "hello"),
+            new EntryResponseDto(99, [
+                new ResponseHeader
+                {
+                    Name = "Content-Length",
+                    Value = "5"
+                }
+            ], "hello"),
             CancellationToken.None);
 
         Assert.IsFalse(change.Changed);
-        CollectionAssert.AreEquivalent(new[] { "Status", "Headers" }, change.Errors.Keys.ToArray());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "Status", "Headers"
+        }, change.Errors.Keys.ToArray());
         StringAssert.Contains(change.Errors["Headers"], "Content-Length is set by the server");
         _entries.Verify(x => x.TryReplaceAsync(It.IsAny<IReadOnlyCollection<Entry>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -107,7 +124,13 @@ public sealed class EntriesServiceTests
 
         var change = await Service(Viewers.Operator).ReplaceAsync(
             [1],
-            new EntryResponseDto(200, [new ResponseHeader { Name = "Server", Value = "nginx/1.18.0" }], "https://deploy:token@github.com"),
+            new EntryResponseDto(200, [
+                new ResponseHeader
+                {
+                    Name = "Server",
+                    Value = "nginx/1.18.0"
+                }
+            ], "https://deploy:token@github.com"),
             CancellationToken.None);
 
         Assert.IsTrue(change.Changed);
@@ -117,7 +140,10 @@ public sealed class EntriesServiceTests
         Assert.AreEqual("https://deploy:token@github.com", replacement.ResponseBody);
         Assert.AreEqual(Now, replacement.GeneratedAt);
         CollectionAssert.AreEqual(
-            new[] { "Server: nginx/1.18.0", "Content-Type: text/html; charset=utf-8" },
+            new[]
+            {
+                "Server: nginx/1.18.0", "Content-Type: text/html; charset=utf-8"
+            },
             replacement.ResponseHeaders.Select(x => $"{x.Name}: {x.Value}").ToArray());
     }
 

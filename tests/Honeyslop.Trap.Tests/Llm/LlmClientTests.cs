@@ -43,7 +43,10 @@ public sealed class LlmClientTests
         Assert.AreEqual(812, completion.PromptTokens);
         Assert.AreEqual(2, completion.CompletionTokens);
         CollectionAssert.AreEqual(
-            new[] { new LlmProgress("{\"status\":", 1), new LlmProgress("{\"status\":200}", 2) },
+            new[]
+            {
+                new LlmProgress("{\"status\":", 1), new LlmProgress("{\"status\":200}", 2)
+            },
             reports);
     }
 
@@ -92,7 +95,8 @@ public sealed class LlmClientTests
         return new LlmClient(httpClientFactory.Object, new OptionsWrapper<LlmOptions>(new LlmOptions()));
     }
 
-    private sealed class StreamHandler(string stream, HttpStatusCode statusCode) : HttpMessageHandler
+    private sealed class StreamHandler(string stream,
+        HttpStatusCode statusCode) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

@@ -76,7 +76,7 @@ internal sealed partial class LlmDispatcher(
 
                     var state = State(endpoint);
                     var score = idle.Value - state.DispatchedSince(now - options.Value.DispatchGrace);
-                    if (score <= 0 || (score < bestScore || score == bestScore && state.InFlight >= bestInFlight))
+                    if (score <= 0 || score < bestScore || score == bestScore && state.InFlight >= bestInFlight)
                         continue;
 
                     best = endpoint;
@@ -125,14 +125,18 @@ internal sealed partial class LlmDispatcher(
             get
             {
                 lock (_lock)
+                {
                     return _leases.Count;
+                }
             }
         }
 
         public bool IsHealthy(DateTimeOffset now)
         {
             lock (_lock)
+            {
                 return _unhealthyUntil <= now;
+            }
         }
 
         public bool MarkUnhealthy(DateTimeOffset now, DateTimeOffset until)
@@ -148,14 +152,19 @@ internal sealed partial class LlmDispatcher(
         public int DispatchedSince(DateTimeOffset threshold)
         {
             lock (_lock)
+            {
                 return _leases.Count(x => x.StartedAt > threshold);
+            }
         }
 
         public Lease Acquire(DateTimeOffset now)
         {
             var lease = new Lease(now);
             lock (_lock)
+            {
                 _leases.Add(lease);
+            }
+
             TrapMetrics.LlmInFlight.WithLabels(name).Inc();
             return lease;
         }
@@ -163,7 +172,10 @@ internal sealed partial class LlmDispatcher(
         public void Release(Lease lease)
         {
             lock (_lock)
+            {
                 _leases.Remove(lease);
+            }
+
             TrapMetrics.LlmInFlight.WithLabels(name).Dec();
         }
     }

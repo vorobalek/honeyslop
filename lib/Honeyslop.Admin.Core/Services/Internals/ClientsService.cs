@@ -166,8 +166,8 @@ internal sealed partial class ClientsService(
         return personal ?? reportOptions.Value.DefaultSenderName;
     }
 
-    private sealed record KnownClient(ClientActivity? Summary);
-
     [LoggerMessage(LogLevel.Warning, "WHOIS lookup of {clientIp} failed")]
     static partial void LogLookupFailed(ILogger<ClientsService> logger, string clientIp, Exception exception);
+
+    private sealed record KnownClient(ClientActivity? Summary);
 }

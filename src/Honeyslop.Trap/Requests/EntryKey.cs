@@ -3,7 +3,10 @@ using System.Text;
 
 namespace Honeyslop.Trap.Requests;
 
-public sealed record EntryKey(string Method, string Host, string Target, byte[] Hash)
+public sealed record EntryKey(string Method,
+    string Host,
+    string Target,
+    byte[] Hash)
 {
     public string HashHex => Convert.ToHexString(Hash);
 

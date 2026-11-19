@@ -69,7 +69,10 @@ public sealed class LlmDispatcherTests
         var completions = await Task.WhenAll(generations);
 
         CollectionAssert.AreEquivalent(
-            new[] { NameOf(A), NameOf(B), NameOf(C) },
+            new[]
+            {
+                NameOf(A), NameOf(B), NameOf(C)
+            },
             completions.Select(x => x.Endpoint).ToArray());
     }
 

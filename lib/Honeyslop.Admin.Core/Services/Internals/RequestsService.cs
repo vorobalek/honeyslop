@@ -47,27 +47,36 @@ internal sealed class RequestsService(
             BreakdownDimension.Country => ByCountry(
                 await requestRepository.GetBreakdownAsync(query.Filter, RequestDimension.Client, int.MaxValue, cancellationToken),
                 top),
-            BreakdownDimension.Client => [.. (await requestRepository.GetBreakdownAsync(query.Filter, RequestDimension.Client, top, cancellationToken))
-                .Select(x => Group(x, countryLookup.Find(x.Key)))],
-            var by => [.. (await requestRepository.GetBreakdownAsync(query.Filter, Dimension(by), top, cancellationToken))
-                .Select(x => Group(x, null))]
+            BreakdownDimension.Client =>
+            [
+                .. (await requestRepository.GetBreakdownAsync(query.Filter, RequestDimension.Client, top, cancellationToken))
+                .Select(x => Group(x, countryLookup.Find(x.Key)))
+            ],
+            var by =>
+            [
+                .. (await requestRepository.GetBreakdownAsync(query.Filter, Dimension(by), top, cancellationToken))
+                .Select(x => Group(x, null))
+            ]
         };
         return new RequestsBreakdownDto(query.By, total, groups, asOf);
     }
 
     private RequestGroupDto[] ByCountry(IEnumerable<RequestBucket> clients, int top)
     {
-        return [.. clients
-            .GroupBy(x => countryLookup.Find(x.Key))
-            .Select(x => new RequestGroupDto(
-                x.Key?.Code ?? "unknown",
-                x.Key,
-                x.Sum(y => y.Requests),
-                x.Count(),
-                x.Min(y => y.FirstSeenAt),
-                x.Max(y => y.LastSeenAt)))
-            .OrderByDescending(x => x.Requests)
-            .Take(top)];
+        return
+        [
+            .. clients
+                .GroupBy(x => countryLookup.Find(x.Key))
+                .Select(x => new RequestGroupDto(
+                    x.Key?.Code ?? "unknown",
+                    x.Key,
+                    x.Sum(y => y.Requests),
+                    x.Count(),
+                    x.Min(y => y.FirstSeenAt),
+                    x.Max(y => y.LastSeenAt)))
+                .OrderByDescending(x => x.Requests)
+                .Take(top)
+        ];
     }
 
     private static RequestGroupDto Group(RequestBucket group, CountryDto? country)

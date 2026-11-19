@@ -12,8 +12,8 @@ public sealed class RequestArchive : IDisposable
     private static readonly string[] ProxyHeaderPrefixes = ["X-Forwarded-", "X-Original-", "X-Real-Ip:"];
 
     private readonly MemoryStream _stream = new();
-    private readonly ZipArchive _zip;
     private readonly StreamWriter _writer;
+    private readonly ZipArchive _zip;
 
     public RequestArchive(string clientIp, int total, int included)
     {
@@ -28,6 +28,13 @@ public sealed class RequestArchive : IDisposable
     }
 
     public int Count { get; private set; }
+
+    public void Dispose()
+    {
+        _writer.Dispose();
+        _zip.Dispose();
+        _stream.Dispose();
+    }
 
     public void Add(RequestRecord request)
     {
@@ -60,13 +67,6 @@ public sealed class RequestArchive : IDisposable
         _writer.Dispose();
         _zip.Dispose();
         return _stream.ToArray();
-    }
-
-    public void Dispose()
-    {
-        _writer.Dispose();
-        _zip.Dispose();
-        _stream.Dispose();
     }
 
     private static bool IsProxyHeader(string header)

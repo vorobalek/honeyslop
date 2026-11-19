@@ -11,7 +11,6 @@ namespace Honeyslop.Data.Repositories.Internals;
 
 internal sealed class RequestRepository(ApplicationDbContext dbContext) : IRequestRepository
 {
-
     public async Task AddRangeAsync(IReadOnlyCollection<RequestRecord> records, CancellationToken cancellationToken)
     {
         await dbContext.Requests.AddRangeAsync(records.Select(Fit), cancellationToken);
@@ -122,13 +121,24 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             RequestDimension.Status => ByCountAsync(query, x => x.ResponseStatus, x => x.ToString(CultureInfo.InvariantCulture), top, cancellationToken),
             RequestDimension.Hour => ByTimeAsync(
                 query,
-                x => new { x.ReceivedAt.Year, x.ReceivedAt.Month, x.ReceivedAt.Day, x.ReceivedAt.Hour },
+                x => new
+                {
+                    x.ReceivedAt.Year,
+                    x.ReceivedAt.Month,
+                    x.ReceivedAt.Day,
+                    x.ReceivedAt.Hour
+                },
                 x => new DateTimeOffset(x.Year, x.Month, x.Day, x.Hour, 0, 0, TimeSpan.Zero),
                 top,
                 cancellationToken),
             _ => ByTimeAsync(
                 query,
-                x => new { x.ReceivedAt.Year, x.ReceivedAt.Month, x.ReceivedAt.Day },
+                x => new
+                {
+                    x.ReceivedAt.Year,
+                    x.ReceivedAt.Month,
+                    x.ReceivedAt.Day
+                },
                 x => new DateTimeOffset(x.Year, x.Month, x.Day, 0, 0, 0, TimeSpan.Zero),
                 top,
                 cancellationToken)
@@ -244,7 +254,17 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .ThenByDescending(x => x.LastSeenAt)
             .Take(top)
             .ToArrayAsync(cancellationToken);
-        return [.. groups.Select(x => new RequestBucket { Key = format(x.Key), Requests = x.Requests, Clients = x.Clients, FirstSeenAt = x.FirstSeenAt, LastSeenAt = x.LastSeenAt })];
+        return
+        [
+            .. groups.Select(x => new RequestBucket
+            {
+                Key = format(x.Key),
+                Requests = x.Requests,
+                Clients = x.Clients,
+                FirstSeenAt = x.FirstSeenAt,
+                LastSeenAt = x.LastSeenAt
+            })
+        ];
     }
 
     private static async Task<RequestBucket[]> ByTimeAsync<TKey>(
@@ -267,16 +287,19 @@ internal sealed class RequestRepository(ApplicationDbContext dbContext) : IReque
             .OrderByDescending(x => x.LastSeenAt)
             .Take(top)
             .ToArrayAsync(cancellationToken);
-        return [.. groups
-            .OrderBy(x => x.FirstSeenAt)
-            .Select(x => new RequestBucket
-            {
-                Key = start(x.Key).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
-                Requests = x.Requests,
-                Clients = x.Clients,
-                FirstSeenAt = x.FirstSeenAt,
-                LastSeenAt = x.LastSeenAt
-            })];
+        return
+        [
+            .. groups
+                .OrderBy(x => x.FirstSeenAt)
+                .Select(x => new RequestBucket
+                {
+                    Key = start(x.Key).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                    Requests = x.Requests,
+                    Clients = x.Clients,
+                    FirstSeenAt = x.FirstSeenAt,
+                    LastSeenAt = x.LastSeenAt
+                })
+        ];
     }
 
     private static RequestRecord Fit(RequestRecord record)

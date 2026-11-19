@@ -11,8 +11,14 @@ public sealed class UserAgentProviderTests
     [TestMethod]
     public async Task GetAsync_ConcurrentCalls_ReadTheSettingsOnce()
     {
-        var settings = new SlowSettings(HoneyslopSettings.Default with { UserAgent = "Honeyslop-test (+https://example.test)" });
-        var provider = new UserAgentProvider(settings, Microsoft.Extensions.Options.Options.Create(new UserAgentOptions { Default = "default" }));
+        var settings = new SlowSettings(HoneyslopSettings.Default with
+        {
+            UserAgent = "Honeyslop-test (+https://example.test)"
+        });
+        var provider = new UserAgentProvider(settings, Microsoft.Extensions.Options.Options.Create(new UserAgentOptions
+        {
+            Default = "default"
+        }));
 
         var userAgents = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => provider.GetAsync(CancellationToken.None)));
 
@@ -23,7 +29,10 @@ public sealed class UserAgentProviderTests
     [TestMethod]
     public async Task GetAsync_NoSetting_UsesTheEnvironmentDefault()
     {
-        var provider = new UserAgentProvider(new SlowSettings(HoneyslopSettings.Default), Microsoft.Extensions.Options.Options.Create(new UserAgentOptions { Default = "default" }));
+        var provider = new UserAgentProvider(new SlowSettings(HoneyslopSettings.Default), Microsoft.Extensions.Options.Options.Create(new UserAgentOptions
+        {
+            Default = "default"
+        }));
 
         Assert.AreEqual("default", await provider.GetAsync(CancellationToken.None));
     }
@@ -41,7 +50,10 @@ public sealed class UserAgentProviderTests
             Reads++;
             await Task.Delay(20, cancellationToken);
             Interlocked.Decrement(ref _active);
-            return new Settings { Honeyslop = settings };
+            return new Settings
+            {
+                Honeyslop = settings
+            };
         }
 
         public Task SaveAsync(HoneyslopSettings saved, DateTimeOffset now, CancellationToken cancellationToken)

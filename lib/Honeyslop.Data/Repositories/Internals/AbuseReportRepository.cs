@@ -87,12 +87,20 @@ internal sealed class AbuseReportRepository(ApplicationDbContext dbContext) : IA
         var counts = await dbContext
             .AbuseReports
             .GroupBy(x =>
-                x.Status == AbuseReportStatus.Sent ? AbuseReportState.Sent :
-                x.Status == AbuseReportStatus.Failed ? AbuseReportState.Failed :
-                x.ClaimedBy != null ? AbuseReportState.Sending :
-                x.RetryAt != null ? AbuseReportState.Retrying :
-                AbuseReportState.Queued)
-            .Select(x => new { State = x.Key, Count = x.Count() })
+                x.Status == AbuseReportStatus.Sent
+                    ? AbuseReportState.Sent
+                    : x.Status == AbuseReportStatus.Failed
+                        ? AbuseReportState.Failed
+                        : x.ClaimedBy != null
+                            ? AbuseReportState.Sending
+                            : x.RetryAt != null
+                                ? AbuseReportState.Retrying
+                                : AbuseReportState.Queued)
+            .Select(x => new
+            {
+                State = x.Key,
+                Count = x.Count()
+            })
             .ToListAsync(cancellationToken);
         return Enum
             .GetValues<AbuseReportState>()

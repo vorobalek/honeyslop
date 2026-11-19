@@ -1,8 +1,10 @@
 using Honeyslop.Admin.Configuration;
 using Honeyslop.Admin.Core.Exceptions;
+using Honeyslop.Admin.Mcp.Tools;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using ModelContextProtocol;
 using ModelContextProtocol.AspNetCore.Authentication;
+using ModelContextProtocol.Authentication;
 using ModelContextProtocol.Protocol;
 
 namespace Honeyslop.Admin.Mcp;
@@ -34,11 +36,14 @@ public static class WebHostBuilderExtensions
                         options.TokenValidationParameters.NameClaimType = "preferred_username";
                         options.ForwardChallenge = McpAuthenticationDefaults.AuthenticationScheme;
                     })
-                    .AddMcp(options => options.ResourceMetadata = new()
+                    .AddMcp(options => options.ResourceMetadata = new ProtectedResourceMetadata
                     {
                         Resource = resource,
                         ResourceName = "honeyslop",
-                        AuthorizationServers = { authority },
+                        AuthorizationServers =
+                        {
+                            authority
+                        },
                         ScopesSupported = ["openid", "profile", "offline_access"]
                     });
                 services
@@ -47,14 +52,18 @@ public static class WebHostBuilderExtensions
                         .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
                         .RequireAuthenticatedUser());
                 services
-                    .AddMcpServer(options => options.ServerInfo = new Implementation { Name = "honeyslop", Version = "1.0" })
+                    .AddMcpServer(options => options.ServerInfo = new Implementation
+                    {
+                        Name = "honeyslop",
+                        Version = "1.0"
+                    })
                     .WithHttpTransport(options => options.Stateless = true)
-                    .WithTools<Tools.Entries>()
-                    .WithTools<Tools.Requests>()
-                    .WithTools<Tools.Clients>()
+                    .WithTools<Entries>()
+                    .WithTools<Requests>()
+                    .WithTools<Clients>()
                     .WithTools<Tools.Reports>()
-                    .WithTools<Tools.Generators>()
-                    .WithTools<Tools.Settings>()
+                    .WithTools<Generators>()
+                    .WithTools<Settings>()
                     .WithRequestFilters(filters => filters.AddCallToolFilter(next => async (context, cancellationToken) =>
                     {
                         try
@@ -66,7 +75,13 @@ public static class WebHostBuilderExtensions
                             return new CallToolResult
                             {
                                 IsError = true,
-                                Content = [new TextContentBlock { Text = exception.Message }]
+                                Content =
+                                [
+                                    new TextContentBlock
+                                    {
+                                        Text = exception.Message
+                                    }
+                                ]
                             };
                         }
                     }));

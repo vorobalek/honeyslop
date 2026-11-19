@@ -3,7 +3,8 @@ using Honeyslop.Admin.Core.Exceptions;
 
 namespace Honeyslop.Admin.Core.Access.Internals;
 
-internal sealed class AccessGuard(IViewerContext viewerContext, IPublicView publicView) : IAccessGuard
+internal sealed class AccessGuard(IViewerContext viewerContext,
+    IPublicView publicView) : IAccessGuard
 {
     public ViewerDto Viewer => viewerContext.Viewer;
 

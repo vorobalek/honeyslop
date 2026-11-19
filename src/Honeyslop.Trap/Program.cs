@@ -22,6 +22,7 @@ using Honeyslop.Trap.Settings;
 using Honeyslop.Trap.Settings.Internals;
 using Microsoft.AspNetCore.HttpOverrides;
 using Prometheus;
+using IPNetwork = System.Net.IPNetwork;
 
 [assembly: InternalsVisibleTo("Honeyslop.Trap.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
@@ -97,7 +98,7 @@ await Host
                     x.KnownIPNetworks.Clear();
                     x.KnownProxies.Clear();
                     foreach (var network in AppConfiguration.TrustedNetworks.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                        x.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+                        x.KnownIPNetworks.Add(IPNetwork.Parse(network));
                 });
         })
         .Configure(app => app

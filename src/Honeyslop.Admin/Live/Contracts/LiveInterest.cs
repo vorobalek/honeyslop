@@ -2,7 +2,9 @@ using Honeyslop.Admin.Live.Enums;
 
 namespace Honeyslop.Admin.Live.Contracts;
 
-public sealed record LiveInterest(LiveTopic[] Topics, long? EntryId = null, bool Periodic = false)
+public sealed record LiveInterest(LiveTopic[] Topics,
+    long? EntryId = null,
+    bool Periodic = false)
 {
     public static readonly LiveInterest Nothing = new([]);
 

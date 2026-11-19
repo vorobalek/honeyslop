@@ -9,7 +9,10 @@ internal static class AccountEndpoints
     public static IResult SignIn(string? returnUrl)
     {
         return Results.Challenge(
-            new AuthenticationProperties { RedirectUri = LocalUrlOrRoot(returnUrl) },
+            new AuthenticationProperties
+            {
+                RedirectUri = LocalUrlOrRoot(returnUrl)
+            },
             [OpenIdConnectDefaults.AuthenticationScheme]);
     }
 

@@ -20,7 +20,9 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Payload);
         await using (var command = new NpgsqlCommand("listen honeyslop_entries", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         var now = DateTimeOffset.UtcNow;
         var entry = new Entry
@@ -34,7 +36,9 @@ public sealed class NotificationTests
             UpdatedAt = now
         };
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             Assert.IsTrue(await scope.Repository().TryAddAsync(entry, CancellationToken.None));
+        }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains(entry.Id.ToString(CultureInfo.InvariantCulture)))
@@ -49,12 +53,19 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Channel);
         await using (var command = new NpgsqlCommand("listen honeyslop_settings", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         await using (var scope = PostgresDatabase.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            dbContext.Settings.Add(new Setting { Key = $"test_{Unique.String(8)}", Value = "on", UpdatedAt = DateTimeOffset.UtcNow });
+            dbContext.Settings.Add(new Setting
+            {
+                Key = $"test_{Unique.String(8)}",
+                Value = "on",
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
             await dbContext.SaveChangesAsync();
         }
 
@@ -71,7 +82,9 @@ public sealed class NotificationTests
         var received = new List<string>();
         connection.Notification += (_, notification) => received.Add(notification.Payload);
         await using (var command = new NpgsqlCommand("listen honeyslop_outputs", connection))
+        {
             await command.ExecuteNonQueryAsync();
+        }
 
         var output = $"{{\"entryId\":{Random.Shared.NextInt64(1, long.MaxValue)},\"tokens\":2}}";
         await using var scope = PostgresDatabase.CreateScope();

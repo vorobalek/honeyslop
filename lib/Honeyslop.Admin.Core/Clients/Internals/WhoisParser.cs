@@ -42,11 +42,13 @@ internal static partial class WhoisParser
             Find(network, OwnerKeys) ?? records.Select(x => Find(x, OwnerKeys)).FirstOrDefault(x => x is not null),
             Find(network, CountryKeys) ?? records.Select(x => Find(x, CountryKeys)).FirstOrDefault(x => x is not null),
             registry is null ? null : Registries.GetValueOrDefault(registry, registry.ToUpperInvariant()),
-            [.. Items(abuseContactFinder, "abuse_contacts")
-                .Select(x => x.ValueKind == JsonValueKind.String ? x.GetString()?.Trim() : null)
-                .OfType<string>()
-                .Where(x => EmailPattern().IsMatch(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)],
+            [
+                .. Items(abuseContactFinder, "abuse_contacts")
+                    .Select(x => x.ValueKind == JsonValueKind.String ? x.GetString()?.Trim() : null)
+                    .OfType<string>()
+                    .Where(x => EmailPattern().IsMatch(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+            ],
             string.Join("\n\n", records.Select(record => string.Join("\n", record.Select(x => $"{x.Key}: {x.Value}")))),
             lookedUpAt);
     }
@@ -96,5 +98,6 @@ internal static partial class WhoisParser
     [GeneratedRegex(@"^[^@\s?&]+@[^@\s?&]+\.[^@\s?&]+$")]
     private static partial Regex EmailPattern();
 
-    private sealed record Field(string Key, string Value);
+    private sealed record Field(string Key,
+        string Value);
 }

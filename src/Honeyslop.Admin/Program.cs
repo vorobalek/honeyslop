@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Honeyslop.Admin.Access;
 using Honeyslop.Admin.Access.Internals;
 using Honeyslop.Admin.Configuration;
@@ -15,7 +16,6 @@ using Honeyslop.Admin.Views.Internals;
 using Honeyslop.Common;
 using Honeyslop.Data;
 using Honeyslop.Llm;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR;
 
 await Host
@@ -68,8 +68,8 @@ await Host
                 x.Urls =
                 [
                     ..(AppConfiguration.LlmUrl ?? string.Empty)
-                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                        .Select(url => new Uri(url.TrimEnd('/') + "/"))
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(url => new Uri(url.TrimEnd('/') + "/"))
                 ];
                 x.Timeout = TimeSpan.FromSeconds(10);
                 x.ProbeTimeout = TimeSpan.FromSeconds(2);

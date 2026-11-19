@@ -19,7 +19,8 @@ public sealed class RequestsServiceTests
     {
         var repository = new Mock<IRequestRepository>();
         repository
-            .Setup(x => x.GetBreakdownAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), RequestDimension.Client, int.MaxValue, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetBreakdownAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(), RequestDimension.Client, int.MaxValue, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 Bucket("192.0.2.1", 5, Start, Start.AddHours(1)),
@@ -27,7 +28,8 @@ public sealed class RequestsServiceTests
                 Bucket("198.51.100.1", 4, Start, Start),
                 Bucket("203.0.113.1", 1, Start, Start)
             ]);
-        repository.Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync(13);
+        repository.Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>())).ReturnsAsync(13);
         var countries = new Mock<ICountryLookup>();
         countries.Setup(x => x.Find(It.Is<string>(ip => ip.StartsWith("192.", StringComparison.Ordinal)))).Returns(new CountryDto("DE", "Germany"));
         countries.Setup(x => x.Find("198.51.100.1")).Returns(new CountryDto("NL", "The Netherlands"));
@@ -39,14 +41,20 @@ public sealed class RequestsServiceTests
         CollectionAssert.AreEqual(
             new[]
             {
-                new RequestGroupDto("DE", new CountryDto("DE", "Germany"), 8, 2, Start.AddHours(-1), Start.AddHours(1)),
-                new RequestGroupDto("NL", new CountryDto("NL", "The Netherlands"), 4, 1, Start, Start)
+                new RequestGroupDto("DE", new CountryDto("DE", "Germany"), 8, 2, Start.AddHours(-1), Start.AddHours(1)), new RequestGroupDto("NL", new CountryDto("NL", "The Netherlands"), 4, 1, Start, Start)
             },
             breakdown.Groups);
     }
 
     private static RequestBucket Bucket(string key, int requests, DateTimeOffset first, DateTimeOffset last)
     {
-        return new RequestBucket { Key = key, Requests = requests, Clients = 1, FirstSeenAt = first, LastSeenAt = last };
+        return new RequestBucket
+        {
+            Key = key,
+            Requests = requests,
+            Clients = 1,
+            FirstSeenAt = first,
+            LastSeenAt = last
+        };
     }
 }

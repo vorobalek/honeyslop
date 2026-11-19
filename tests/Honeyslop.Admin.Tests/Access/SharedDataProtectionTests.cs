@@ -61,11 +61,6 @@ public sealed class SharedDataProtectionTests
 
         public List<DataProtectionKey> Keys { get; } = [];
 
-        public void MissNextRead()
-        {
-            _missNextRead = true;
-        }
-
         public IReadOnlyList<DataProtectionKey> GetAll()
         {
             if (!_missNextRead)
@@ -80,6 +75,11 @@ public sealed class SharedDataProtectionTests
                 return false;
             Keys.Add(key);
             return true;
+        }
+
+        public void MissNextRead()
+        {
+            _missNextRead = true;
         }
     }
 }

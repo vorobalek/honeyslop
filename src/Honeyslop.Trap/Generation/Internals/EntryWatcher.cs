@@ -103,5 +103,6 @@ internal sealed partial class EntryWatcher(
     [LoggerMessage(LogLevel.Warning, "Failed to check {count} awaited entries")]
     static partial void LogPollFailed(ILogger<EntryWatcher> logger, Exception exception, int count);
 
-    private sealed record Watch(TaskCompletionSource<CachedResponse?> Completion, DateTimeOffset Since);
+    private sealed record Watch(TaskCompletionSource<CachedResponse?> Completion,
+        DateTimeOffset Since);
 }

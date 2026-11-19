@@ -24,7 +24,10 @@ public sealed class ResponseSanitizerTests
             ("Server", "nginx/1.18.0"),
             ("Content-Type", "text/html"));
 
-        CollectionAssert.AreEquivalent(new[] { "Server", "Content-Type" }, response.Headers.Select(x => x.Name).ToArray());
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "Server", "Content-Type"
+        }, response.Headers.Select(x => x.Name).ToArray());
     }
 
     [TestMethod]
@@ -66,7 +69,10 @@ public sealed class ResponseSanitizerTests
             ("Content-Type", "text/html"));
 
         var cookies = response.Headers.Where(x => x.Name == "Set-Cookie").Select(x => x.Value).ToArray();
-        CollectionAssert.AreEqual(new[] { "session=abc; Path=/; HttpOnly", "theme=dark; path=/" }, cookies);
+        CollectionAssert.AreEqual(new[]
+        {
+            "session=abc; Path=/; HttpOnly", "theme=dark; path=/"
+        }, cookies);
     }
 
     [TestMethod]

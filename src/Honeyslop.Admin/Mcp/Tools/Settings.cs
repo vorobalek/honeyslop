@@ -16,19 +16,31 @@ public sealed class Settings(ISettingsService settingsService)
     }
 
     [McpServerTool(Name = "update_settings", Title = "Change the settings", Destructive = true, Idempotent = true)]
-    [Description("Changes the given runtime settings and keeps the rest. Durations are in seconds, 0 means never or off where the setting allows it. Saving applies them at once: entries past the new lifetimes expire and requests past the retention are deleted. Returns validation errors or what the cleanup did.")]
+    [Description(
+        "Changes the given runtime settings and keeps the rest. Durations are in seconds, 0 means never or off where the setting allows it. Saving applies them at once: entries past the new lifetimes expire and requests past the retention are deleted. Returns validation errors or what the cleanup did.")]
     public async Task<SettingsSaveDto> UpdateAsync(
-        [Description("Expire generated responses after this long.")] long? cacheTtlSeconds = null,
-        [Description("Expire responses nobody requested for this long.")] long? keepUnusedSeconds = null,
-        [Description("Generate responses for new paths.")] bool? generationEnabled = null,
-        [Description("Delete recorded requests older than this.")] long? requestRetentionSeconds = null,
-        [Description("How long a request waits for its response to be generated.")] long? generationWaitSeconds = null,
-        [Description("Let the model refuse to answer.")] bool? allowRefusals = null,
-        [Description("Take a generation over when its worker stops sending heartbeats for this long, at least 20.")] long? claimTimeoutSeconds = null,
-        [Description("Retry failed generations after this long.")] long? retryFailedSeconds = null,
-        [Description("Give up a generation after this long, at least 10.")] long? generationTimeLimitSeconds = null,
-        [Description("Let anyone browse the admin read-only.")] bool? publicView = null,
-        [Description("User-Agent for outbound lookups; an empty string restores the default.")] string? userAgent = null,
+        [Description("Expire generated responses after this long.")]
+        long? cacheTtlSeconds = null,
+        [Description("Expire responses nobody requested for this long.")]
+        long? keepUnusedSeconds = null,
+        [Description("Generate responses for new paths.")]
+        bool? generationEnabled = null,
+        [Description("Delete recorded requests older than this.")]
+        long? requestRetentionSeconds = null,
+        [Description("How long a request waits for its response to be generated.")]
+        long? generationWaitSeconds = null,
+        [Description("Let the model refuse to answer.")]
+        bool? allowRefusals = null,
+        [Description("Take a generation over when its worker stops sending heartbeats for this long, at least 20.")]
+        long? claimTimeoutSeconds = null,
+        [Description("Retry failed generations after this long.")]
+        long? retryFailedSeconds = null,
+        [Description("Give up a generation after this long, at least 10.")]
+        long? generationTimeLimitSeconds = null,
+        [Description("Let anyone browse the admin read-only.")]
+        bool? publicView = null,
+        [Description("User-Agent for outbound lookups; an empty string restores the default.")]
+        string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
         var current = (await settingsService.GetAsync(cancellationToken)).Settings;

@@ -56,7 +56,10 @@ public sealed class ReportsServiceTests
         return new ReportsService(
             repository.Object,
             Mock.Of<ICountryLookup>(),
-            Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions { FromAddress = "security@example.test" }),
+            Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions
+            {
+                FromAddress = "security@example.test"
+            }),
             Viewers.Guard(viewer),
             Viewers.ServerTime(DateTimeOffset.UnixEpoch));
     }

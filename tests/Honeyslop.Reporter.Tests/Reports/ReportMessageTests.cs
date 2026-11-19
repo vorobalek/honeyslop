@@ -33,7 +33,10 @@ public sealed class ReportMessageTests
         Assert.AreEqual("security@example.test", message.From.Mailboxes.Single().Address);
         Assert.AreEqual("Example Sender, security team", message.From.Mailboxes.Single().Name);
         Assert.Contains("\"Example Sender, security team\" <security@example.test>", message.Headers[HeaderId.From]!);
-        CollectionAssert.AreEqual(new[] { "abuse@example.test", "noc@example.test" }, message.To.Mailboxes.Select(x => x.Address).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@example.test", "noc@example.test"
+        }, message.To.Mailboxes.Select(x => x.Address).ToArray());
         Assert.AreEqual(report.Subject, message.Subject);
         Assert.MatchesRegex(@"^report-42\.20261118120000\.[0-9a-f]{6}@example\.test$", message.MessageId);
         Assert.AreEqual("Hello", message.TextBody);

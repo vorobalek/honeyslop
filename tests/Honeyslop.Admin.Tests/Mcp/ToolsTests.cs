@@ -7,6 +7,7 @@ using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using ModelContextProtocol;
 using Moq;
+using Settings = Honeyslop.Admin.Mcp.Tools.Settings;
 
 namespace Honeyslop.Admin.Tests.Mcp;
 
@@ -42,13 +43,23 @@ public sealed class ToolsTests
             [3],
             200,
             "<?xml version=\"1.0\"?>",
-            new Dictionary<string, string> { ["Content-Type"] = "application/xml", ["Server"] = "App-webs/" });
+            new Dictionary<string, string>
+            {
+                ["Content-Type"] = "application/xml",
+                ["Server"] = "App-webs/"
+            });
 
-        CollectionAssert.AreEqual(new long[] { 9 }, change.Ids);
+        CollectionAssert.AreEqual(new long[]
+        {
+            9
+        }, change.Ids);
         Assert.IsNotNull(asked);
         Assert.AreEqual(200, asked.Status);
         CollectionAssert.AreEqual(
-            new[] { "Content-Type: application/xml", "Server: App-webs/" },
+            new[]
+            {
+                "Content-Type: application/xml", "Server: App-webs/"
+            },
             asked.Headers.Select(x => $"{x.Name}: {x.Value}").ToArray());
     }
 
@@ -64,7 +75,7 @@ public sealed class ToolsTests
         var since = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
 
         await new Requests(requests.Object).ListAsync(
-            clientIp: "192.0.2.1",
+            "192.0.2.1",
             method: "POST",
             userAgent: "curl",
             outcome: RequestOutcome.Hit,
@@ -85,7 +96,10 @@ public sealed class ToolsTests
     public async Task UpdateAsync_ChangesOnlyTheGivenSettings()
     {
         var settings = new Mock<ISettingsService>();
-        var current = HoneyslopSettings.Default with { UserAgent = "custom" };
+        var current = HoneyslopSettings.Default with
+        {
+            UserAgent = "custom"
+        };
         settings
             .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SettingsDto(current, "default", null, null));
@@ -95,8 +109,12 @@ public sealed class ToolsTests
             .Callback<HoneyslopSettings, CancellationToken>((value, _) => saved = value)
             .ReturnsAsync(new SettingsSaveDto(new Dictionary<string, string>(), new MaintenanceResultDto(0, 0, 0, 0)));
 
-        await new Admin.Mcp.Tools.Settings(settings.Object).UpdateAsync(cacheTtlSeconds: 3600, publicView: true);
+        await new Settings(settings.Object).UpdateAsync(3600, publicView: true);
 
-        Assert.AreEqual(current with { CacheTtl = TimeSpan.FromHours(1), PublicView = true }, saved);
+        Assert.AreEqual(current with
+        {
+            CacheTtl = TimeSpan.FromHours(1),
+            PublicView = true
+        }, saved);
     }
 }

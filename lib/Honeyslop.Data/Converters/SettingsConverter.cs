@@ -57,12 +57,19 @@ internal static class SettingsConverter
 
     public static UserSettings ToUserSettings(string userId, IReadOnlyDictionary<string, string> values)
     {
-        return new UserSettings { UserId = userId, SenderName = values.GetValueOrDefault(SenderName) };
+        return new UserSettings
+        {
+            UserId = userId,
+            SenderName = values.GetValueOrDefault(SenderName)
+        };
     }
 
     public static Dictionary<string, string?> ToValues(UserSettings settings)
     {
-        return new Dictionary<string, string?>(StringComparer.Ordinal) { [SenderName] = settings.SenderName };
+        return new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            [SenderName] = settings.SenderName
+        };
     }
 
     private static string Seconds(TimeSpan duration)

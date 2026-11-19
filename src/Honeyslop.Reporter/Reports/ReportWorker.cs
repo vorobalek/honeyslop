@@ -4,8 +4,8 @@ using Honeyslop.Reporter.Mail;
 using Honeyslop.Reporter.Monitoring;
 using Honeyslop.Reports;
 using MailKit.Net.Smtp;
-using MimeKit;
 using Microsoft.Extensions.Options;
+using MimeKit;
 
 namespace Honeyslop.Reporter.Reports;
 
@@ -105,7 +105,8 @@ internal sealed partial class ReportWorker(
             return;
         }
 
-        await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, await serverTime.GetNowAsync(CancellationToken.None), CancellationToken.None);
+        await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, await serverTime.GetNowAsync(CancellationToken.None),
+            CancellationToken.None);
         LogSent(logger, report.Id, report.ClientIp, string.Join(", ", report.Recipients), archive.Requests);
     }
 

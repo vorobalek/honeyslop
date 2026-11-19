@@ -15,11 +15,16 @@ public sealed class ClientWhoisRepositoryTests
         var now = DateTimeOffset.UtcNow;
 
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IClientWhoisRepository>()
                 .SaveAsync(clientIp, """{"Prefix": "first"}""", now.AddDays(-1), CancellationToken.None);
+        }
+
         await using (var scope = PostgresDatabase.CreateScope())
+        {
             await scope.ServiceProvider.GetRequiredService<IClientWhoisRepository>()
                 .SaveAsync(clientIp, """{"Prefix": "second"}""", now, CancellationToken.None);
+        }
 
         await using var readScope = PostgresDatabase.CreateScope();
         var stored = await readScope.ServiceProvider.GetRequiredService<IClientWhoisRepository>()

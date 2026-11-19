@@ -15,13 +15,19 @@ public sealed class WhoisParserTests
         var info = Parse(RipeStatFixtures.PrefixOverview, RipeStatFixtures.AbuseContactFinder, RipeStatFixtures.Whois);
 
         Assert.AreEqual("8.8.8.0/24", info.Prefix);
-        CollectionAssert.AreEqual(new[] { new WhoisOriginDto(15169, "GOOGLE - Google LLC") }, info.Origins);
+        CollectionAssert.AreEqual(new[]
+        {
+            new WhoisOriginDto(15169, "GOOGLE - Google LLC")
+        }, info.Origins);
         Assert.AreEqual("8.8.8.0/24", info.Network);
         Assert.AreEqual("GOGL", info.NetworkName);
         Assert.AreEqual("Google LLC (GOGL)", info.Owner);
         Assert.AreEqual("US", info.Country);
         Assert.AreEqual("ARIN", info.Registry);
-        CollectionAssert.AreEqual(new[] { "network-abuse@google.com" }, info.AbuseContacts);
+        CollectionAssert.AreEqual(new[]
+        {
+            "network-abuse@google.com"
+        }, info.AbuseContacts);
         Assert.Contains("NetName: GOGL", info.Records);
         Assert.Contains("OrgAbuseEmail: network-abuse@google.com", info.Records);
         Assert.AreEqual(Now, info.LookedUpAt);

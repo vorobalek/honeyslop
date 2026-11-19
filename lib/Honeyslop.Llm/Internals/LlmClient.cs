@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -151,7 +152,7 @@ internal sealed class LlmClient(
         }
 
         using var _ = response;
-        if ((int)response.StatusCode >= 500 || response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        if ((int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests)
             throw new LlmUnavailableException($"Model server {endpoint.Authority} responded {(int)response.StatusCode}.");
         if (!response.IsSuccessStatusCode)
         {
@@ -225,11 +226,14 @@ internal sealed class LlmClient(
         return metrics;
     }
 
-    private sealed record SlotState(bool IsProcessing, int NCtx);
+    private sealed record SlotState(bool IsProcessing,
+        int NCtx);
 
     private sealed record ModelList(IReadOnlyList<ModelInfo>? Data);
 
-    private sealed record ModelInfo(string? Id, ModelMeta? Meta);
+    private sealed record ModelInfo(string? Id,
+        ModelMeta? Meta);
 
-    private sealed record ModelMeta(long? NParams, long? Size);
+    private sealed record ModelMeta(long? NParams,
+        long? Size);
 }

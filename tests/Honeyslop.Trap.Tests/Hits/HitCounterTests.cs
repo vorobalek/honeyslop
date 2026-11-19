@@ -19,7 +19,10 @@ public sealed class HitCounterTests
 
         var drained = counter.Drain().OrderBy(x => x.EntryId).ToArray();
         CollectionAssert.AreEqual(
-            new[] { new HitBatch(1, 2, latest), new HitBatch(2, 1, first) },
+            new[]
+            {
+                new HitBatch(1, 2, latest), new HitBatch(2, 1, first)
+            },
             drained);
         Assert.AreEqual(0, counter.Drain().Count);
     }

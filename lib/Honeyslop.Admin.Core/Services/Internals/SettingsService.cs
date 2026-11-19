@@ -34,7 +34,10 @@ internal sealed class SettingsService(
     public async Task<SettingsSaveDto> SaveAsync(HoneyslopSettings settings, CancellationToken cancellationToken)
     {
         access.EnsureCanOperate();
-        settings = settings with { UserAgent = string.IsNullOrWhiteSpace(settings.UserAgent) ? null : settings.UserAgent.Trim() };
+        settings = settings with
+        {
+            UserAgent = string.IsNullOrWhiteSpace(settings.UserAgent) ? null : settings.UserAgent.Trim()
+        };
         var errors = Validate(settings);
         if (errors.Count > 0)
             return new SettingsSaveDto(errors, null);
@@ -50,7 +53,11 @@ internal sealed class SettingsService(
         if (access.Viewer.UserId is not { } userId)
             throw new AccessDeniedException("Personal settings need a signed-in user.");
         var cleaned = SenderName.Clean(senderName);
-        await settingsRepository.SaveAsync(new UserSettings { UserId = userId, SenderName = cleaned }, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
+        await settingsRepository.SaveAsync(new UserSettings
+        {
+            UserId = userId,
+            SenderName = cleaned
+        }, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
         return cleaned;
     }
 

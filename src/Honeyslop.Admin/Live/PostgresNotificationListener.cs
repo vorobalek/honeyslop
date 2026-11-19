@@ -34,7 +34,10 @@ internal sealed partial class PostgresNotificationListener(
                 connection.Notification += (_, notification) => Dispatch(notification.Channel, notification.Payload);
                 await connection.OpenAsync(stoppingToken);
                 await using (var command = new NpgsqlCommand("listen honeyslop_entries; listen honeyslop_requests; listen honeyslop_outputs; listen honeyslop_reports; listen honeyslop_settings;", connection))
+                {
                     await command.ExecuteNonQueryAsync(stoppingToken);
+                }
+
                 LogListening(logger);
                 subscriptions.PublishEverything();
                 while (!stoppingToken.IsCancellationRequested)
@@ -53,11 +56,17 @@ internal sealed partial class PostgresNotificationListener(
     private void Dispatch(string channel, string payload)
     {
         if (channel == "honeyslop_settings")
+        {
             publicView.Reset();
+        }
         else if (channel == "honeyslop_requests")
+        {
             subscriptions.Publish(new LiveChange(LiveTopic.Requests));
+        }
         else if (channel == "honeyslop_reports")
+        {
             subscriptions.Publish(new LiveChange(LiveTopic.Reports));
+        }
         else if (channel == "honeyslop_outputs")
         {
             if (outputSerializer.Deserialize(payload) is not { } output)
@@ -66,9 +75,13 @@ internal sealed partial class PostgresNotificationListener(
             subscriptions.Publish(new LiveChange(LiveTopic.Outputs, output.EntryId));
         }
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
+        {
             subscriptions.Publish(new LiveChange(LiveTopic.Entries, entryId));
+        }
         else
+        {
             subscriptions.Publish(new LiveChange(LiveTopic.Entries));
+        }
     }
 
     [LoggerMessage(LogLevel.Information, "Listening for database changes")]

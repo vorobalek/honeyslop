@@ -2,15 +2,10 @@ using System.Text.Json;
 
 namespace Honeyslop.Admin.Core.Clients.Internals;
 
-internal sealed class RipeStatClient(HttpClient httpClient, IUserAgentProvider userAgentProvider) : IRipeStatClient
+internal sealed class RipeStatClient(HttpClient httpClient,
+    IUserAgentProvider userAgentProvider) : IRipeStatClient
 {
     public static readonly Uri BaseAddress = new("https://stat.ripe.net/data/");
-
-    public static void Configure(HttpClient client)
-    {
-        client.BaseAddress = BaseAddress;
-        client.Timeout = TimeSpan.FromSeconds(20);
-    }
 
     public async Task<JsonElement> GetAsync(string dataCall, string resource, CancellationToken cancellationToken)
     {
@@ -25,5 +20,11 @@ internal sealed class RipeStatClient(HttpClient httpClient, IUserAgentProvider u
         return document.RootElement.TryGetProperty("data", out var data)
             ? data.Clone()
             : throw new JsonException($"RIPEstat {dataCall} answered without data");
+    }
+
+    public static void Configure(HttpClient client)
+    {
+        client.BaseAddress = BaseAddress;
+        client.Timeout = TimeSpan.FromSeconds(20);
     }
 }

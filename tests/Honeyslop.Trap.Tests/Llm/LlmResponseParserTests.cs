@@ -15,7 +15,10 @@ public sealed class LlmResponseParserTests
         Assert.AreEqual(403, response.Status);
         Assert.AreEqual("<h1>Forbidden</h1>", response.Body);
         CollectionAssert.AreEqual(
-            new[] { "Server: nginx", "Content-Type: text/html" },
+            new[]
+            {
+                "Server: nginx", "Content-Type: text/html"
+            },
             response.Headers.Select(x => $"{x.Name}: {x.Value}").ToArray());
     }
 

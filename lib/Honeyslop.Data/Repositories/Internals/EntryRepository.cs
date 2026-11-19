@@ -101,8 +101,8 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         CancellationToken cancellationToken)
     {
         Expression<Func<Entry, bool>> claimable = x =>
-            (x.Status == EntryStatus.Pending && (x.ClaimedAt == null || x.ClaimedAt < staleBefore)) ||
-            (x.Status == EntryStatus.Failed && x.Attempts < maxAttempts && x.UpdatedAt < retryBefore);
+            x.Status == EntryStatus.Pending && (x.ClaimedAt == null || x.ClaimedAt < staleBefore) ||
+            x.Status == EntryStatus.Failed && x.Attempts < maxAttempts && x.UpdatedAt < retryBefore;
         var candidates = await dbContext
             .Entries
             .Where(claimable)
@@ -155,7 +155,6 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy != null)
             .OrderBy(x => x.ClaimedAt)
             .Take(limit)
-
             .ToArrayAsync(cancellationToken);
     }
 
@@ -166,7 +165,6 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
             .Where(x => x.Status == EntryStatus.Pending && x.ClaimedBy == null)
             .OrderByDescending(x => x.RequestedAt ?? x.CreatedAt)
             .Take(limit)
-
             .ToArrayAsync(cancellationToken);
     }
 
@@ -480,5 +478,4 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 })
         ];
     }
-
 }

@@ -6,6 +6,17 @@ namespace Honeyslop.Data.Extensions;
 
 internal static class ResourceLockExtensions
 {
+    private static void Attempt(UpdateSettersBuilder<ResourceLock> setters)
+    {
+        setters.SetProperty(x => x.Attempts, x => x.Attempts + 1);
+    }
+
+    private static void EnsureLocked(string name, int locked)
+    {
+        if (locked == 0)
+            throw new InvalidOperationException($"The resource lock '{name}' is missing, the database is not migrated.");
+    }
+
     extension(ApplicationDbContext dbContext)
     {
         public void Lock(string name)
@@ -17,16 +28,5 @@ internal static class ResourceLockExtensions
         {
             EnsureLocked(name, await dbContext.ResourceLocks.Where(x => x.Name == name).ExecuteUpdateAsync(Attempt, cancellationToken));
         }
-    }
-
-    private static void Attempt(UpdateSettersBuilder<ResourceLock> setters)
-    {
-        setters.SetProperty(x => x.Attempts, x => x.Attempts + 1);
-    }
-
-    private static void EnsureLocked(string name, int locked)
-    {
-        if (locked == 0)
-            throw new InvalidOperationException($"The resource lock '{name}' is missing, the database is not migrated.");
     }
 }

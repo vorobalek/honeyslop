@@ -34,6 +34,11 @@ internal sealed partial class LiveView(
 
     public HashSet<string> Members { get; } = [];
 
+    public void Dispose()
+    {
+        _stop.Cancel();
+    }
+
     public void Invalidate()
     {
         while (true)
@@ -47,11 +52,6 @@ internal sealed partial class LiveView(
                 _ = Task.Run(RunAsync);
             return;
         }
-    }
-
-    public void Dispose()
-    {
-        _stop.Cancel();
     }
 
     private async Task RunAsync()

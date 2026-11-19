@@ -7,7 +7,6 @@ using Honeyslop.Admin.Live;
 using Honeyslop.Admin.Live.Contracts;
 using Honeyslop.Admin.Live.Contracts.Watches;
 using Honeyslop.Admin.Live.Enums;
-using Honeyslop.Admin.Views;
 using Honeyslop.Admin.Views.Contracts;
 using Honeyslop.Data.Contracts;
 using Microsoft.AspNetCore.SignalR;
@@ -22,6 +21,10 @@ public sealed class AdminHub(
     ISettingsService settingsService) : Hub
 {
     private ClaimsPrincipal User => Context.User ?? new ClaimsPrincipal();
+
+    private string Audience => User.CanOperate ? "operators" : "anonymous";
+
+    private string PersonalAudience => User.CanOperate ? $"operator {User.UserId}" : "anonymous";
 
     [HubMethodName("session")]
     public SessionDto GetSession()
@@ -119,8 +122,4 @@ public sealed class AdminHub(
         subscriptions.Drop(Context.ConnectionId);
         return base.OnDisconnectedAsync(exception);
     }
-
-    private string Audience => User.CanOperate ? "operators" : "anonymous";
-
-    private string PersonalAudience => User.CanOperate ? $"operator {User.UserId}" : "anonymous";
 }

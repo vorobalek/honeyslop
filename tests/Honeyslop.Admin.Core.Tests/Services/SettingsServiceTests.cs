@@ -13,20 +13,27 @@ namespace Honeyslop.Admin.Core.Tests.Services;
 [TestClass]
 public sealed class SettingsServiceTests
 {
-    private readonly Mock<ISettingsRepository> _settings = new();
     private readonly Mock<ICacheMaintenance> _maintenance = new();
     private readonly Mock<IPublicView> _publicView = new();
+    private readonly Mock<ISettingsRepository> _settings = new();
 
     [TestMethod]
     public async Task SaveAsync_TooShortClaimTimeout_IsRejectedAndNothingIsSaved()
     {
         var save = await Service(Viewers.Operator).SaveAsync(
-            HoneyslopSettings.Default with { ClaimTimeout = TimeSpan.FromSeconds(5), UserAgent = "bad\nagent" },
+            HoneyslopSettings.Default with
+            {
+                ClaimTimeout = TimeSpan.FromSeconds(5),
+                UserAgent = "bad\nagent"
+            },
             CancellationToken.None);
 
         Assert.IsFalse(save.Saved);
         CollectionAssert.AreEquivalent(
-            new[] { nameof(HoneyslopSettings.ClaimTimeout), nameof(HoneyslopSettings.UserAgent) },
+            new[]
+            {
+                nameof(HoneyslopSettings.ClaimTimeout), nameof(HoneyslopSettings.UserAgent)
+            },
             save.Errors.Keys.ToArray());
         _settings.Verify(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -38,7 +45,10 @@ public sealed class SettingsServiceTests
             .Setup(x => x.RunAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MaintenanceResultDto(1, 2, 3, 4));
 
-        var save = await Service(Viewers.Operator).SaveAsync(HoneyslopSettings.Default with { UserAgent = "  " }, CancellationToken.None);
+        var save = await Service(Viewers.Operator).SaveAsync(HoneyslopSettings.Default with
+        {
+            UserAgent = "  "
+        }, CancellationToken.None);
 
         Assert.IsTrue(save.Saved);
         Assert.AreEqual(new MaintenanceResultDto(1, 2, 3, 4), save.Maintenance);
@@ -70,8 +80,14 @@ public sealed class SettingsServiceTests
             _settings.Object,
             _maintenance.Object,
             _publicView.Object,
-            Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions { DefaultSenderName = "Default Name" }),
-            Microsoft.Extensions.Options.Options.Create(new UserAgentOptions { Default = "Honeyslop" }),
+            Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions
+            {
+                DefaultSenderName = "Default Name"
+            }),
+            Microsoft.Extensions.Options.Options.Create(new UserAgentOptions
+            {
+                Default = "Honeyslop"
+            }),
             Viewers.Guard(viewer),
             Viewers.ServerTime(DateTimeOffset.UnixEpoch));
     }

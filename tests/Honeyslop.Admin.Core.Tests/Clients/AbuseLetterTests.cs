@@ -18,8 +18,25 @@ public sealed class AbuseLetterTests
         var whois = new WhoisDto("203.0.113.0/24", [new WhoisOriginDto(64500, "EXAMPLE-AS")], null, null, null, null, "RIPE NCC", [], string.Empty, Last);
         RequestRecord[] latest =
         [
-            new() { Id = 2, ReceivedAt = Last, ClientIp = client.ClientIp, Method = "GET", Host = "a.example.test", Target = "/.env", UserAgent = "curl/8.4" },
-            new() { Id = 1, ReceivedAt = First, ClientIp = client.ClientIp, Method = "POST", Host = "b.example.test", Target = "/wp-login.php" }
+            new()
+            {
+                Id = 2,
+                ReceivedAt = Last,
+                ClientIp = client.ClientIp,
+                Method = "GET",
+                Host = "a.example.test",
+                Target = "/.env",
+                UserAgent = "curl/8.4"
+            },
+            new()
+            {
+                Id = 1,
+                ReceivedAt = First,
+                ClientIp = client.ClientIp,
+                Method = "POST",
+                Host = "b.example.test",
+                Target = "/wp-login.php"
+            }
         ];
 
         var report = AbuseLetters.Write(client, latest, whois);

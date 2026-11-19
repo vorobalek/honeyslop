@@ -32,7 +32,10 @@ internal sealed partial class RequestLogWriter(
 
     private List<RequestLogItem> Batch(RequestLogItem first)
     {
-        var batch = new List<RequestLogItem> { first };
+        var batch = new List<RequestLogItem>
+        {
+            first
+        };
         while (batch.Count < BatchSize && requestLog.TryRead(out var item))
             batch.Add(item);
         return batch;

@@ -16,7 +16,8 @@ public sealed class Reports(IReportsService reportsService)
     public Task<ReportsPageDto> ListAsync(
         [Description("Column to sort by.")] ReportColumn? sort = null,
         [Description("Sort descending.")] bool descending = false,
-        [Description("Zero-based page number.")] int page = 0,
+        [Description("Zero-based page number.")]
+        int page = 0,
         CancellationToken cancellationToken = default)
     {
         return reportsService.GetPageAsync(new ReportsQuery(sort.SortedBy(descending), page), cancellationToken);

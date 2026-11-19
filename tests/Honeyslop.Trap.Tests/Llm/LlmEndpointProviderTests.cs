@@ -23,7 +23,10 @@ public sealed class LlmEndpointProviderTests
         var endpoints = await provider.GetEndpointsAsync(CancellationToken.None);
 
         CollectionAssert.AreEqual(
-            new[] { "10.0.0.1:8080", "10.0.0.1:8081", "10.0.0.2:8080" },
+            new[]
+            {
+                "10.0.0.1:8080", "10.0.0.1:8081", "10.0.0.2:8080"
+            },
             endpoints.Select(x => x.Url.Authority).ToArray());
         CollectionAssert.AreEqual(
             endpoints.Select(x => x.Url.Authority).ToArray(),

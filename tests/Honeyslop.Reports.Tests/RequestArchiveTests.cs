@@ -62,7 +62,8 @@ public sealed class RequestArchiveTests
     {
         var repository = new Mock<IRequestRepository>();
         repository
-            .Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(requests.Length);
         repository
             .Setup(x => x.GetLogStartAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))

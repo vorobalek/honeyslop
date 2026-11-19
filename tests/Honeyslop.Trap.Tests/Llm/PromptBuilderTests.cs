@@ -60,7 +60,12 @@ public sealed class PromptBuilderTests
     [TestMethod]
     public void Build_RefusalsAllowed_LetsTheModelDenyAccess()
     {
-        var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, true);
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/"
+        }, true);
 
         StringAssert.Contains(prompt.System, "401 or 403 only where the software puts a login");
         Assert.DoesNotContain("Every request succeeds", prompt.System);
@@ -70,7 +75,12 @@ public sealed class PromptBuilderTests
     [TestMethod]
     public void Build_RefusalsForbidden_DemandsContentForEveryPath()
     {
-        var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, false);
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/"
+        }, false);
 
         StringAssert.Contains(prompt.System, "Every request succeeds");
         Assert.DoesNotContain("401 or 403 only where", prompt.System);
@@ -95,10 +105,14 @@ public sealed class PromptBuilderTests
     [TestMethod]
     public void Build_WithoutGuidance_LeavesNoPlaceholder()
     {
-        var prompt = new PromptBuilder().Build(new Entry { Method = "GET", Host = "a.test", Target = "/" }, true);
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/"
+        }, true);
 
         Assert.DoesNotContain("{guidance}", prompt.System);
         Assert.DoesNotContain("owner of this server", prompt.System);
     }
-
 }

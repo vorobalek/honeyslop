@@ -120,7 +120,10 @@ public sealed class TrapHandlerTests
             first.Response.Headers.ContentSecurityPolicy.ToString());
         Assert.AreEqual(string.Empty, Body(second));
         Assert.AreEqual(19, second.Response.ContentLength);
-        CollectionAssert.AreEqual(new[] { 7L }, sut.Hits.Drain().Where(x => x.Count == 2).Select(x => x.EntryId).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            7L
+        }, sut.Hits.Drain().Where(x => x.Count == 2).Select(x => x.EntryId).ToArray());
         sut.Repository.Verify(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

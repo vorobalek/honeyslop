@@ -11,7 +11,10 @@ public sealed class AbuseReportOptionsTests
     [DataRow(null, "security@example.test")]
     public void ExpectedFrom_QuotesTheNameOnlyWhenItNeedsIt(string? senderName, string expected)
     {
-        var options = new AbuseReportOptions { FromAddress = "security@example.test" };
+        var options = new AbuseReportOptions
+        {
+            FromAddress = "security@example.test"
+        };
 
         Assert.AreEqual(expected, options.ExpectedFrom(senderName));
     }

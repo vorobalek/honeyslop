@@ -33,7 +33,10 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task ReportAsync_UnknownAddress_IsNotFound()
     {
-        var setup = new Setup { Summary = null };
+        var setup = new Setup
+        {
+            Summary = null
+        };
 
         var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
 
@@ -43,7 +46,10 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task ReportAsync_ReportOnItsWay_PointsAtIt()
     {
-        var setup = new Setup { Reports = [Report(5, AbuseReportStatus.Pending)] };
+        var setup = new Setup
+        {
+            Reports = [Report(5, AbuseReportStatus.Pending)]
+        };
 
         var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
 
@@ -54,7 +60,11 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task ReportAsync_NothingNewSinceTheLastSentReport_IsAlreadyReported()
     {
-        var setup = new Setup { Reports = [Report(5, AbuseReportStatus.Sent, 40)], NewSinceLastSent = 0 };
+        var setup = new Setup
+        {
+            Reports = [Report(5, AbuseReportStatus.Sent, 40)],
+            NewSinceLastSent = 0
+        };
 
         var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
 
@@ -64,7 +74,10 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task ReportAsync_NoAbuseContact_HasNobodyToWriteTo()
     {
-        var setup = new Setup { Contacts = [] };
+        var setup = new Setup
+        {
+            Contacts = []
+        };
 
         var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
 
@@ -74,21 +87,31 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task ReportAsync_NewRequestsSinceTheLastReport_QueuesAFollowUpSignedWithTheGivenName()
     {
-        var setup = new Setup { Reports = [Report(5, AbuseReportStatus.Sent, 40)], NewSinceLastSent = 3 };
+        var setup = new Setup
+        {
+            Reports = [Report(5, AbuseReportStatus.Sent, 40)],
+            NewSinceLastSent = 3
+        };
 
         var request = await setup.Service().ReportAsync(Ip, "  Given\tName ", CancellationToken.None);
 
         Assert.AreEqual(ReportOutcome.Queued, request.Outcome);
         Assert.AreEqual("Given Name", setup.Added!.SenderName);
         Assert.AreEqual("operator", setup.Added.RequestedBy);
-        CollectionAssert.AreEqual(new[] { "abuse@example.test" }, setup.Added.Recipients);
+        CollectionAssert.AreEqual(new[]
+        {
+            "abuse@example.test"
+        }, setup.Added.Recipients);
         Assert.AreEqual(Now, setup.Added.CreatedAt);
     }
 
     [TestMethod]
     public async Task ReportAsync_WithoutAName_SignsWithThePersonalNameBeforeTheDefault()
     {
-        var setup = new Setup { PersonalSenderName = "Personal Name" };
+        var setup = new Setup
+        {
+            PersonalSenderName = "Personal Name"
+        };
 
         await setup.Service().ReportAsync(Ip, " ", CancellationToken.None);
 
@@ -98,7 +121,11 @@ public sealed class ClientsServiceTests
     [TestMethod]
     public async Task GetAbuseAsync_Anonymous_GetsNoDraftAndNoRequesters()
     {
-        var setup = new Setup { Reports = [Report(5, AbuseReportStatus.Sent, 40)], NewSinceLastSent = 2 };
+        var setup = new Setup
+        {
+            Reports = [Report(5, AbuseReportStatus.Sent, 40)],
+            NewSinceLastSent = 2
+        };
 
         var abuse = await setup.Service(ViewerDto.Anonymous).GetAbuseAsync(Ip, CancellationToken.None);
 
@@ -136,6 +163,7 @@ public sealed class ClientsServiceTests
             LastSeenAt = Now.AddHours(-1),
             LastUserAgent = "curl/8.4.0"
         };
+
         public AbuseReport[] Reports { get; init; } = [];
         public int NewSinceLastSent { get; init; }
         public string[] Contacts { get; init; } = ["abuse@example.test"];
@@ -147,9 +175,11 @@ public sealed class ClientsServiceTests
         {
             var requests = new Mock<IRequestRepository>();
             requests.Setup(x => x.GetClientOrDefaultAsync(Ip, It.IsAny<CancellationToken>())).ReturnsAsync(Summary);
-            requests.Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.Is<long?>(id => id != null), It.IsAny<CancellationToken>())).ReturnsAsync(NewSinceLastSent);
+            requests.Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(), It.Is<long?>(id => id != null), It.IsAny<CancellationToken>())).ReturnsAsync(NewSinceLastSent);
             requests
-                .Setup(x => x.GetPageAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<RequestOrder>(), It.IsAny<SortDirection>(), 0, AbuseLetters.LatestRequests, It.IsAny<CancellationToken>()))
+                .Setup(x => x.GetPageAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
+                    It.IsAny<DateTimeOffset?>(), It.IsAny<RequestOrder>(), It.IsAny<SortDirection>(), 0, AbuseLetters.LatestRequests, It.IsAny<CancellationToken>()))
                 .ReturnsAsync([]);
             Repository.Setup(x => x.GetByClientAsync(Ip, It.IsAny<CancellationToken>())).ReturnsAsync(Reports);
             Repository
@@ -165,7 +195,13 @@ public sealed class ClientsServiceTests
                 .Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string? userId, CancellationToken _) => new Settings
                 {
-                    User = userId is null ? null : new UserSettings { UserId = userId, SenderName = PersonalSenderName }
+                    User = userId is null
+                        ? null
+                        : new UserSettings
+                        {
+                            UserId = userId,
+                            SenderName = PersonalSenderName
+                        }
                 });
             return new ClientsService(
                 requests.Object,
@@ -175,7 +211,11 @@ public sealed class ClientsServiceTests
                 Mock.Of<IRequestArchiveBuilder>(),
                 Mock.Of<ICountryLookup>(),
                 whois.Object,
-                Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions { DefaultSenderName = "Default Name", FromAddress = "security@example.test" }),
+                Microsoft.Extensions.Options.Options.Create(new AbuseReportOptions
+                {
+                    DefaultSenderName = "Default Name",
+                    FromAddress = "security@example.test"
+                }),
                 Viewers.Guard(viewer ?? Viewers.Operator),
                 Viewers.ServerTime(Now),
                 NullLogger<ClientsService>.Instance);

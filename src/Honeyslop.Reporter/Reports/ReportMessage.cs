@@ -19,7 +19,10 @@ internal static class ReportMessage
         message.From.Add(sender);
         message.To.AddRange(report.Recipients.Select(MailboxAddress.Parse));
 
-        var body = new BodyBuilder { TextBody = report.Body };
+        var body = new BodyBuilder
+        {
+            TextBody = report.Body
+        };
         body.Attachments.Add(RequestLogArchive.FileName(report.ClientIp), archive, new ContentType("application", "zip"));
         message.Body = body.ToMessageBody();
         return message;

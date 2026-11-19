@@ -132,7 +132,14 @@ internal sealed partial class EntriesService(
         var entry = Copy(current, now);
         entry.Status = EntryStatus.Ready;
         entry.ResponseStatus = status;
-        entry.ResponseHeaders = [.. headers.Select(x => new ResponseHeader { Name = x.Name, Value = x.Value })];
+        entry.ResponseHeaders =
+        [
+            .. headers.Select(x => new ResponseHeader
+            {
+                Name = x.Name,
+                Value = x.Value
+            })
+        ];
         entry.ResponseBody = body;
         entry.GeneratedAt = now;
         return entry;
@@ -189,15 +196,24 @@ internal sealed partial class EntriesService(
     {
         return headers.Any(x => x.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
             ? headers
-            : [.. headers, new ResponseHeader { Name = "Content-Type", Value = DefaultContentType }];
+            :
+            [
+                .. headers, new ResponseHeader
+                {
+                    Name = "Content-Type",
+                    Value = DefaultContentType
+                }
+            ];
     }
 
     private static EntryChangeDto Refused(string field, string error)
     {
-        return new EntryChangeDto(new Dictionary<string, string> { [field] = error }, []);
+        return new EntryChangeDto(new Dictionary<string, string>
+        {
+            [field] = error
+        }, []);
     }
 
     [GeneratedRegex(@"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")]
     private static partial Regex HeaderName();
-
 }

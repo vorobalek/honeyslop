@@ -40,7 +40,7 @@ internal sealed partial class LlmEndpointProvider(
             try
             {
                 var literal = IPAddress.TryParse(url.Host, out var parsed);
-                IPAddress[] addresses = literal
+                var addresses = literal
                     ? [parsed!]
                     : await Dns.GetHostAddressesAsync(url.Host, cancellationToken);
                 var preferred = addresses.Any(x => x.AddressFamily == AddressFamily.InterNetwork)

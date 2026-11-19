@@ -18,7 +18,10 @@ public sealed class WatchHandlersTests
     private static readonly JsonSerializerOptions HubOptions = new(JsonSerializerDefaults.Web)
     {
         AllowOutOfOrderMetadataProperties = true,
-        Converters = { new JsonStringEnumConverter() }
+        Converters =
+        {
+            new JsonStringEnumConverter()
+        }
     };
 
     private readonly ServiceProvider _services = new ServiceCollection().AddLiveWatches().BuildServiceProvider();
@@ -78,6 +81,9 @@ public sealed class WatchHandlersTests
             .Select(x => x.RequestType)
             .ToArray();
 
-        CollectionAssert.AreEquivalent(new[] { typeof(ClientAbuseWatch), typeof(SettingsWatch) }, personal);
+        CollectionAssert.AreEquivalent(new[]
+        {
+            typeof(ClientAbuseWatch), typeof(SettingsWatch)
+        }, personal);
     }
 }

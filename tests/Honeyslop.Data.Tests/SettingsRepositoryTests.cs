@@ -31,11 +31,17 @@ public sealed class SettingsRepositoryTests
             UserAgent = "Honeyslop-test (+https://example.test)"
         };
         await repository.SaveAsync(saved, DateTimeOffset.UtcNow, CancellationToken.None);
-        await repository.SaveAsync(saved with { GenerationEnabled = true }, DateTimeOffset.UtcNow, CancellationToken.None);
+        await repository.SaveAsync(saved with
+        {
+            GenerationEnabled = true
+        }, DateTimeOffset.UtcNow, CancellationToken.None);
 
         await using var readScope = PostgresDatabase.CreateScope();
         var loaded = await readScope.ServiceProvider.GetRequiredService<ISettingsRepository>().GetAsync(null, CancellationToken.None);
-        Assert.AreEqual(saved with { GenerationEnabled = true }, loaded.Honeyslop);
+        Assert.AreEqual(saved with
+        {
+            GenerationEnabled = true
+        }, loaded.Honeyslop);
     }
 
     [TestMethod]
@@ -45,10 +51,17 @@ public sealed class SettingsRepositoryTests
         var other = $"user-{Unique.String(8)}";
         var now = DateTimeOffset.UtcNow;
 
-        await SaveAsync(new UserSettings { UserId = user, SenderName = "Example Researcher, security team" }, now);
+        await SaveAsync(new UserSettings
+        {
+            UserId = user,
+            SenderName = "Example Researcher, security team"
+        }, now);
         var saved = await GetAsync(user);
         var otherUser = await GetAsync(other);
-        await SaveAsync(new UserSettings { UserId = user }, now);
+        await SaveAsync(new UserSettings
+        {
+            UserId = user
+        }, now);
         var cleared = await GetAsync(user);
 
         Assert.AreEqual("Example Researcher, security team", saved.User?.SenderName);
@@ -66,7 +79,11 @@ public sealed class SettingsRepositoryTests
         var saving = names.Select(name => Task.Run(async () =>
         {
             await go.Task;
-            await SaveAsync(new UserSettings { UserId = user, SenderName = name }, DateTimeOffset.UtcNow);
+            await SaveAsync(new UserSettings
+            {
+                UserId = user,
+                SenderName = name
+            }, DateTimeOffset.UtcNow);
         })).ToArray();
         go.SetResult();
         await Task.WhenAll(saving);

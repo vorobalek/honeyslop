@@ -16,7 +16,10 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Key, x => x.Value, cancellationToken);
         if (userId is null)
-            return new Settings { Honeyslop = SettingsConverter.ToSettings(values) };
+            return new Settings
+            {
+                Honeyslop = SettingsConverter.ToSettings(values)
+            };
 
         var userValues = await dbContext
             .UserSettings
@@ -41,7 +44,12 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             dbContext.Settings,
             existing,
             SettingsConverter.ToValues(settings),
-            (key, value) => new Setting { Key = key, Value = value, UpdatedAt = now },
+            (key, value) => new Setting
+            {
+                Key = key,
+                Value = value,
+                UpdatedAt = now
+            },
             now);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -59,7 +67,13 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
             dbContext.UserSettings,
             existing,
             SettingsConverter.ToValues(settings),
-            (key, value) => new UserSetting { UserId = settings.UserId, Key = key, Value = value, UpdatedAt = now },
+            (key, value) => new UserSetting
+            {
+                UserId = settings.UserId,
+                Key = key,
+                Value = value,
+                UpdatedAt = now
+            },
             now);
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -82,7 +96,9 @@ internal sealed class SettingsRepository(ApplicationDbContext dbContext) : ISett
                     rows.Remove(row);
             }
             else if (row is null)
+            {
                 rows.Add(create(key, value));
+            }
             else if (row.Value != value)
             {
                 row.Value = value;

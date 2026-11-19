@@ -19,14 +19,27 @@ public sealed class DataProtectionKeyRepositoryTests
         var first = Key(start);
         var concurrent = Key(start.AddSeconds(1));
         var successor = Key(start + Lifetime);
-        var revocation = new DataProtectionKey { FriendlyName = $"revocation-{Unique.String(8)}", Xml = "<revocation />" };
+        var revocation = new DataProtectionKey
+        {
+            FriendlyName = $"revocation-{Unique.String(8)}",
+            Xml = "<revocation />"
+        };
 
-        var added = new[] { TryAdd(first), TryAdd(concurrent), TryAdd(successor), TryAdd(revocation) };
+        var added = new[]
+        {
+            TryAdd(first), TryAdd(concurrent), TryAdd(successor), TryAdd(revocation)
+        };
 
-        CollectionAssert.AreEqual(new[] { true, false, true, true }, added);
+        CollectionAssert.AreEqual(new[]
+        {
+            true, false, true, true
+        }, added);
         var stored = GetAll();
         CollectionAssert.AreEqual(
-            new[] { first.FriendlyName, successor.FriendlyName, revocation.FriendlyName },
+            new[]
+            {
+                first.FriendlyName, successor.FriendlyName, revocation.FriendlyName
+            },
             stored.Where(x => x.Id >= first.Id).Select(x => x.FriendlyName).ToArray());
         CollectionAssert.AreEqual(stored.OrderBy(x => x.Id).ToArray(), stored.ToArray());
     }
