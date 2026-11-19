@@ -22,7 +22,7 @@ const RequestMeta: React.FC<RequestMetaProps> = ({ record, country }) => (
             />
         </dd>
         <dt>Response</dt>
-        <dd className='mono'>{`${record.responseStatus} in ${record.durationMs} ms`}</dd>
+        <dd className='mono'>{`${record.responseStatus} in ${record.durationMs}ms`}</dd>
         <dt>Cache entry</dt>
         <dd>
             {record.entryId !== null ? <Link to={`/entries/${record.entryId}`}>{`entry ${record.entryId}`}</Link> : '—'}

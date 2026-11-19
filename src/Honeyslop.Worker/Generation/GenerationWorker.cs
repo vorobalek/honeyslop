@@ -237,7 +237,7 @@ internal sealed partial class GenerationWorker(
     [LoggerMessage(LogLevel.Error, "Generation loop failed")]
     static partial void LogLoopFailed(ILogger<GenerationWorker> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Information, "Generated entry {entryId} {method} {host}{target} -> {status} in {elapsedMs} ms, {completionTokens} tokens")]
+    [LoggerMessage(LogLevel.Information, "Generated entry {entryId} {method} {host}{target} -> {status} in {elapsedMs}ms, {completionTokens} tokens")]
     static partial void LogGenerated(
         ILogger<GenerationWorker> logger,
         long entryId,
@@ -257,7 +257,7 @@ internal sealed partial class GenerationWorker(
         string target,
         string reason);
 
-    [LoggerMessage(LogLevel.Warning, "Generation of entry {entryId} {method} {host}{target} failed on attempt {attempt} after {elapsedMs} ms: {error}")]
+    [LoggerMessage(LogLevel.Warning, "Generation of entry {entryId} {method} {host}{target} failed on attempt {attempt} after {elapsedMs}ms: {error}")]
     static partial void LogFailed(
         ILogger<GenerationWorker> logger,
         long entryId,

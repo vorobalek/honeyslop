@@ -36,8 +36,8 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
             <dt>Delay</dt>
             <dd>
                 {entry.responseDelayMilliseconds !== null
-                    ? `${entry.responseDelayMilliseconds} ms, set on this entry`
-                    : `${defaultDelay} ms, the default`}
+                    ? `${entry.responseDelayMilliseconds}ms, set on this entry`
+                    : `${defaultDelay}ms, the default`}
                 {!expired && (
                     <>
                         {' '}

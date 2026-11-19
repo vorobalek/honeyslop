@@ -22,7 +22,7 @@ const ResponseDelaySetting: React.FC<ResponseDelaySettingProps> = ({ millisecond
         />
         {error && <span className='error'>{error}</span>}
         <p className='hint'>
-            {`Keeps a scanner's connection open longer; time spent generating counts towards it. An entry can set its own delay and a client's delay wins over both. Static files and plain 404s are never held. Empty uses ${fallback} ms from the RESPONSE_DELAY_MILLISECONDS variable.`}
+            {`Keeps a scanner's connection open longer; time spent generating counts towards it. An entry can set its own delay and a client's delay wins over both. Static files and plain 404s are never held. Empty uses ${fallback}ms from the RESPONSE_DELAY_MILLISECONDS variable.`}
         </p>
     </div>
 );

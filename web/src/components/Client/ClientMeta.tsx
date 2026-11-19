@@ -11,11 +11,11 @@ type ClientMetaProps = {
 };
 
 function delayText(manual: number | null, learned: number | null, timeout: number | null): string {
-    if (manual !== null) return `${manual} ms, set on this address`;
+    if (manual !== null) return `${manual}ms, set on this address`;
     if (learned === null) return 'none; the delays of the entries apply';
     return timeout === null
-        ? `${learned} ms, learned; it has not dropped a connection yet`
-        : `${learned} ms, learned; it drops the connection at about ${timeout} ms`;
+        ? `${learned}ms, learned; it has not dropped a connection yet`
+        : `${learned}ms, learned; it drops the connection at about ${timeout}ms`;
 }
 
 const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {

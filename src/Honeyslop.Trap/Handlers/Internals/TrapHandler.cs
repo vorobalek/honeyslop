@@ -306,7 +306,7 @@ internal sealed partial class TrapHandler(
         }
     }
 
-    [LoggerMessage(LogLevel.Information, "{outcome} {method} {host}{target} -> {status} in {elapsedMs} ms from {clientIp}")]
+    [LoggerMessage(LogLevel.Information, "{outcome} {method} {host}{target} -> {status} in {elapsedMs}ms from {clientIp}")]
     static partial void LogRequest(
         ILogger<TrapHandler> logger,
         RequestOutcome outcome,
