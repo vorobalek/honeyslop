@@ -137,6 +137,36 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("abuse_report", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.BlockedAbuseContact", b =>
+                {
+                    b.Property<string>("Contact")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("contact");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("note");
+
+                    b.HasKey("Contact")
+                        .HasName("pk_blocked_abuse_contact");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_blocked_abuse_contact_created_at");
+
+                    b.ToTable("blocked_abuse_contact", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.ClientWhois", b =>
                 {
                     b.Property<string>("ClientIp")
@@ -307,6 +337,10 @@ namespace Honeyslop.Migrator.Migrations
                         .HasMaxLength(65536)
                         .HasColumnType("character varying(65536)")
                         .HasColumnName("response_body");
+
+                    b.Property<int?>("ResponseDelaySeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("response_delay_seconds");
 
                     b.Property<int?>("ResponseStatus")
                         .HasColumnType("integer")

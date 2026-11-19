@@ -30,6 +30,23 @@ public sealed class ToolsTests
     }
 
     [TestMethod]
+    public async Task CreateAsync_PassesTheRequestAndTheGuidance()
+    {
+        var entries = new Mock<IEntriesService>();
+        EntryRequestDto? asked = null;
+        entries
+            .Setup(x => x.CreateAsync(It.IsAny<EntryRequestDto>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<EntryRequestDto, string?, CancellationToken>((request, _, _) => asked = request)
+            .ReturnsAsync(new EntryChangeDto(new Dictionary<string, string>(), [5]));
+
+        var change = await new Entries(entries.Object).CreateAsync("GET", "camera.example", "/SDK/webLanguage", "User-Agent: curl/8", null, "Hikvision");
+
+        CollectionAssert.AreEqual(new long[] { 5 }, change.Ids);
+        Assert.AreEqual(new EntryRequestDto("GET", "camera.example", "/SDK/webLanguage", "User-Agent: curl/8", null), asked);
+        entries.Verify(x => x.CreateAsync(It.IsAny<EntryRequestDto>(), "Hikvision", It.IsAny<CancellationToken>()));
+    }
+
+    [TestMethod]
     public async Task ReplaceAsync_PassesTheHeadersAsNamedPairs()
     {
         var entries = new Mock<IEntriesService>();
@@ -98,11 +115,12 @@ public sealed class ToolsTests
         var settings = new Mock<ISettingsService>();
         var current = HoneyslopSettings.Default with
         {
-            UserAgent = "custom"
+            UserAgent = "custom",
+            ResponseDelay = TimeSpan.FromSeconds(9)
         };
         settings
             .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SettingsDto(current, "default", null, null));
+            .ReturnsAsync(new SettingsDto(current, "default", TimeSpan.Zero, null, null));
         HoneyslopSettings? saved = null;
         settings
             .Setup(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<CancellationToken>()))
@@ -110,11 +128,14 @@ public sealed class ToolsTests
             .ReturnsAsync(new SettingsSaveDto(new Dictionary<string, string>(), new MaintenanceResultDto(0, 0, 0, 0)));
 
         await new Settings(settings.Object).UpdateAsync(3600, publicView: true);
+        var kept = saved;
+        await new Settings(settings.Object).UpdateAsync(responseDelaySeconds: -1);
 
         Assert.AreEqual(current with
         {
             CacheTtl = TimeSpan.FromHours(1),
             PublicView = true
-        }, saved);
+        }, kept);
+        Assert.IsNull(saved?.ResponseDelay);
     }
 }

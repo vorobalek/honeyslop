@@ -1,1 +1,1 @@
-export type ReportOutcomeType = 'Queued' | 'AlreadyQueued' | 'AlreadyReported' | 'NoContact' | 'NotFound';
+export type ReportOutcomeType = 'Queued' | 'AlreadyQueued' | 'AlreadyReported' | 'NoContact' | 'Blocked' | 'NotFound';

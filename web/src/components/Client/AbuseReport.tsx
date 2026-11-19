@@ -21,6 +21,7 @@ const AbuseReport: React.FC<AbuseReportProps> = ({ ip, watch }) => {
     const newSinceLastSent = useWatched(watch, (abuse) => abuse.newSinceLastSent);
     const draft = useWatched(watch, (abuse) => abuse.draft);
     const recipients = useWatched(watch, (abuse) => abuse.recipients);
+    const blocked = useWatched(watch, (abuse) => abuse.blockedRecipients);
     const reportPending = useWatched(watch, (abuse) => abuse.reportPending);
     const alreadyReported = useWatched(watch, (abuse) => abuse.alreadyReported);
     return (
@@ -37,6 +38,7 @@ const AbuseReport: React.FC<AbuseReportProps> = ({ ip, watch }) => {
                     ip={ip}
                     draft={draft}
                     recipients={recipients}
+                    blocked={blocked}
                     reportPending={reportPending}
                     alreadyReported={alreadyReported}
                     followUp={lastSent !== null}

@@ -1,11 +1,13 @@
 using Honeyslop.Admin.Core.Clients;
 using Honeyslop.Admin.Core.Contracts;
 using Honeyslop.Admin.Core.Exceptions;
+using Honeyslop.Admin.Core.Options;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Core.Services.Internals;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Moq;
 
 namespace Honeyslop.Admin.Core.Tests.Services;
@@ -16,6 +18,7 @@ public sealed class EntriesServiceTests
     private static readonly DateTimeOffset Now = new(2026, 11, 19, 9, 0, 0, TimeSpan.Zero);
 
     private readonly Mock<IEntryRepository> _entries = new();
+    private readonly Mock<ISettingsRepository> _settings = new();
     private Entry[] _replacements = [];
 
     [TestInitialize]
@@ -166,10 +169,166 @@ public sealed class EntriesServiceTests
     }
 
     [TestMethod]
+    public async Task CreateAsync_QueuesTheRequestUnderTheTrapsKey()
+    {
+        var added = Adding(true);
+
+        var change = await Service(Viewers.Operator).CreateAsync(
+            new EntryRequestDto("head", " Camera.Example ", "/SDK/webLanguage", "User-Agent: Go-http-client/1.1\r\n\n  Accept: */*  ", null),
+            "Answer as a Hikvision camera",
+            CancellationToken.None);
+
+        Assert.IsTrue(change.Changed);
+        var entry = added();
+        CollectionAssert.AreEqual(new[] { entry.Id }, change.Ids);
+        Assert.AreEqual("GET", entry.Method);
+        Assert.AreEqual("camera.example", entry.Host);
+        CollectionAssert.AreEqual(EntryKey.Create("GET", "camera.example", "/SDK/webLanguage").Hash, entry.KeyHash);
+        Assert.AreEqual(EntryStatus.Pending, entry.Status);
+        Assert.AreEqual("Answer as a Hikvision camera", entry.Guidance);
+        Assert.AreEqual("Go-http-client/1.1", entry.UserAgent);
+        Assert.AreEqual("User-Agent: Go-http-client/1.1\nAccept: */*\n", entry.RequestHeaders);
+        Assert.AreEqual("operator", entry.ChangedBy);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_WithAResponse_StoresItReady()
+    {
+        var added = Adding(true);
+
+        var change = await Service(Viewers.Operator).CreateWithResponseAsync(
+            new EntryRequestDto("GET", "camera.example", "/SDK/webLanguage", null, null),
+            new EntryResponseDto(200, [], "<Language><type>English</type></Language>"),
+            CancellationToken.None);
+
+        Assert.IsTrue(change.Changed);
+        var entry = added();
+        Assert.AreEqual(EntryStatus.Ready, entry.Status);
+        Assert.AreEqual("<Language><type>English</type></Language>", entry.ResponseBody);
+        Assert.AreEqual("Content-Type", entry.ResponseHeaders.Single().Name);
+        Assert.IsNull(entry.RequestHeaders);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_InvalidRequest_SaysWhatIsWrongWithEachField()
+    {
+        var change = await Service(Viewers.Operator).CreateAsync(
+            new EntryRequestDto("TRACE", "http://camera.example:80", "/logo.png", "not a header", null),
+            null,
+            CancellationToken.None);
+
+        Assert.IsFalse(change.Changed);
+        CollectionAssert.AreEquivalent(new[] { "Method", "Host", "RequestHeaders" }, change.Errors.Keys.ToArray());
+        _entries.Verify(x => x.TryAddAsync(It.IsAny<Entry>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    [DataRow("/logo.png")]
+    [DataRow("SDK/webLanguage")]
+    [DataRow("/with space")]
+    [DataRow("")]
+    public void CreateAsync_TargetTheTrapWouldNotGenerateFor_IsRefused(string target)
+    {
+        var change = Service(Viewers.Operator)
+            .CreateAsync(new EntryRequestDto("GET", "camera.example", target, null, null), null, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+
+        CollectionAssert.AreEqual(new[] { "Target" }, change.Errors.Keys.ToArray());
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_WhenTheRequestHasAnEntry_PointsToIt()
+    {
+        Adding(false);
+        _entries
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Ready(42, "/SDK/webLanguage"));
+
+        var change = await Service(Viewers.Operator).CreateAsync(
+            new EntryRequestDto("GET", "camera.example", "/SDK/webLanguage", null, null),
+            null,
+            CancellationToken.None);
+
+        Assert.IsFalse(change.Changed);
+        StringAssert.Contains(change.Errors["Entries"], "42");
+        CollectionAssert.AreEqual(new long[] { 42 }, change.Ids);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_Anonymous_IsDenied()
+    {
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
+            Service(ViewerDto.Anonymous).CreateAsync(new EntryRequestDto("GET", "camera.example", "/", null, null), null, CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task RegenerateAsync_KeepsTheDelayOfTheEntryItReplaces()
+    {
+        var current = Ready(1, "/SDK/webLanguage");
+        current.ResponseDelaySeconds = 30;
+        Active(current);
+
+        await Service(Viewers.Operator).RegenerateAsync([1], null, CancellationToken.None);
+
+        Assert.AreEqual(30, _replacements.Single().ResponseDelaySeconds);
+    }
+
+    [TestMethod]
+    [DataRow(-1)]
+    [DataRow(601)]
+    public async Task SetResponseDelayAsync_OutOfRange_IsRefused(int seconds)
+    {
+        var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], seconds, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { nameof(Entry.ResponseDelaySeconds) }, change.Errors.Keys.ToArray());
+        _entries.Verify(x => x.SetResponseDelayAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<int?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task SetResponseDelayAsync_ReturnsTheEntriesItChanged()
+    {
+        _entries
+            .Setup(x => x.SetResponseDelayAsync(It.IsAny<IReadOnlyCollection<long>>(), 15, Now, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([2]);
+
+        var change = await Service(Viewers.Operator).SetResponseDelayAsync([1, 2], 15, CancellationToken.None);
+
+        Assert.IsTrue(change.Changed);
+        CollectionAssert.AreEqual(new long[] { 2 }, change.Ids);
+    }
+
+    [TestMethod]
+    public async Task SetResponseDelayAsync_WhenNothingIsServed_IsRefused()
+    {
+        _entries
+            .Setup(x => x.SetResponseDelayAsync(It.IsAny<IReadOnlyCollection<long>>(), null, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var change = await Service(Viewers.Operator).SetResponseDelayAsync([1], null, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "Entries" }, change.Errors.Keys.ToArray());
+    }
+
+    [TestMethod]
     public async Task RegenerateAsync_Anonymous_IsDenied()
     {
         await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
             Service(ViewerDto.Anonymous).RegenerateAsync([1], null, CancellationToken.None));
+    }
+
+    private Func<Entry> Adding(bool added)
+    {
+        Entry? captured = null;
+        _entries
+            .Setup(x => x.TryAddAsync(It.IsAny<Entry>(), It.IsAny<CancellationToken>()))
+            .Callback<Entry, CancellationToken>((entry, _) =>
+            {
+                entry.Id = 77;
+                captured = entry;
+            })
+            .ReturnsAsync(added);
+        return () => captured ?? throw new AssertFailedException("Nothing was added.");
     }
 
     private void Active(params Entry[] entries)
@@ -203,6 +362,9 @@ public sealed class EntriesServiceTests
             Mock.Of<IGenerationOutputStore>(),
             Mock.Of<ICountryLookup>(),
             Viewers.Guard(viewer),
-            Viewers.ServerTime(Now));
+            Viewers.ServerTime(Now),
+            _settings.Object,
+            Microsoft.Extensions.Options.Options.Create(new RequestRules()),
+            Microsoft.Extensions.Options.Options.Create(new ResponseDelayOptions()));
     }
 }

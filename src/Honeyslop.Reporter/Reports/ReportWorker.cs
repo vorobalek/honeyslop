@@ -84,6 +84,20 @@ internal sealed partial class ReportWorker(
         var settings = options.Value;
         var reports = services.GetRequiredService<IAbuseReportRepository>();
         var serverTime = services.GetRequiredService<IServerTimeRepository>();
+        string[] blocked =
+        [
+            .. (await services
+                    .GetRequiredService<IBlockedAbuseContactRepository>()
+                    .GetAnyOfAsync(AbuseContactBlocklist.Candidates(report.Recipients), cancellationToken))
+                .Select(x => x.Contact)
+        ];
+        string[] recipients = [.. report.Recipients.Where(x => !AbuseContactBlocklist.Blocks(blocked, x))];
+        if (recipients.Length == 0)
+        {
+            await reports.FailAsync(report.Id, settings.InstanceName, "Every recipient is on the blocked list", await serverTime.GetNowAsync(CancellationToken.None), CancellationToken.None);
+            return;
+        }
+
         var archive = await services
             .GetRequiredService<IRequestArchiveBuilder>()
             .BuildAsync(report.ClientIp, settings.MaxAttachedRequests, cancellationToken);
@@ -94,7 +108,7 @@ internal sealed partial class ReportWorker(
         }
 
         var sender = new MailboxAddress(report.SenderName ?? string.Empty, smtpOptions.Value.From!);
-        var message = ReportMessage.Create(report, sender, archive.Content, await serverTime.GetNowAsync(cancellationToken));
+        var message = ReportMessage.Create(report, recipients, sender, archive.Content, await serverTime.GetNowAsync(cancellationToken));
         try
         {
             await mailSender.SendAsync(message, cancellationToken);
@@ -107,7 +121,7 @@ internal sealed partial class ReportWorker(
 
         await reports.CompleteAsync(report.Id, settings.InstanceName, message.MessageId ?? string.Empty, sender.ToString(), archive.Requests, archive.LastRequestId, await serverTime.GetNowAsync(CancellationToken.None),
             CancellationToken.None);
-        LogSent(logger, report.Id, report.ClientIp, string.Join(", ", report.Recipients), archive.Requests);
+        LogSent(logger, report.Id, report.ClientIp, string.Join(", ", recipients), archive.Requests);
     }
 
     private async Task HandleFailureAsync(IAbuseReportRepository reports, IServerTimeRepository serverTime, AbuseReport report, Exception exception)

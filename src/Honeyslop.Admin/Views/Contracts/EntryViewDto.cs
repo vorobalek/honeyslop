@@ -12,4 +12,5 @@ public sealed record EntryViewDto(
     CountryDto? Country,
     long? CurrentId,
     GenerationOutputDto? Output,
+    TimeSpan DefaultResponseDelay,
     DateTimeOffset AsOf);

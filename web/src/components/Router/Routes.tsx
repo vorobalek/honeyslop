@@ -1,4 +1,5 @@
 import { usePath } from '../../hooks/useLocation';
+import BlockedContactsPage from '../BlockedContacts/BlockedContactsPage';
 import ClientPage from '../Client/ClientPage';
 import ClientsPage from '../Clients/ClientsPage';
 import NotFound from '../Common/NotFound';
@@ -48,6 +49,7 @@ const Routes: React.FC = () => {
         );
     }
     if (path === '/reports') return <ReportsPage />;
+    if (path === '/reports/blocked') return <BlockedContactsPage />;
     if ((match = REPORT.exec(path)))
         return (
             <ReportPage

@@ -14,4 +14,5 @@ namespace Honeyslop.Admin.Live.Contracts.Watches;
 [JsonDerivedType(typeof(ReportWatch), "report")]
 [JsonDerivedType(typeof(GeneratorsWatch), "generators")]
 [JsonDerivedType(typeof(SettingsWatch), "settings")]
+[JsonDerivedType(typeof(BlockedContactsWatch), "blockedContacts")]
 public abstract record WatchRequest;

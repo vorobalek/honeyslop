@@ -1,3 +1,5 @@
+import { BlockedContactsQueryType } from './blockedContactsQueryType';
+import { BlockedContactsViewType } from './blockedContactsViewType';
 import { ClientAbuseType } from './clientAbuseType';
 import { ClientType } from './clientType';
 import { ClientsQueryType } from './clientsQueryType';
@@ -26,6 +28,7 @@ interface WatchViewsType {
     report: { request: { id: number }; view: ReportDetailsType };
     generators: { request: Record<never, never>; view: GeneratorsViewType };
     settings: { request: Record<never, never>; view: SettingsViewType };
+    blockedContacts: { request: { query: BlockedContactsQueryType }; view: BlockedContactsViewType };
 }
 
 export type WatchNameType = keyof WatchViewsType;

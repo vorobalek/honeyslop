@@ -7,7 +7,8 @@ public sealed record CachedResponse(
     long EntryId,
     int Status,
     IReadOnlyList<ResponseHeader> Headers,
-    byte[] Body)
+    byte[] Body,
+    TimeSpan? Delay = null)
 {
     public static CachedResponse From(Entry entry)
     {
@@ -15,7 +16,8 @@ public sealed record CachedResponse(
             entry.Id,
             entry.ResponseStatus ?? StatusCodes.Status200OK,
             entry.ResponseHeaders,
-            Encoding.UTF8.GetBytes(entry.ResponseBody ?? string.Empty));
+            Encoding.UTF8.GetBytes(entry.ResponseBody ?? string.Empty),
+            DelayOf(entry));
     }
 
     public static CachedResponse From(long entryId, GeneratedResponse response)
@@ -25,5 +27,10 @@ public sealed record CachedResponse(
             response.Status,
             response.Headers,
             Encoding.UTF8.GetBytes(response.Body));
+    }
+
+    public static TimeSpan? DelayOf(Entry entry)
+    {
+        return entry.ResponseDelaySeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null;
     }
 }

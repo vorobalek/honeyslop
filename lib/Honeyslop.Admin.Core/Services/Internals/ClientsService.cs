@@ -22,6 +22,7 @@ internal sealed partial class ClientsService(
     IEntryRepository entryRepository,
     IAbuseReportRepository abuseReportRepository,
     ISettingsRepository settingsRepository,
+    IBlockedAbuseContactRepository blockedContactRepository,
     IRequestArchiveBuilder archiveBuilder,
     ICountryLookup countryLookup,
     IWhoisLookup whoisLookup,
@@ -72,7 +73,8 @@ internal sealed partial class ClientsService(
                 RequestLogArchive.FileName(ip));
         }
 
-        return new ClientAbuseDto(ip, whois, [.. reports.Select(x => x.ToRow(access.Viewer))], newSinceLastSent, draft);
+        var blocked = await BlockedContactsAsync(whois, cancellationToken);
+        return new ClientAbuseDto(ip, whois, [.. reports.Select(x => x.ToRow(access.Viewer))], newSinceLastSent, draft, blocked);
     }
 
     public async Task<RequestLogArchive?> GetArchiveAsync(string ip, CancellationToken cancellationToken)
@@ -98,13 +100,17 @@ internal sealed partial class ClientsService(
         var whois = await TryLookupAsync(ip, cancellationToken);
         if (whois is not { AbuseContacts.Length: > 0 })
             return new ReportRequestDto(ReportOutcome.NoContact);
+        var blocked = await BlockedContactsAsync(whois, cancellationToken);
+        string[] recipients = [.. whois.AbuseContacts.Except(blocked)];
+        if (recipients.Length == 0)
+            return new ReportRequestDto(ReportOutcome.Blocked);
 
         var letter = await WriteLetterAsync(summary, whois, cancellationToken);
         var now = await serverTime.GetNowAsync(cancellationToken);
         var report = new AbuseReport
         {
             ClientIp = ip,
-            Recipients = whois.AbuseContacts,
+            Recipients = recipients,
             Subject = letter.Subject,
             Body = letter.Body,
             RequestedBy = access.Viewer.Name ?? "admin",
@@ -156,6 +162,18 @@ internal sealed partial class ClientsService(
     {
         var latest = await requestRepository.GetPageAsync(new RequestFilter(summary.ClientIp), null, 0, AbuseLetters.LatestRequests, cancellationToken);
         return AbuseLetters.Write(summary, latest, whois);
+    }
+
+    private async Task<string[]> BlockedContactsAsync(WhoisDto? whois, CancellationToken cancellationToken)
+    {
+        if (whois is not { AbuseContacts.Length: > 0 })
+            return [];
+        string[] blocked =
+        [
+            .. (await blockedContactRepository.GetAnyOfAsync(AbuseContactBlocklist.Candidates(whois.AbuseContacts), cancellationToken))
+                .Select(x => x.Contact)
+        ];
+        return [.. whois.AbuseContacts.Where(x => AbuseContactBlocklist.Blocks(blocked, x))];
     }
 
     private async Task<string?> DefaultSenderNameAsync(CancellationToken cancellationToken)

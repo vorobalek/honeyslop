@@ -15,6 +15,7 @@ type WhoisSectionProps = {
 const WhoisSection: React.FC<WhoisSectionProps> = ({ ip, watch, onRetry }) => {
     const whois = useWatched(watch, (abuse) => abuse.whois);
     const recipients = useWatched(watch, (abuse) => abuse.recipients);
+    const blocked = useWatched(watch, (abuse) => abuse.blockedRecipients);
     return (
         <div>
             {whois === null ? (
@@ -24,6 +25,7 @@ const WhoisSection: React.FC<WhoisSectionProps> = ({ ip, watch, onRetry }) => {
                     ip={ip}
                     whois={whois}
                     recipients={recipients}
+                    blocked={blocked}
                 />
             )}
             <AbuseReport

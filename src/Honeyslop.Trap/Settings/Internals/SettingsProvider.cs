@@ -48,6 +48,11 @@ internal sealed partial class SettingsProvider(
         }
     }
 
+    public void Reset()
+    {
+        _loadedAt = DateTimeOffset.MinValue;
+    }
+
     [LoggerMessage(LogLevel.Warning, "Failed to load settings, keeping the previous ones")]
     static partial void LogRefreshFailed(ILogger<SettingsProvider> logger, Exception exception);
 }

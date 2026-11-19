@@ -6,6 +6,7 @@ type AbuseActionsProps = {
     ip: string;
     draft: AbuseDraftType;
     recipients: readonly string[];
+    blocked: readonly string[];
     reportPending: boolean;
     alreadyReported: boolean;
     followUp: boolean;
@@ -16,13 +17,18 @@ const AbuseActions: React.FC<AbuseActionsProps> = ({
     ip,
     draft,
     recipients,
+    blocked,
     reportPending,
     alreadyReported,
     followUp,
     newSinceLastSent,
 }) => {
     let content: React.ReactNode;
-    if (recipients.length === 0)
+    if (recipients.length === 0 && blocked.length > 0)
+        content = (
+            <span className='hint'>{`Every abuse contact of this network is blocked: ${blocked.join(', ')}.`}</span>
+        );
+    else if (recipients.length === 0)
         content = <span className='hint'>The registry publishes no abuse contact for this network.</span>;
     else if (reportPending) content = <span className='hint'>A report about this address is already on its way.</span>;
     else if (alreadyReported) {

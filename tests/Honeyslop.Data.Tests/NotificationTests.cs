@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
+using Honeyslop.Data.Repositories;
 using Honeyslop.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -71,6 +72,32 @@ public sealed class NotificationTests
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!received.Contains("honeyslop_settings"))
+            await connection.WaitAsync(timeout.Token);
+    }
+
+    [TestMethod]
+    public async Task BlockedContactChanges_AreAnnouncedAsReportChanges()
+    {
+        await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);
+        await connection.OpenAsync();
+        var received = new List<string>();
+        connection.Notification += (_, notification) => received.Add(notification.Channel);
+        await using (var command = new NpgsqlCommand("listen honeyslop_reports", connection))
+            await command.ExecuteNonQueryAsync();
+
+        await using (var scope = PostgresDatabase.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<IBlockedAbuseContactRepository>().AddAsync(
+                [
+                    new BlockedAbuseContact
+                    {
+                        Contact = $"@{Unique.String(8)}.example",
+                        CreatedAt = DateTimeOffset.UtcNow
+                    }
+                ],
+                CancellationToken.None);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!received.Contains("honeyslop_reports"))
             await connection.WaitAsync(timeout.Token);
     }
 

@@ -13,6 +13,7 @@ public interface IViewBuilder
     Task<ClientDto?> GetClientAsync(string ip, CancellationToken cancellationToken);
     Task<ClientAbuseDto?> GetClientAbuseAsync(string ip, CancellationToken cancellationToken);
     Task<ReportsPageDto> GetReportsAsync(ReportsQuery query, CancellationToken cancellationToken);
+    Task<BlockedContactsPageDto> GetBlockedContactsAsync(BlockedContactsQuery query, CancellationToken cancellationToken);
     Task<ReportDetailsDto?> GetReportAsync(long id, CancellationToken cancellationToken);
     Task<GeneratorsViewDto> GetGeneratorsAsync(CancellationToken cancellationToken);
     Task<SettingsDto> GetSettingsAsync(CancellationToken cancellationToken);

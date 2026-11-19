@@ -31,4 +31,5 @@ export interface EntryType {
     requestedAt: string | null;
     guidance: string | null;
     changedBy: string | null;
+    responseDelaySeconds: number | null;
 }

@@ -6,5 +6,6 @@ public enum ReportOutcome
     AlreadyQueued,
     AlreadyReported,
     NoContact,
+    Blocked,
     NotFound
 }

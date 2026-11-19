@@ -11,4 +11,5 @@ public sealed record SettingsFormDto(
     long RetryFailedSeconds,
     long GenerationTimeLimitSeconds,
     bool PublicView,
-    string? UserAgent);
+    string? UserAgent,
+    long? ResponseDelaySeconds);

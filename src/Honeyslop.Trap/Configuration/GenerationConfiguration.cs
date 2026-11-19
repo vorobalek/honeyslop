@@ -1,4 +1,5 @@
 using Honeyslop.Common;
+using Honeyslop.Data.Requests;
 
 namespace Honeyslop.Trap.Configuration;
 
@@ -14,7 +15,7 @@ public static class GenerationConfiguration
         .GetEnvironmentValueWithFallback(3);
 
     public static readonly int MaxTargetLength = "MAX_TARGET_LENGTH"
-        .GetEnvironmentValueWithFallback(1024);
+        .GetEnvironmentValueWithFallback(RequestRules.DefaultMaxTargetLength);
 
     public static readonly int MaxRequestBodyBytes = "MAX_REQUEST_BODY_BYTES"
         .GetEnvironmentValueWithFallback(2048);
@@ -30,4 +31,7 @@ public static class GenerationConfiguration
 
     public static readonly string? StaticExtensions = "STATIC_EXTENSIONS"
         .EnvironmentValue;
+
+    public static readonly int ResponseDelaySeconds = "RESPONSE_DELAY_SECONDS"
+        .GetEnvironmentValueWithFallback(0);
 }

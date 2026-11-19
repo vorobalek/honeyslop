@@ -85,6 +85,51 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
+    public async Task ReportAsync_EveryContactBlocked_QueuesNothing()
+    {
+        var setup = new Setup
+        {
+            Contacts = ["Abuse@Bouncing.example", "noc@bouncing.example"],
+            Blocked = ["abuse@bouncing.example", "@bouncing.example"]
+        };
+
+        var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
+
+        Assert.AreEqual(ReportOutcome.Blocked, request.Outcome);
+        Assert.IsNull(setup.Added);
+    }
+
+    [TestMethod]
+    public async Task ReportAsync_SomeContactsBlocked_WritesOnlyToTheOthers()
+    {
+        var setup = new Setup
+        {
+            Contacts = ["abuse@bouncing.example", "abuse@example.test"],
+            Blocked = ["abuse@bouncing.example"]
+        };
+
+        var request = await setup.Service().ReportAsync(Ip, null, CancellationToken.None);
+
+        Assert.AreEqual(ReportOutcome.Queued, request.Outcome);
+        CollectionAssert.AreEqual(new[] { "abuse@example.test" }, setup.Added!.Recipients);
+    }
+
+    [TestMethod]
+    public async Task GetAbuseAsync_ShowsBlockedContactsApartFromTheRecipients()
+    {
+        var setup = new Setup
+        {
+            Contacts = ["abuse@bouncing.example", "abuse@example.test"],
+            Blocked = ["@bouncing.example"]
+        };
+
+        var abuse = await setup.Service().GetAbuseAsync(Ip, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "abuse@bouncing.example" }, abuse!.BlockedRecipients);
+        CollectionAssert.AreEqual(new[] { "abuse@example.test" }, abuse.Recipients);
+    }
+
+    [TestMethod]
     public async Task ReportAsync_NewRequestsSinceTheLastReport_QueuesAFollowUpSignedWithTheGivenName()
     {
         var setup = new Setup
@@ -168,6 +213,7 @@ public sealed class ClientsServiceTests
         public int NewSinceLastSent { get; init; }
         public string[] Contacts { get; init; } = ["abuse@example.test"];
         public string? PersonalSenderName { get; init; }
+        public string[] Blocked { get; init; } = [];
         public Mock<IAbuseReportRepository> Repository { get; } = new();
         public AbuseReport? Added { get; private set; }
 
@@ -203,11 +249,22 @@ public sealed class ClientsServiceTests
                             SenderName = PersonalSenderName
                         }
                 });
+            var blocked = new Mock<IBlockedAbuseContactRepository>();
+            blocked
+                .Setup(x => x.GetAnyOfAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IReadOnlyCollection<string> candidates, CancellationToken _) =>
+                [
+                    .. Blocked.Where(candidates.Contains).Select(x => new BlockedAbuseContact
+                    {
+                        Contact = x
+                    })
+                ]);
             return new ClientsService(
                 requests.Object,
                 Mock.Of<IEntryRepository>(),
                 Repository.Object,
                 settings.Object,
+                blocked.Object,
                 Mock.Of<IRequestArchiveBuilder>(),
                 Mock.Of<ICountryLookup>(),
                 whois.Object,

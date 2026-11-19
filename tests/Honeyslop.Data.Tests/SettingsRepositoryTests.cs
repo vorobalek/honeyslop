@@ -28,7 +28,8 @@ public sealed class SettingsRepositoryTests
             RetryFailedAfter = TimeSpan.FromMinutes(5),
             GenerationTimeLimit = TimeSpan.FromMinutes(4),
             PublicView = true,
-            UserAgent = "Honeyslop-test (+https://example.test)"
+            UserAgent = "Honeyslop-test (+https://example.test)",
+            ResponseDelay = TimeSpan.FromSeconds(7)
         };
         await repository.SaveAsync(saved, DateTimeOffset.UtcNow, CancellationToken.None);
         await repository.SaveAsync(saved with

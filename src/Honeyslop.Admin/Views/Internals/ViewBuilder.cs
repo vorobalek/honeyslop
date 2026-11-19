@@ -11,6 +11,7 @@ internal sealed class ViewBuilder(
     IRequestsService requestsService,
     IClientsService clientsService,
     IReportsService reportsService,
+    IBlockedContactsService blockedContactsService,
     IGeneratorsService generatorsService,
     ISettingsService settingsService) : IViewBuilder
 {
@@ -30,6 +31,7 @@ internal sealed class ViewBuilder(
                 details.Country,
                 details.CurrentId,
                 details.Output,
+                details.DefaultResponseDelay,
                 details.AsOf)
             : null;
     }
@@ -58,6 +60,11 @@ internal sealed class ViewBuilder(
     public Task<ClientAbuseDto?> GetClientAbuseAsync(string ip, CancellationToken cancellationToken)
     {
         return clientsService.GetAbuseAsync(ip, cancellationToken);
+    }
+
+    public Task<BlockedContactsPageDto> GetBlockedContactsAsync(BlockedContactsQuery query, CancellationToken cancellationToken)
+    {
+        return blockedContactsService.GetPageAsync(query, cancellationToken);
     }
 
     public Task<ReportsPageDto> GetReportsAsync(ReportsQuery query, CancellationToken cancellationToken)

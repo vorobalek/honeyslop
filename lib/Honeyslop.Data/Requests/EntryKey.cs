@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Honeyslop.Trap.Requests;
+namespace Honeyslop.Data.Requests;
 
 public sealed record EntryKey(string Method,
     string Host,

@@ -10,6 +10,7 @@ export const FIELD_OF_ERROR: Record<string, string> = {
     GenerationWait: 'GenerationWait',
     RequestRetention: 'RequestRetention',
     UserAgent: 'UserAgent',
+    ResponseDelay: 'ResponseDelay',
 };
 
 export function readSettingsForm(form: HTMLFormElement): SettingsFormType {
@@ -27,5 +28,11 @@ export function readSettingsForm(form: HTMLFormElement): SettingsFormType {
         generationTimeLimitSeconds: duration('TimeLimit'),
         publicView: data.has('PublicView'),
         userAgent: String(data.get('UserAgent') ?? ''),
+        responseDelaySeconds: optionalSeconds(data.get('ResponseDelay')),
     };
+}
+
+function optionalSeconds(value: FormDataEntryValue | null): number | null {
+    const text = String(value ?? '').trim();
+    return text === '' ? null : Number(text);
 }

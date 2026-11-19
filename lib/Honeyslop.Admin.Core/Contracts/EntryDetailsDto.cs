@@ -8,4 +8,5 @@ public sealed record EntryDetailsDto(
     CountryDto? Country,
     long? CurrentId,
     GenerationOutputDto? Output,
+    TimeSpan DefaultResponseDelay,
     DateTimeOffset AsOf);

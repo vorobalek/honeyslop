@@ -16,6 +16,7 @@ internal static class SettingsConverter
     private const string GenerationTimeLimitSeconds = "generation_time_limit_seconds";
     private const string PublicView = "public_view";
     private const string UserAgent = "user_agent";
+    private const string ResponseDelaySeconds = "response_delay_seconds";
     private const string SenderName = "sender_name";
 
     public static HoneyslopSettings ToSettings(IReadOnlyDictionary<string, string> values)
@@ -33,7 +34,8 @@ internal static class SettingsConverter
             RetryFailedAfter = ReadSeconds(values, RetryFailedSeconds, defaults.RetryFailedAfter),
             GenerationTimeLimit = ReadSeconds(values, GenerationTimeLimitSeconds, defaults.GenerationTimeLimit),
             PublicView = ReadFlag(values, PublicView, defaults.PublicView),
-            UserAgent = values.GetValueOrDefault(UserAgent)
+            UserAgent = values.GetValueOrDefault(UserAgent),
+            ResponseDelay = ReadOptionalSeconds(values, ResponseDelaySeconds)
         };
     }
 
@@ -51,7 +53,8 @@ internal static class SettingsConverter
             [RetryFailedSeconds] = Seconds(settings.RetryFailedAfter),
             [GenerationTimeLimitSeconds] = Seconds(settings.GenerationTimeLimit),
             [PublicView] = settings.PublicView.ToString(CultureInfo.InvariantCulture),
-            [UserAgent] = settings.UserAgent
+            [UserAgent] = settings.UserAgent,
+            [ResponseDelaySeconds] = settings.ResponseDelay is { } delay ? Seconds(delay) : null
         };
     }
 
@@ -86,10 +89,15 @@ internal static class SettingsConverter
 
     private static TimeSpan ReadSeconds(IReadOnlyDictionary<string, string> values, string key, TimeSpan fallback)
     {
+        return ReadOptionalSeconds(values, key) ?? fallback;
+    }
+
+    private static TimeSpan? ReadOptionalSeconds(IReadOnlyDictionary<string, string> values, string key)
+    {
         return values.TryGetValue(key, out var value) &&
                long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) &&
                seconds >= 0
             ? TimeSpan.FromSeconds(seconds)
-            : fallback;
+            : null;
     }
 }

@@ -9,7 +9,7 @@ namespace Honeyslop.Admin.Mcp.Tools;
 public sealed class Settings(ISettingsService settingsService)
 {
     [McpServerTool(Name = "get_settings", Title = "Get the settings", ReadOnly = true, Idempotent = true)]
-    [Description("Runtime settings: cache lifetimes, generation limits, request retention, the public view, the outbound User-Agent, and the sender names for abuse reports.")]
+    [Description("Runtime settings: cache lifetimes, generation limits, request retention, the public view, the outbound User-Agent, the default response delay, and the sender names for abuse reports.")]
     public Task<SettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
         return settingsService.GetAsync(cancellationToken);
@@ -41,6 +41,8 @@ public sealed class Settings(ISettingsService settingsService)
         bool? publicView = null,
         [Description("User-Agent for outbound lookups; an empty string restores the default.")]
         string? userAgent = null,
+        [Description("Seconds the trap waits before every response served from an entry that sets no delay of its own, 0 to 600; -1 goes back to RESPONSE_DELAY_SECONDS.")]
+        long? responseDelaySeconds = null,
         CancellationToken cancellationToken = default)
     {
         var current = (await settingsService.GetAsync(cancellationToken)).Settings;
@@ -56,7 +58,13 @@ public sealed class Settings(ISettingsService settingsService)
             RetryFailedAfter = Seconds(retryFailedSeconds) ?? current.RetryFailedAfter,
             GenerationTimeLimit = Seconds(generationTimeLimitSeconds) ?? current.GenerationTimeLimit,
             PublicView = publicView ?? current.PublicView,
-            UserAgent = userAgent ?? current.UserAgent
+            UserAgent = userAgent ?? current.UserAgent,
+            ResponseDelay = responseDelaySeconds switch
+            {
+                null => current.ResponseDelay,
+                -1 => null,
+                { } seconds => TimeSpan.FromSeconds(seconds)
+            }
         };
         return await settingsService.SaveAsync(settings, cancellationToken);
     }

@@ -58,6 +58,16 @@ const BUDGETS: Record<string, Budget> = {
         forbidden: [...STILL, ...ENTRY_LIST, 'ExpireSelectedButton', 'RowCheckbox', 'ResponseChangeDialog'],
         max: { ChangeSelectedButton: 1 },
     },
+    'open a new entry': {
+        renders: 6,
+        forbidden: [...STILL, ...ENTRY_LIST, 'ChangeSelectedButton', 'ExpireSelectedButton', 'RowCheckbox'],
+        max: { NewEntryButton: 1, ResponseChangeDialog: 1, RequestFields: 1 },
+    },
+    'close the new entry': {
+        renders: 1,
+        forbidden: [...STILL, ...ENTRY_LIST, 'ResponseChangeDialog', 'RowCheckbox'],
+        max: { NewEntryButton: 1 },
+    },
     'select every entry': { renders: 53, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
     'clear the selection': { renders: 53, forbidden: [...STILL, ...ENTRY_LIST, 'EntriesStats', 'ListPager'] },
     'an entry is hit': {
@@ -114,7 +124,7 @@ const BUDGETS: Record<string, Budget> = {
         forbidden: [...STILL_BUT_DIALOG, 'ClientPage', 'AbuseReport', 'SendReportForm', 'RequestsTableRow'],
         max: { ConfirmDialog: 1 },
     },
-    'go to the settings': { renders: 20, forbidden: SHELL },
+    'go to the settings': { renders: 21, forbidden: SHELL },
     'type into a setting': { idle: true },
     'ask to save the settings': {
         renders: 1,
@@ -223,6 +233,14 @@ test('render audit', async ({ browser }, testInfo) => {
             await page.locator('dialog.change-response[open]').waitFor();
         });
         await step(testInfo, page, 'close the change of the selected entry', async () => {
+            await page.locator('dialog.change-response button', { hasText: 'Cancel' }).click();
+            await page.locator('dialog.change-response').waitFor({ state: 'detached' });
+        });
+        await step(testInfo, page, 'open a new entry', async () => {
+            await page.locator('.actions button', { hasText: 'New entry' }).click();
+            await page.locator('dialog.change-response[open]').waitFor();
+        });
+        await step(testInfo, page, 'close the new entry', async () => {
             await page.locator('dialog.change-response button', { hasText: 'Cancel' }).click();
             await page.locator('dialog.change-response').waitFor({ state: 'detached' });
         });

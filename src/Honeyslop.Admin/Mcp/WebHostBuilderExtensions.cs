@@ -62,6 +62,7 @@ public static class WebHostBuilderExtensions
                     .WithTools<Requests>()
                     .WithTools<Clients>()
                     .WithTools<Tools.Reports>()
+                    .WithTools<BlockedContacts>()
                     .WithTools<Generators>()
                     .WithTools<Settings>()
                     .WithRequestFilters(filters => filters.AddCallToolFilter(next => async (context, cancellationToken) =>

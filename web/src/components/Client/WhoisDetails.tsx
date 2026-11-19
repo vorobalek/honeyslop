@@ -1,5 +1,6 @@
 import { display } from '../../lib/time';
 import { WhoisType } from '../../types/whoisType';
+import AbuseContacts from './AbuseContacts';
 import WhoisOrigins from './WhoisOrigins';
 import React from 'react';
 
@@ -7,9 +8,10 @@ type WhoisDetailsProps = {
     ip: string;
     whois: WhoisType;
     recipients: readonly string[];
+    blocked: readonly string[];
 };
 
-const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients }) => (
+const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients, blocked }) => (
     <>
         <dl className='meta'>
             <dt>Routed as</dt>
@@ -23,7 +25,14 @@ const WhoisDetails: React.FC<WhoisDetailsProps> = ({ ip, whois, recipients }) =>
             <dd>{`${whois.owner ?? '—'}${whois.country === null ? '' : ` · ${whois.country}`}`}</dd>
             <dt>Abuse contact</dt>
             <dd>
-                {recipients.length === 0 ? 'none published' : <span className='mono'>{recipients.join(', ')}</span>}
+                {recipients.length + blocked.length === 0 ? (
+                    'none published'
+                ) : (
+                    <AbuseContacts
+                        recipients={recipients}
+                        blocked={blocked}
+                    />
+                )}
             </dd>
             <dt>Source</dt>
             <dd>

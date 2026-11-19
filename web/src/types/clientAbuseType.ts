@@ -8,6 +8,7 @@ export interface ClientAbuseType {
     reports: ReportType[];
     newSinceLastSent: number;
     draft: AbuseDraftType | null;
+    blockedRecipients: string[];
     recipients: string[];
     lastReport: ReportType | null;
     lastSent: ReportType | null;

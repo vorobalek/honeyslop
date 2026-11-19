@@ -15,6 +15,8 @@ using Honeyslop.Admin.Views;
 using Honeyslop.Admin.Views.Internals;
 using Honeyslop.Common;
 using Honeyslop.Data;
+using Honeyslop.Data.Entities;
+using Honeyslop.Data.Requests;
 using Honeyslop.Llm;
 using Microsoft.AspNetCore.SignalR;
 
@@ -54,12 +56,18 @@ await Host
                 .AddOptions<UserAgentOptions>()
                 .Configure(x => x.Default = AppConfiguration.UserAgent);
             services
+                .AddOptions<ResponseDelayOptions>()
+                .Configure(x => x.Default = TimeSpan.FromSeconds(Math.Clamp(AppConfiguration.ResponseDelaySeconds, 0, Entry.ResponseDelayMaxSeconds)));
+            services
                 .AddOptions<AbuseReportOptions>()
                 .Configure(x =>
                 {
                     x.DefaultSenderName = SenderName.Clean(AppConfiguration.AbuseReportSenderName);
                     x.FromAddress = AppConfiguration.SmtpFrom;
                 });
+            services
+                .AddOptions<RequestRules>()
+                .Configure(x => x.Apply(AppConfiguration.MaxTargetLength, AppConfiguration.StaticExtensions));
             services
                 .AddOptions<MaintenanceOptions>()
                 .Configure(x => x.Interval = TimeSpan.FromSeconds(AppConfiguration.MaintenanceIntervalSeconds));

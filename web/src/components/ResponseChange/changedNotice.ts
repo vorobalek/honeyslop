@@ -6,3 +6,9 @@ export function changedNotice(mode: ResponseChangeModeType, count: number): stri
         ? `Queued ${count} new ${responses} for generation.`
         : `Replaced ${count} ${responses}.`;
 }
+
+export function createdNotice(mode: ResponseChangeModeType): string {
+    return mode === 'regenerate'
+        ? 'Created the entry and queued it for generation.'
+        : 'Created the entry with your response.';
+}

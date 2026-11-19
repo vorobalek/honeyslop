@@ -5,10 +5,12 @@ using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching.Internals;
 using Honeyslop.Trap.Generation.Internals;
 using Honeyslop.Trap.Handlers.Internals;
 using Honeyslop.Trap.Hits.Internals;
+using Honeyslop.Trap.Options;
 using Honeyslop.Trap.Requests;
 using Honeyslop.Trap.Requests.Internals;
 using Honeyslop.Trap.Responses;
@@ -125,6 +127,54 @@ public sealed class TrapHandlerTests
             7L
         }, sut.Hits.Drain().Where(x => x.Count == 2).Select(x => x.EntryId).ToArray());
         sut.Repository.Verify(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_EntryWithItsOwnDelay_WaitsThatLongBeforeAnswering()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(1));
+        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelay = TimeSpan.FromSeconds(10) };
+        var entry = ReadyEntry(7);
+        entry.ResponseDelaySeconds = 3;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var context = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("APP_KEY=base64:fake", Body(context));
+        CollectionAssert.AreEqual(new[] { TimeSpan.FromSeconds(3) }, time.Delays);
+    }
+
+    [TestMethod]
+    [DataRow(4, 2, 4)]
+    [DataRow(-1, 2, 2)]
+    [DataRow(-1, 0, 0)]
+    public async Task HandleAsync_EntryWithoutADelay_TakesTheSettingThenTheEnvironment(int setting, int environment, int expected)
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(environment));
+        sut.CurrentSettings = sut.CurrentSettings with { ResponseDelay = setting < 0 ? null : TimeSpan.FromSeconds(setting) };
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ReadyEntry(7));
+
+        await sut.Handler.HandleAsync(Request("GET", "/.env"));
+
+        CollectionAssert.AreEqual(expected == 0 ? Array.Empty<TimeSpan>() : new[] { TimeSpan.FromSeconds(expected) }, time.Delays);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_StaticFile_IsNotDelayed()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time, x => x.ResponseDelay = TimeSpan.FromSeconds(5));
+
+        await sut.Handler.HandleAsync(Request("GET", "/favicon.ico"));
+
+        Assert.IsEmpty(time.Delays);
     }
 
     [TestMethod]
@@ -375,11 +425,32 @@ public sealed class TrapHandlerTests
         return Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray());
     }
 
+    private sealed class DelayRecorder : TimeProvider
+    {
+        private readonly List<TimeSpan> _delays = [];
+
+        public TimeSpan[] Delays
+        {
+            get
+            {
+                lock (_delays)
+                    return [.. _delays];
+            }
+        }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            lock (_delays)
+                _delays.Add(dueTime);
+            return base.CreateTimer(callback, state, TimeSpan.Zero, period);
+        }
+    }
+
     private sealed class Sut : IDisposable
     {
-        public Sut()
+        public Sut(TimeProvider? time = null, Action<TrapOptions>? configure = null)
         {
-            var options = TestOptions.Trap();
+            var options = TestOptions.Trap(configure);
             Settings
                 .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => CurrentSettings);
@@ -388,6 +459,7 @@ public sealed class TrapHandlerTests
                 .SetupGet(x => x.Token)
                 .Returns(CancellationToken.None);
             Cache = new ResponseCache(options);
+            Cache.Enable();
             Watcher = new EntryWatcher(
                 new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
                 options,
@@ -407,7 +479,7 @@ public sealed class TrapHandlerTests
                 Log,
                 globalCancellationTokenSource.Object,
                 options,
-                TimeProvider.System,
+                time ?? TimeProvider.System,
                 NullLogger<TrapHandler>.Instance);
         }
 

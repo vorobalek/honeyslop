@@ -3,7 +3,8 @@
 Catch-all for HTTP requests that no real route answers. A small language model writes what the software a request probes
 for would return (a camera's device info, a leaked `.env`, a WordPress installer), once per method, host and path; the
 answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a comment
-for the model or writes it by hand. Every request is recorded, and the networks that scan can be sent an abuse report
+for the model or writes it by hand. Entries can also be made by hand before anyone asks, and responses can be held back
+by a delay to keep scanners waiting. Every request is recorded, and the networks that scan can be sent an abuse report
 with their request log attached.
 
 ### Services
@@ -18,29 +19,32 @@ with their request log attached.
 
 ### Configuration
 
-| Trap                                | Default        |                                                           |
-| ----------------------------------- | -------------- | --------------------------------------------------------- |
-| `DB_CONNECTION_STRING`              |                | PostgreSQL                                                |
-| `LLM_URL`                           |                | Model servers: a headless service or comma-separated URLs |
-| `TRAP_PORT`, `MANAGEMENT_PORT`      | `8080`, `8081` | Catch-all; health and metrics                             |
-| `TRUSTED_NETWORKS`                  | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                    |
-| `GENERATION_WORKERS`                | `6`            | Concurrent generations per instance                       |
-| `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                   |
-| `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                     |
-| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                           |
+| Trap                                | Default        |                                                               |
+| ----------------------------------- | -------------- | ------------------------------------------------------------- |
+| `DB_CONNECTION_STRING`              |                | PostgreSQL                                                    |
+| `LLM_URL`                           |                | Model servers: a headless service or comma-separated URLs     |
+| `TRAP_PORT`, `MANAGEMENT_PORT`      | `8080`, `8081` | Catch-all; health and metrics                                 |
+| `TRUSTED_NETWORKS`                  | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                        |
+| `GENERATION_WORKERS`                | `6`            | Concurrent generations per instance                           |
+| `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                       |
+| `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                         |
+| `MAX_TARGET_LENGTH`                 | `1024`         | Longer paths get a 414 without the model, at most 2048        |
+| `RESPONSE_DELAY_SECONDS`            | `0`            | Wait before a response from an entry, unless set in the admin |
+| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                               |
 
-| Admin                                   | Default                                               |                                                                   |
-| --------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
-| `DB_CONNECTION_STRING`                  |                                                       | PostgreSQL                                                        |
-| `PORT`                                  | `8080`                                                |                                                                   |
-| `LLM_URL`                               |                                                       | Model servers for the Generators page                             |
-| `OIDC_AUTHORITY`                        |                                                       | Sign-in issuer; without it, an authenticating proxy goes in front |
-| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`  | `honeyslop`                                           |                                                                   |
-| `MCP_RESOURCE`                          |                                                       | Public URL of `/mcp`; turns MCP on when sign-in is on             |
-| `GEOIP_DATABASE`                        | `/app/geoip/country.mmdb`                             | DB-IP country database                                            |
-| `USER_AGENT`                            | `Honeyslop (+https://github.com/vorobalek/honeyslop)` | For RIPEstat lookups                                              |
-| `ABUSE_REPORT_SENDER_NAME`, `SMTP_FROM` |                                                       | Shown on a report before it is sent                               |
-| `MAINTENANCE_INTERVAL_SECONDS`          | `60`                                                  | Expiration and pruning                                            |
+| Admin                                                              | Default                                               |                                                                              |
+| ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `DB_CONNECTION_STRING`                                             |                                                       | PostgreSQL                                                                   |
+| `PORT`                                                             | `8080`                                                |                                                                              |
+| `LLM_URL`                                                          |                                                       | Model servers for the Generators page                                        |
+| `OIDC_AUTHORITY`                                                   |                                                       | Sign-in issuer; without it, an authenticating proxy goes in front            |
+| `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                             | `honeyslop`                                           |                                                                              |
+| `MCP_RESOURCE`                                                     |                                                       | Public URL of `/mcp`; turns MCP on when sign-in is on                        |
+| `GEOIP_DATABASE`                                                   | `/app/geoip/country.mmdb`                             | DB-IP country database                                                       |
+| `USER_AGENT`                                                       | `Honeyslop (+https://github.com/vorobalek/honeyslop)` | For RIPEstat lookups                                                         |
+| `ABUSE_REPORT_SENDER_NAME`, `SMTP_FROM`                            |                                                       | Shown on a report before it is sent                                          |
+| `MAINTENANCE_INTERVAL_SECONDS`                                     | `60`                                                  | Expiration and pruning                                                       |
+| `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_SECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
 
 | Reporter                                      | Default       |                                  |
 | --------------------------------------------- | ------------- | -------------------------------- |
@@ -50,7 +54,8 @@ with their request log attached.
 | `MAX_ATTACHED_REQUESTS`                       | `50000`       | Requests in the attached archive |
 | `MANAGEMENT_PORT`                             | `8081`        | Health and metrics               |
 
-Cache lifetimes, generation limits, request retention and the public view are edited in the admin or over MCP.
+Cache lifetimes, generation limits, request retention, the public view, the default response delay and the abuse
+addresses that never get reports are edited in the admin or over MCP.
 
 ### Development
 

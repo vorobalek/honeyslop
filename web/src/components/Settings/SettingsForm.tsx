@@ -8,6 +8,7 @@ import { SettingsSaveType } from '../../types/settingsSaveType';
 import { SettingsViewType } from '../../types/settingsViewType';
 import CheckboxSetting from './CheckboxSetting';
 import DurationSetting from './DurationSetting';
+import ResponseDelaySetting from './ResponseDelaySetting';
 import UserAgentSetting from './UserAgentSetting';
 import { FIELD_OF_ERROR, readSettingsForm } from './settingsFormData';
 import React, { useState, type FormEvent } from 'react';
@@ -68,6 +69,11 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     Counts from the last time the response was served, or from its creation if it never was. 0 keeps
                     them forever.
                 </DurationSetting>
+                <ResponseDelaySetting
+                    seconds={settings.responseDelay === null ? null : timeSpanSeconds(settings.responseDelay)}
+                    fallback={timeSpanSeconds(view.defaultResponseDelay)}
+                    error={errors.ResponseDelay}
+                />
 
                 <h2>Generation</h2>
                 <DurationSetting

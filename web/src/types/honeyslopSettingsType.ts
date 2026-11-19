@@ -10,4 +10,5 @@ export interface HoneyslopSettingsType {
     generationTimeLimit: string;
     publicView: boolean;
     userAgent: string | null;
+    responseDelay: string | null;
 }

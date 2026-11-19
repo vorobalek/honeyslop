@@ -22,6 +22,7 @@ const REFUSALS: Partial<Record<ReportOutcomeType, string>> = {
     AlreadyReported:
         'This address was already reported and has sent nothing new since, so no second report was queued.',
     NoContact: 'The registry publishes no abuse contact for this network, so there is nobody to send the report to.',
+    Blocked: 'Every abuse contact of this network is blocked, so no report was queued.',
 };
 
 function senderLine(name: string, address: string | null): string {

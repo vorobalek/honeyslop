@@ -3,6 +3,7 @@ using Honeyslop.Common;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching;
 using Honeyslop.Trap.Generation;
 using Honeyslop.Trap.Hits;
@@ -98,6 +99,8 @@ internal sealed partial class TrapHandler(
                 : (RequestOutcome.Static, StaticResponses.For(classification.Kind));
             status = response.Status;
             entryId = response.EntryId > 0 ? response.EntryId : null;
+            if (outcome is RequestOutcome.Hit or RequestOutcome.Generated)
+                await DelayAsync(response, httpContext.RequestAborted);
             await ResponseWriter.WriteAsync(httpContext, response, httpContext.RequestAborted);
         }
         catch (Exception exception) when (exception is OperationCanceledException or IOException &&
@@ -135,6 +138,7 @@ internal sealed partial class TrapHandler(
     {
         var cancellationToken = httpContext.RequestAborted;
         var key = EntryKey.Create(method, host, target);
+        var cacheVersion = responseCache.Version;
         if (responseCache.TryGet(key, out var cached))
         {
             hitCounter.Add(cached.EntryId, receivedAt);
@@ -143,7 +147,7 @@ internal sealed partial class TrapHandler(
 
         var entry = await entryRepository.GetByKeyHashOrDefaultAsync(key.Hash, cancellationToken);
         if (entry is { Status: EntryStatus.Ready })
-            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt));
+            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt, cacheVersion));
 
         var settings = await settingsProvider.GetAsync(cancellationToken);
         if (!settings.GenerationEnabled)
@@ -153,7 +157,7 @@ internal sealed partial class TrapHandler(
             await entryRepository.TouchRequestedAsync(entry.Id, receivedAt, globalCancellationTokenSource.Token);
         entry ??= await EnqueueAsync(httpContext, key, body, receivedAt);
         if (entry is { Status: EntryStatus.Ready })
-            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt));
+            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt, cacheVersion));
         if (entry is null)
             return (RequestOutcome.Fallback, StaticResponses.NotFound);
         if (entry.Status == EntryStatus.Failed && entry.Attempts >= options.Value.MaxAttempts)
@@ -164,15 +168,28 @@ internal sealed partial class TrapHandler(
         if (generated is null)
             return (RequestOutcome.Fallback, StaticResponses.NotFound);
 
-        responseCache.Set(key, generated);
+        generated = generated with
+        {
+            Delay = CachedResponse.DelayOf(entry)
+        };
+        responseCache.Set(key, generated, cacheVersion);
         hitCounter.Add(generated.EntryId, await serverTime.GetNowAsync(globalCancellationTokenSource.Token));
         return (RequestOutcome.Generated, generated);
     }
 
-    private CachedResponse ServeReady(EntryKey key, Entry entry, DateTimeOffset servedAt)
+    private async Task DelayAsync(CachedResponse response, CancellationToken cancellationToken)
+    {
+        var delay = response.Delay ??
+                    (await settingsProvider.GetAsync(cancellationToken)).ResponseDelay ??
+                    options.Value.ResponseDelay;
+        if (delay > TimeSpan.Zero)
+            await Task.Delay(delay, timeProvider, cancellationToken);
+    }
+
+    private CachedResponse ServeReady(EntryKey key, Entry entry, DateTimeOffset servedAt, long cacheVersion)
     {
         var ready = CachedResponse.From(entry);
-        responseCache.Set(key, ready);
+        responseCache.Set(key, ready, cacheVersion);
         hitCounter.Add(ready.EntryId, servedAt);
         return ready;
     }

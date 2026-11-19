@@ -35,11 +35,11 @@ public static class ServiceCollectionExtensions
                     async (views, request, cancellationToken) => await views.GetClientsAsync(request.Query, cancellationToken))
                 .AddWatch<ClientWatch, object?>(
                     WatchAudience.Shared,
-                    _ => LiveInterest.Nothing,
+                    _ => new LiveInterest([LiveTopic.Requests]),
                     async (views, request, cancellationToken) => await views.GetClientAsync(request.Ip, cancellationToken))
                 .AddWatch<ClientAbuseWatch, object?>(
                     WatchAudience.Personal,
-                    _ => new LiveInterest([LiveTopic.Reports]),
+                    _ => new LiveInterest([LiveTopic.Reports, LiveTopic.Requests]),
                     async (views, request, cancellationToken) => await views.GetClientAbuseAsync(request.Ip, cancellationToken))
                 .AddWatch<ReportsWatch, object>(
                     WatchAudience.Shared,
@@ -57,6 +57,10 @@ public static class ServiceCollectionExtensions
                     WatchAudience.Personal,
                     _ => LiveInterest.Nothing,
                     async (views, _, cancellationToken) => await views.GetSettingsAsync(cancellationToken))
+                .AddWatch<BlockedContactsWatch, object>(
+                    WatchAudience.Shared,
+                    _ => new LiveInterest([LiveTopic.Reports]),
+                    async (views, request, cancellationToken) => await views.GetBlockedContactsAsync(request.Query, cancellationToken))
                 .AddSingleton<IWatchHandlers, WatchHandlers>();
         }
 

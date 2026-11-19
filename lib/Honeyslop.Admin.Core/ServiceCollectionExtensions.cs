@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
                 .AddScoped<IRequestsService, RequestsService>()
                 .AddScoped<IClientsService, ClientsService>()
                 .AddScoped<IReportsService, ReportsService>()
+                .AddScoped<IBlockedContactsService, BlockedContactsService>()
                 .AddScoped<IGeneratorsService, GeneratorsService>()
                 .AddScoped<ISettingsService, SettingsService>()
                 .AddHostedService<MaintenanceService>();

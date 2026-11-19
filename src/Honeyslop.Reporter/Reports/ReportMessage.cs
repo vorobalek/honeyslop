@@ -8,7 +8,7 @@ namespace Honeyslop.Reporter.Reports;
 
 internal static class ReportMessage
 {
-    public static MimeMessage Create(AbuseReport report, MailboxAddress sender, byte[] archive, DateTimeOffset now)
+    public static MimeMessage Create(AbuseReport report, IReadOnlyCollection<string> recipients, MailboxAddress sender, byte[] archive, DateTimeOffset now)
     {
         var message = new MimeMessage
         {
@@ -17,7 +17,7 @@ internal static class ReportMessage
             MessageId = MessageIdOf(report, sender, now)
         };
         message.From.Add(sender);
-        message.To.AddRange(report.Recipients.Select(MailboxAddress.Parse));
+        message.To.AddRange(recipients.Select(MailboxAddress.Parse));
 
         var body = new BodyBuilder
         {

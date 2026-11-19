@@ -1,3 +1,4 @@
+using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Requests;
 using Honeyslop.Trap.Requests.Internals;
 
@@ -6,7 +7,7 @@ namespace Honeyslop.Trap.Tests.Requests;
 [TestClass]
 public sealed class RequestClassifierTests
 {
-    private readonly RequestClassifier _classifier = new(TestOptions.Trap(x => x.MaxTargetLength = 64));
+    private readonly RequestClassifier _classifier = new(TestOptions.Trap(x => x.Requests.MaxTargetLength = 64));
 
     [TestMethod]
     [DataRow("/favicon.ico")]
@@ -91,9 +92,22 @@ public sealed class RequestClassifierTests
     }
 
     [TestMethod]
+    [DataRow(64, 64)]
+    [DataRow(100000, 2048)]
+    public void Apply_CapsTheTargetLengthAtWhatAnEntryCanHold(int configured, int expected)
+    {
+        var rules = new RequestRules();
+
+        rules.Apply(configured, null);
+
+        Assert.AreEqual(expected, rules.MaxTargetLength);
+        Assert.AreSame(StaticFileExtensions.Default, rules.StaticExtensions);
+    }
+
+    [TestMethod]
     public void Classify_ConfiguredExtensions_ReplaceDefaults()
     {
-        var classifier = new RequestClassifier(TestOptions.Trap(x => x.StaticExtensions = StaticExtensions.Parse(".txt, LOG")));
+        var classifier = new RequestClassifier(TestOptions.Trap(x => x.Requests.StaticExtensions = StaticFileExtensions.Parse(".txt, LOG")));
 
         Assert.AreEqual(ClassificationKind.StaticFile, classifier.Classify("GET", "/robots.txt").Kind);
         Assert.AreEqual(ClassificationKind.StaticFile, classifier.Classify("GET", "/error.log").Kind);

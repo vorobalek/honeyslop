@@ -88,7 +88,70 @@ public sealed class Entries(IEntriesService entriesService)
         Dictionary<string, string>? headers = null,
         CancellationToken cancellationToken = default)
     {
-        ResponseHeader[] list =
+        return entriesService.ReplaceAsync(ids, new EntryResponseDto(status, Headers(headers), body), cancellationToken);
+    }
+
+    [McpServerTool(Name = "create_entry", Title = "Create an entry for generation", Destructive = false, Idempotent = false)]
+    [Description(
+        "Creates an entry for a request nobody has made yet and queues it for the model, optionally with guidance such as the software to answer as. Method, host and path make the cache key; headers and body only help the model. Refused when the request already has an entry. Returns the id of the new entry, or what was wrong.")]
+    public Task<EntryChangeDto> CreateAsync(
+        [Description("GET, HEAD, POST, PUT, PATCH or DELETE; HEAD is cached as GET.")]
+        string method,
+        [Description("Host name or address without a scheme or port, as in the Host header.")]
+        string host,
+        [Description("Path with the query string, starting with /, exactly as scanners send it.")]
+        string path,
+        [Description("Request headers, one Name: value per line.")]
+        string? requestHeaders = null,
+        [Description("Request body.")] string? requestBody = null,
+        [Description("Guidance for the model, at most 2048 characters.")]
+        string? guidance = null,
+        CancellationToken cancellationToken = default)
+    {
+        return entriesService.CreateAsync(new EntryRequestDto(method, host, path, requestHeaders, requestBody), guidance, cancellationToken);
+    }
+
+    [McpServerTool(Name = "create_entry_with_response", Title = "Create an entry with a written response", Destructive = false, Idempotent = false)]
+    [Description(
+        "Creates an entry for a request nobody has made yet and serves the given response for it. Method, host and path make the cache key. Headers the server sets itself, such as Content-Length, are refused; Content-Type defaults to text/html. Refused when the request already has an entry. Returns the id of the new entry, or what was wrong.")]
+    public Task<EntryChangeDto> CreateWithResponseAsync(
+        [Description("GET, HEAD, POST, PUT, PATCH or DELETE; HEAD is cached as GET.")]
+        string method,
+        [Description("Host name or address without a scheme or port, as in the Host header.")]
+        string host,
+        [Description("Path with the query string, starting with /, exactly as scanners send it.")]
+        string path,
+        [Description("HTTP status, 200 to 599.")]
+        int status,
+        [Description("Response body.")] string body,
+        [Description("Response headers by name.")]
+        Dictionary<string, string>? headers = null,
+        [Description("Request headers, one Name: value per line.")]
+        string? requestHeaders = null,
+        [Description("Request body.")] string? requestBody = null,
+        CancellationToken cancellationToken = default)
+    {
+        return entriesService.CreateWithResponseAsync(
+            new EntryRequestDto(method, host, path, requestHeaders, requestBody),
+            new EntryResponseDto(status, Headers(headers), body),
+            cancellationToken);
+    }
+
+    [McpServerTool(Name = "set_entry_delay", Title = "Delay the responses of entries", Destructive = false, Idempotent = true)]
+    [Description(
+        "Makes the trap wait this many seconds before every response it serves from these entries, to hold a scanner's connections open longer. Without seconds the entries go back to the default delay from the settings. Expired entries are left alone. Returns the ids of the changed entries, or what was wrong.")]
+    public Task<EntryChangeDto> SetDelayAsync(
+        [Description("Entry ids.")] long[] ids,
+        [Description("Seconds from 0 to 600; leave out to use the default.")]
+        int? seconds = null,
+        CancellationToken cancellationToken = default)
+    {
+        return entriesService.SetResponseDelayAsync(ids, seconds, cancellationToken);
+    }
+
+    private static ResponseHeader[] Headers(Dictionary<string, string>? headers)
+    {
+        return
         [
             .. (headers ?? []).Select(x => new ResponseHeader
             {
@@ -96,6 +159,5 @@ public sealed class Entries(IEntriesService entriesService)
                 Value = x.Value
             })
         ];
-        return entriesService.ReplaceAsync(ids, new EntryResponseDto(status, list, body), cancellationToken);
     }
 }

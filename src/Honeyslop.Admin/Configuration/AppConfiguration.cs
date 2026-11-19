@@ -1,4 +1,5 @@
 using Honeyslop.Common;
+using Honeyslop.Data.Requests;
 
 namespace Honeyslop.Admin.Configuration;
 
@@ -30,6 +31,15 @@ public static class AppConfiguration
 
     public static readonly string? SmtpFrom = "SMTP_FROM"
         .EnvironmentValue;
+
+    public static readonly int MaxTargetLength = "MAX_TARGET_LENGTH"
+        .GetEnvironmentValueWithFallback(RequestRules.DefaultMaxTargetLength);
+
+    public static readonly string? StaticExtensions = "STATIC_EXTENSIONS"
+        .EnvironmentValue;
+
+    public static readonly int ResponseDelaySeconds = "RESPONSE_DELAY_SECONDS"
+        .GetEnvironmentValueWithFallback(0);
 
     public static readonly string? AbuseReportSenderName = "ABUSE_REPORT_SENDER_NAME"
         .EnvironmentValue;

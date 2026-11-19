@@ -1,4 +1,4 @@
-namespace Honeyslop.Trap.Requests;
+namespace Honeyslop.Data.Requests;
 
 public enum ClassificationKind
 {

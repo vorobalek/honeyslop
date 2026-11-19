@@ -554,6 +554,21 @@ public sealed class EntryRepositoryTests
     }
 
     [TestMethod]
+    public async Task SetResponseDelayAsync_ChangesOnlyEntriesThatAreServed()
+    {
+        var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        var expired = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Expired));
+
+        long[] changed;
+        await using (var scope = PostgresDatabase.CreateScope())
+            changed = await scope.Repository().SetResponseDelayAsync([ready.Id, expired.Id], 12, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { ready.Id }, changed);
+        Assert.AreEqual(12, (await GetAsync(ready.Id)).ResponseDelaySeconds);
+        Assert.IsNull((await GetAsync(expired.Id)).ResponseDelaySeconds);
+    }
+
+    [TestMethod]
     public async Task GetChangeableAsync_LeavesOutExpiredEntriesWhosePathHasANewerOne()
     {
         var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));

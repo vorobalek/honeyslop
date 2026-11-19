@@ -13,4 +13,5 @@ public partial class ApplicationDbContext
     public required DbSet<UserSetting> UserSettings { get; set; }
     public required DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     public required DbSet<ResourceLock> ResourceLocks { get; set; }
+    public required DbSet<BlockedAbuseContact> BlockedAbuseContacts { get; set; }
 }

@@ -28,7 +28,7 @@ public sealed class ReportMessageTests
         using var archive = new RequestArchive(report.ClientIp, 1, 1);
         archive.Add(Request(1, Now, "GET", "/.env", "Host: a.example.test\n", null));
 
-        var message = ReportMessage.Create(report, new MailboxAddress("Example Sender, security team", "security@example.test"), archive.ToArray(), Now);
+        var message = ReportMessage.Create(report, report.Recipients, new MailboxAddress("Example Sender, security team", "security@example.test"), archive.ToArray(), Now);
 
         Assert.AreEqual("security@example.test", message.From.Mailboxes.Single().Address);
         Assert.AreEqual("Example Sender, security team", message.From.Mailboxes.Single().Name);

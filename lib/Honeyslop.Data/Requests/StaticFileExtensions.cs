@@ -1,6 +1,6 @@
-namespace Honeyslop.Trap.Requests;
+namespace Honeyslop.Data.Requests;
 
-public static class StaticExtensions
+public static class StaticFileExtensions
 {
     public static readonly IReadOnlySet<string> Default = Parse(
         "ico,png,jpg,jpeg,jpe,gif,webp,bmp,tif,tiff,svg,svgz,avif,heic,heif,psd,ai,eps," +

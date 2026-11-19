@@ -1,3 +1,4 @@
+import { EntryRequestType } from '../../types/entryRequestType';
 import { EntryResponseType } from '../../types/entryResponseType';
 import { ResponseHeaderType } from '../../types/responseHeaderType';
 
@@ -21,4 +22,18 @@ export function readResponse(data: FormData): ResponseRead {
         headers.push({ name: line.slice(0, colon).trim(), value: line.slice(colon + 1).trim() });
     }
     return { response: { status: Number(data.get('Status')), headers, body: String(data.get('Body') ?? '') } };
+}
+
+export function readRequest(data: FormData): EntryRequestType {
+    const optional = (name: string) => {
+        const value = String(data.get(name) ?? '');
+        return value.trim() === '' ? null : value;
+    };
+    return {
+        method: String(data.get('Method') ?? 'GET'),
+        host: String(data.get('Host') ?? ''),
+        target: String(data.get('Target') ?? ''),
+        headers: optional('RequestHeaders'),
+        body: optional('RequestBody'),
+    };
 }

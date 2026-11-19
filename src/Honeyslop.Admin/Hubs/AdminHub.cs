@@ -18,7 +18,8 @@ public sealed class AdminHub(
     IWatchHandlers watches,
     IEntriesService entriesService,
     IClientsService clientsService,
-    ISettingsService settingsService) : Hub
+    ISettingsService settingsService,
+    IBlockedContactsService blockedContactsService) : Hub
 {
     private ClaimsPrincipal User => Context.User ?? new ClaimsPrincipal();
 
@@ -84,10 +85,40 @@ public sealed class AdminHub(
         return entriesService.ReplaceAsync(ids, response, Context.ConnectionAborted);
     }
 
+    [HubMethodName("createEntry")]
+    public Task<EntryChangeDto> CreateEntryAsync(EntryRequestDto request, string? guidance)
+    {
+        return entriesService.CreateAsync(request, guidance, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("createEntryWithResponse")]
+    public Task<EntryChangeDto> CreateEntryWithResponseAsync(EntryRequestDto request, EntryResponseDto response)
+    {
+        return entriesService.CreateWithResponseAsync(request, response, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("setEntryDelay")]
+    public Task<EntryChangeDto> SetEntryDelayAsync(long[] ids, int? seconds)
+    {
+        return entriesService.SetResponseDelayAsync(ids, seconds, Context.ConnectionAborted);
+    }
+
     [HubMethodName("report")]
     public Task<ReportRequestDto> ReportAsync(string ip, string? senderName)
     {
         return clientsService.ReportAsync(ip, senderName, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("blockContacts")]
+    public Task<ContactsChangeDto> BlockContactsAsync(string[] contacts, string? note)
+    {
+        return blockedContactsService.BlockAsync(contacts, note, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("unblockContacts")]
+    public Task<ContactsChangeDto> UnblockContactsAsync(string[] contacts)
+    {
+        return blockedContactsService.UnblockAsync(contacts, Context.ConnectionAborted);
     }
 
     [HubMethodName("saveSettings")]
@@ -106,7 +137,8 @@ public sealed class AdminHub(
                 RetryFailedAfter = TimeSpan.FromSeconds(form.RetryFailedSeconds),
                 GenerationTimeLimit = TimeSpan.FromSeconds(form.GenerationTimeLimitSeconds),
                 PublicView = form.PublicView,
-                UserAgent = string.IsNullOrWhiteSpace(form.UserAgent) ? null : form.UserAgent.Trim()
+                UserAgent = string.IsNullOrWhiteSpace(form.UserAgent) ? null : form.UserAgent.Trim(),
+                ResponseDelay = form.ResponseDelaySeconds is { } delay ? TimeSpan.FromSeconds(delay) : null
             },
             Context.ConnectionAborted);
     }

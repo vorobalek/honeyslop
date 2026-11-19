@@ -66,5 +66,7 @@ export const REPORT_COLUMNS: readonly ReportColumnType[] = [
 export const SENDER_NAME_MAX_LENGTH = 128;
 export const USER_AGENT_MAX_LENGTH = 512;
 export const GUIDANCE_MAX_LENGTH = 2048;
+export const RESPONSE_DELAY_MAX_SECONDS = 600;
+export const REQUEST_METHODS: readonly string[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
 export const RESPONSE_BODY_MAX_LENGTH = 65536;
 export const FILTER_DELAY = 400;

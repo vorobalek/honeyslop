@@ -5,6 +5,7 @@ import { useWatchPresence } from '../../hooks/useWatched';
 import { REPORT_COLUMNS } from '../../lib/constants';
 import { pageParam, sortingParam } from '../../lib/listQuery';
 import { ReportsViewType } from '../../types/reportsViewType';
+import Link from '../Common/Link';
 import ListPager from '../Common/ListPager';
 import Presence from '../Common/Presence';
 import ReportsCount from './ReportsCount';
@@ -25,6 +26,7 @@ const ReportsPage: React.FC = () => {
         <div>
             <div className='actions'>
                 <ReportsCount watch={watch} />
+                <Link to='/reports/blocked'>Blocked abuse contacts →</Link>
             </div>
             <ReportsTable
                 watch={watch}

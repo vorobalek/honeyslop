@@ -3,11 +3,14 @@ using Honeyslop.Admin.Core.Access;
 using Honeyslop.Admin.Core.Clients;
 using Honeyslop.Admin.Core.Contracts;
 using Honeyslop.Admin.Core.Extensions;
+using Honeyslop.Admin.Core.Options;
 using Honeyslop.Common;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Llm.Contracts;
+using Microsoft.Extensions.Options;
 
 namespace Honeyslop.Admin.Core.Services.Internals;
 
@@ -16,7 +19,10 @@ internal sealed partial class EntriesService(
     IGenerationOutputStore outputStore,
     ICountryLookup countryLookup,
     IAccessGuard access,
-    IServerTimeRepository serverTime) : IEntriesService
+    IServerTimeRepository serverTime,
+    ISettingsRepository settingsRepository,
+    IOptions<RequestRules> requestRules,
+    IOptions<ResponseDelayOptions> responseDelayOptions) : IEntriesService
 {
     private const string DefaultContentType = "text/html; charset=utf-8";
 
@@ -47,6 +53,7 @@ internal sealed partial class EntriesService(
             entry.ClientIp is null ? null : countryLookup.Find(entry.ClientIp),
             current?.Id,
             entry.State == EntryState.Generating ? outputStore.GetOrDefault(entry.Id) : null,
+            (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.ResponseDelay ?? responseDelayOptions.Value.Default,
             await serverTime.GetNowAsync(cancellationToken));
     }
 
@@ -102,6 +109,162 @@ internal sealed partial class EntriesService(
             ids,
             (current, now) => Written(current, response.Status, headers, response.Body, now),
             cancellationToken);
+    }
+
+    public async Task<EntryChangeDto> CreateAsync(
+        EntryRequestDto request,
+        string? guidance,
+        CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        var errors = new Dictionary<string, string>();
+        var template = ReadRequest(request, errors);
+        var note = string.IsNullOrWhiteSpace(guidance) ? null : guidance.Trim();
+        if (note?.Length > Entry.GuidanceMaxLength)
+            errors[nameof(Entry.Guidance)] = $"Must be at most {Entry.GuidanceMaxLength} characters.";
+        if (template is null || errors.Count > 0)
+            return new EntryChangeDto(errors, []);
+        return await CreateWithAsync(template, (current, now) => Queued(current, note, now), cancellationToken);
+    }
+
+    public async Task<EntryChangeDto> CreateWithResponseAsync(
+        EntryRequestDto request,
+        EntryResponseDto response,
+        CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        var errors = Validate(response);
+        var template = ReadRequest(request, errors);
+        if (template is null || errors.Count > 0)
+            return new EntryChangeDto(errors, []);
+        var headers = WithContentType(response.Headers);
+        return await CreateWithAsync(
+            template,
+            (current, now) => Written(current, response.Status, headers, response.Body, now),
+            cancellationToken);
+    }
+
+    public async Task<EntryChangeDto> SetResponseDelayAsync(
+        IReadOnlyCollection<long> ids,
+        int? seconds,
+        CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        if (seconds is < 0 or > Entry.ResponseDelayMaxSeconds)
+            return Refused(nameof(Entry.ResponseDelaySeconds), $"Must be from 0 to {Entry.ResponseDelayMaxSeconds} seconds.");
+        var changed = ids.Count > 0
+            ? await entryRepository.SetResponseDelayAsync(ids, seconds, await serverTime.GetNowAsync(cancellationToken), cancellationToken)
+            : [];
+        return changed.Length > 0
+            ? new EntryChangeDto(new Dictionary<string, string>(), changed)
+            : Refused("Entries", "None of these entries is served any more.");
+    }
+
+    private async Task<EntryChangeDto> CreateWithAsync(
+        Entry template,
+        Func<Entry, DateTimeOffset, Entry> create,
+        CancellationToken cancellationToken)
+    {
+        var entry = create(template, await serverTime.GetNowAsync(cancellationToken));
+        if (await entryRepository.TryAddAsync(entry, cancellationToken))
+            return new EntryChangeDto(new Dictionary<string, string>(), [entry.Id]);
+        var existing = await entryRepository.GetByKeyHashOrDefaultAsync(template.KeyHash, cancellationToken);
+        return existing is null
+            ? Refused("Entries", "Another change to this request got there first, try again.")
+            : new EntryChangeDto(
+                new Dictionary<string, string>
+                {
+                    ["Entries"] = $"This request already has entry {existing.Id}, change that one instead."
+                },
+                [existing.Id]);
+    }
+
+    private Entry? ReadRequest(EntryRequestDto request, Dictionary<string, string> errors)
+    {
+        var method = RequestRules.NormalizeMethod(request.Method.Trim());
+        if (method is null)
+            errors[nameof(request.Method)] = "Must be GET, HEAD, POST, PUT, PATCH or DELETE.";
+
+        var host = request.Host.Trim().ToLowerInvariant();
+        if (host.Length == 0)
+            errors[nameof(request.Host)] = "Required.";
+        else if (host.Length > Entry.HostMaxLength || !HostName().IsMatch(host))
+            errors[nameof(request.Host)] = "A host name or address, without a scheme, port or path.";
+
+        var target = request.Target.Trim();
+        if (TargetProblem(method, target) is { } targetProblem)
+            errors[nameof(request.Target)] = targetProblem;
+
+        var headers = RequestHeaders(request.Headers, out var headersProblem);
+        if (headersProblem is not null)
+            errors["RequestHeaders"] = headersProblem;
+
+        var body = string.IsNullOrEmpty(request.Body) ? null : request.Body;
+        if (body?.Length > Entry.RequestBodyMaxLength)
+            errors["RequestBody"] = $"Must be at most {Entry.RequestBodyMaxLength} characters.";
+
+        if (method is null || errors.Count > 0)
+            return null;
+        var key = EntryKey.Create(method, host, target);
+        return new Entry
+        {
+            KeyHash = key.Hash,
+            Method = key.Method,
+            Host = key.Host,
+            Target = key.Target,
+            UserAgent = UserAgentOf(headers),
+            RequestHeaders = headers,
+            RequestBody = body
+        };
+    }
+
+    private string? TargetProblem(string? method, string target)
+    {
+        if (target.Length == 0)
+            return "Required.";
+        if (target.Any(x => char.IsWhiteSpace(x) || char.IsControl(x)))
+            return "Must not contain spaces or control characters, encode them as %20 and the like.";
+        if (method is null)
+            return null;
+        return requestRules.Value.Classify(method, target).Kind switch
+        {
+            ClassificationKind.BadRequest => "Must start with /.",
+            ClassificationKind.UriTooLong => $"Must be at most {requestRules.Value.MaxTargetLength} characters.",
+            ClassificationKind.StaticFile => "The trap answers this extension without an entry, so the entry would never be served.",
+            _ => null
+        };
+    }
+
+    private static string? RequestHeaders(string? text, out string? problem)
+    {
+        problem = null;
+        var lines = (text ?? string.Empty)
+            .Split('\n')
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)
+            .ToArray();
+        foreach (var line in lines)
+        {
+            var colon = line.IndexOf(':');
+            if (colon < 1 || !HeaderName().IsMatch(line[..colon].Trim()))
+            {
+                problem = $"Write each header as Name: value, \"{line}\" is not.";
+                return null;
+            }
+        }
+
+        var headers = string.Concat(lines.Select(x => x + "\n"));
+        if (headers.Length > Entry.RequestHeadersMaxLength)
+            problem = $"Must be at most {Entry.RequestHeadersMaxLength} characters.";
+        return headers.Length > 0 ? headers : null;
+    }
+
+    private static string? UserAgentOf(string? headers)
+    {
+        var line = headers?
+            .Split('\n')
+            .FirstOrDefault(x => x.StartsWith("User-Agent:", StringComparison.OrdinalIgnoreCase));
+        return line?["User-Agent:".Length..].Trim().Truncate(Entry.UserAgentMaxLength);
     }
 
     private async Task<EntryChangeDto> ReplaceWithAsync(
@@ -163,6 +326,7 @@ internal sealed partial class EntriesService(
             UserAgent = current.UserAgent,
             RequestHeaders = current.RequestHeaders,
             RequestBody = current.RequestBody,
+            ResponseDelaySeconds = current.ResponseDelaySeconds,
             ChangedBy = access.Viewer.Name,
             CreatedAt = now,
             UpdatedAt = now
@@ -222,4 +386,7 @@ internal sealed partial class EntriesService(
 
     [GeneratedRegex(@"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")]
     private static partial Regex HeaderName();
+
+    [GeneratedRegex(@"^(\[[0-9a-f:.]+\]|[a-z0-9]([a-z0-9._-]*[a-z0-9])?)$")]
+    private static partial Regex HostName();
 }

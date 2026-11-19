@@ -5,6 +5,7 @@ using Honeyslop.Admin.Core.Maintenance;
 using Honeyslop.Admin.Core.Options;
 using Honeyslop.Admin.Core.Text;
 using Honeyslop.Data.Contracts;
+using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
 using Microsoft.Extensions.Options;
 
@@ -16,6 +17,7 @@ internal sealed class SettingsService(
     IPublicView publicView,
     IOptions<AbuseReportOptions> reportOptions,
     IOptions<UserAgentOptions> userAgentOptions,
+    IOptions<ResponseDelayOptions> responseDelayOptions,
     IAccessGuard access,
     IServerTimeRepository serverTime) : ISettingsService
 {
@@ -27,6 +29,7 @@ internal sealed class SettingsService(
         return new SettingsDto(
             settings.Honeyslop,
             userAgentOptions.Value.Default,
+            responseDelayOptions.Value.Default,
             viewer.CanOperate ? reportOptions.Value.DefaultSenderName : null,
             settings.User?.SenderName);
     }
@@ -78,6 +81,8 @@ internal sealed class SettingsService(
             errors[nameof(settings.GenerationWait)] = "Must be zero or positive.";
         if (settings.RequestRetention < TimeSpan.Zero)
             errors[nameof(settings.RequestRetention)] = "Must be zero or positive.";
+        if (settings.ResponseDelay is { } delay && (delay < TimeSpan.Zero || delay > TimeSpan.FromSeconds(Entry.ResponseDelayMaxSeconds)))
+            errors[nameof(settings.ResponseDelay)] = $"Must be from 0 to {Entry.ResponseDelayMaxSeconds} seconds.";
         if (settings.UserAgent is not null && !UserAgentHeader.IsValid(settings.UserAgent))
             errors[nameof(settings.UserAgent)] = "Must be a valid User-Agent header of at most 512 characters.";
         return errors;

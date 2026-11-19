@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using Honeyslop.Common;
 using Honeyslop.Data;
+using Honeyslop.Data.Entities;
+using Honeyslop.Data.Requests;
 using Honeyslop.Llm;
 using Honeyslop.Trap.Caching;
 using Honeyslop.Trap.Caching.Internals;
@@ -54,6 +56,9 @@ await Host
                 .AddScoped<ITrapHandler, TrapHandler>()
                 .AddHostedService<GenerationWorker>()
                 .AddHostedService<HitFlushService>()
+                .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<ChangeListener>(
+                    serviceProvider,
+                    AppConfiguration.DbConnectionString))
                 .AddHealthChecks();
             services
                 .AddOptions<TrapOptions>()
@@ -63,14 +68,12 @@ await Host
                     x.Workers = GenerationConfiguration.Workers;
                     x.MaxWaiters = GenerationConfiguration.MaxWaiters;
                     x.MaxAttempts = GenerationConfiguration.MaxAttempts;
-                    x.MaxTargetLength = GenerationConfiguration.MaxTargetLength;
                     x.MaxRequestBodyBytes = GenerationConfiguration.MaxRequestBodyBytes;
                     x.MemoryCacheDuration = TimeSpan.FromSeconds(GenerationConfiguration.MemoryCacheSeconds);
                     x.MemoryCacheSizeLimit = GenerationConfiguration.MemoryCacheMegabytes * 1024L * 1024L;
                     x.HitFlushInterval = TimeSpan.FromSeconds(GenerationConfiguration.HitFlushSeconds);
-                    x.StaticExtensions = GenerationConfiguration.StaticExtensions is { } staticExtensions
-                        ? StaticExtensions.Parse(staticExtensions)
-                        : StaticExtensions.Default;
+                    x.Requests.Apply(GenerationConfiguration.MaxTargetLength, GenerationConfiguration.StaticExtensions);
+                    x.ResponseDelay = TimeSpan.FromSeconds(Math.Clamp(GenerationConfiguration.ResponseDelaySeconds, 0, Entry.ResponseDelayMaxSeconds));
                 });
             services
                 .AddLlm(x =>

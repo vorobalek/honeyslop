@@ -122,6 +122,39 @@ button.link {
     border: 0;
 }
 
+button.link.danger {
+    color: var(--danger);
+}
+
+.abuse-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.block-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0 12px;
+    max-width: 960px;
+    margin-bottom: 16px;
+}
+
+.block-contacts .setting {
+    flex: 1 1 320px;
+}
+
+.block-contacts .setting input[type=text] {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.block-contacts button {
+    margin-top: 22px;
+}
+
 .settings {
     display: flex;
     flex-direction: column;
@@ -357,7 +390,36 @@ dialog .setting {
     resize: vertical;
 }
 
-.setting textarea.mono {
+.request-line-fields {
+    display: flex;
+    gap: 8px;
+}
+
+.request-line-fields .setting:last-child {
+    flex: 1;
+}
+
+.request-line-fields .setting {
+    min-width: 0;
+}
+
+.request-line-fields .error {
+    display: block;
+}
+
+.request-line-fields select {
+    min-width: 0;
+    margin-top: 4px;
+}
+
+.request-line-fields input[type=text] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
+}
+
+.setting textarea.mono, .request-line-fields input.mono {
     font-family: var(--mono);
     font-size: 13px;
 }

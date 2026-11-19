@@ -6,8 +6,6 @@ namespace Honeyslop.Data.Extensions;
 
 internal static class EntryQueryableExtensions
 {
-    private const string LikeEscape = "\\";
-
     extension(IQueryable<Entry> query)
     {
         public IQueryable<Entry> FilterBy(string? host, string? target, EntryState? state)
@@ -15,13 +13,13 @@ internal static class EntryQueryableExtensions
             if (!string.IsNullOrWhiteSpace(host))
             {
                 var pattern = host.Trim().ContainsPattern;
-                query = query.Where(x => EF.Functions.ILike(x.Host, pattern, LikeEscape));
+                query = query.Where(x => EF.Functions.ILike(x.Host, pattern, LikePatterns.Escape));
             }
 
             if (!string.IsNullOrWhiteSpace(target))
             {
                 var pattern = target.Trim().ContainsPattern;
-                query = query.Where(x => EF.Functions.ILike(x.Target, pattern, LikeEscape));
+                query = query.Where(x => EF.Functions.ILike(x.Target, pattern, LikePatterns.Escape));
             }
 
             query = state switch
@@ -72,13 +70,13 @@ internal static class EntryQueryableExtensions
             if (!string.IsNullOrWhiteSpace(host))
             {
                 var pattern = host.Trim().ContainsPattern;
-                query = query.Where(x => EF.Functions.ILike(x.Host, pattern, LikeEscape));
+                query = query.Where(x => EF.Functions.ILike(x.Host, pattern, LikePatterns.Escape));
             }
 
             if (!string.IsNullOrWhiteSpace(target))
             {
                 var pattern = target.Trim().ContainsPattern;
-                query = query.Where(x => EF.Functions.ILike(x.Target, pattern, LikeEscape));
+                query = query.Where(x => EF.Functions.ILike(x.Target, pattern, LikePatterns.Escape));
             }
 
             if (outcome is not null)
@@ -99,7 +97,7 @@ internal static class EntryQueryableExtensions
             if (!string.IsNullOrWhiteSpace(userAgent))
             {
                 var pattern = userAgent.Trim().ContainsPattern;
-                query = query.Where(x => x.UserAgent != null && EF.Functions.ILike(x.UserAgent, pattern, LikeEscape));
+                query = query.Where(x => x.UserAgent != null && EF.Functions.ILike(x.UserAgent, pattern, LikePatterns.Escape));
             }
 
             if (since is not null)
@@ -110,16 +108,5 @@ internal static class EntryQueryableExtensions
 
             return query;
         }
-    }
-
-    extension(string value)
-    {
-        private string ContainsPattern =>
-            "%" +
-            value
-                .Replace(LikeEscape, LikeEscape + LikeEscape)
-                .Replace("%", LikeEscape + "%")
-                .Replace("_", LikeEscape + "_") +
-            "%";
     }
 }

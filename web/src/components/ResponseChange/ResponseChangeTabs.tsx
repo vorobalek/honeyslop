@@ -3,31 +3,33 @@ import React from 'react';
 
 type ResponseChangeTabsProps = {
     mode: ResponseChangeModeType;
+    creating: boolean;
     onSelect: (mode: ResponseChangeModeType) => void;
 };
 
-const TABS: readonly { mode: ResponseChangeModeType; label: string }[] = [
-    { mode: 'regenerate', label: 'Regenerate' },
-    { mode: 'write', label: 'Write the response' },
-];
-
-const ResponseChangeTabs: React.FC<ResponseChangeTabsProps> = ({ mode, onSelect }) => (
-    <div
-        className='tabs'
-        role='tablist'
-    >
-        {TABS.map((tab) => (
-            <button
-                key={tab.mode}
-                type='button'
-                role='tab'
-                aria-selected={tab.mode === mode}
-                onClick={() => onSelect(tab.mode)}
-            >
-                {tab.label}
-            </button>
-        ))}
-    </div>
-);
+const ResponseChangeTabs: React.FC<ResponseChangeTabsProps> = ({ mode, creating, onSelect }) => {
+    const tabs: readonly { mode: ResponseChangeModeType; label: string }[] = [
+        { mode: 'regenerate', label: creating ? 'Generate' : 'Regenerate' },
+        { mode: 'write', label: 'Write the response' },
+    ];
+    return (
+        <div
+            className='tabs'
+            role='tablist'
+        >
+            {tabs.map((tab) => (
+                <button
+                    key={tab.mode}
+                    type='button'
+                    role='tab'
+                    aria-selected={tab.mode === mode}
+                    onClick={() => onSelect(tab.mode)}
+                >
+                    {tab.label}
+                </button>
+            ))}
+        </div>
+    );
+};
 
 export default React.memo(ResponseChangeTabs);

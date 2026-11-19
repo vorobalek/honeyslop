@@ -1,3 +1,5 @@
+using Honeyslop.Data.Requests;
+
 namespace Honeyslop.Trap.Requests;
 
 public interface IRequestClassifier

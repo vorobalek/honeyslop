@@ -7,6 +7,7 @@ import EntriesCount from './EntriesCount';
 import ExpireAllButton from './ExpireAllButton';
 import ExpireMatchingButton from './ExpireMatchingButton';
 import ExpireSelectedButton from './ExpireSelectedButton';
+import NewEntryButton from './NewEntryButton';
 import React from 'react';
 
 type EntriesActionsProps = {
@@ -19,6 +20,7 @@ const EntriesActions: React.FC<EntriesActionsProps> = ({ watch, selection, filte
     const filtered = filter.host !== null || filter.target !== null || filter.state !== null;
     return (
         <div className='actions'>
+            <NewEntryButton />
             <ChangeSelectedButton selection={selection} />
             <ExpireSelectedButton
                 watch={watch}
