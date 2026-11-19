@@ -115,8 +115,11 @@ internal sealed partial class TrapHandler(
         }
         finally
         {
-            var elapsedMs = (int)timeProvider.GetElapsedTime(startedAt).TotalMilliseconds;
-            TrapMetrics.Requests.WithLabels(outcome.ToString().ToLowerInvariant()).Inc();
+            var elapsed = timeProvider.GetElapsedTime(startedAt);
+            var elapsedMs = (int)elapsed.TotalMilliseconds;
+            var outcomeLabel = outcome.ToString().ToLowerInvariant();
+            TrapMetrics.Requests.WithLabels(outcomeLabel).Inc();
+            TrapMetrics.RequestDuration.WithLabels(outcomeLabel).Observe(elapsed.TotalSeconds);
             LogRequest(logger, outcome, request.Method, host, target, status, elapsedMs, clientIp);
             var loggedWhileWaiting = record is not null;
             var final = Record();
@@ -188,10 +191,12 @@ internal sealed partial class TrapHandler(
             ? await clientDelays.GetAsync(ClientAddress.Key(address), cancellationToken)
             : new PersonalDelay(null, null);
         var learning = settings.AutoDelayEnabled;
-        var delay = client.Manual ??
-                    (learning ? client.Learned ?? TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)) : (TimeSpan?)null) ??
-                    response.Delay ??
-                    (settings.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : options.Value.ResponseDelay);
+        var (delay, source) = client.Manual is { } manual ? (manual, "manual")
+            : learning && client.Learned is { } learned ? (learned, "learned")
+            : learning ? (TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)), "start")
+            : response.Delay is { } entry ? (entry, "entry")
+            : (settings.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : options.Value.ResponseDelay, "default");
+        TrapMetrics.ResponseDelays.WithLabels(source).Inc();
         var remaining = delay - timeProvider.GetElapsedTime(startedAt);
         if (learning)
         {

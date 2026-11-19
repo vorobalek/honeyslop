@@ -41,6 +41,21 @@ public sealed class DelayJobRepositoryTests
     }
 
     [TestMethod]
+    public async Task CountAsync_CountsClaimedAndUnclaimedJobs()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await using var scope = PostgresDatabase.CreateScope();
+        var repository = Repository(scope);
+        await repository.ClearAsync(CancellationToken.None);
+        await repository.AddRangeAsync([Job("203.0.113.1", true, 1000, now), Job("203.0.113.2", false, 2000, now), Job("203.0.113.3", true, 3000, now)], CancellationToken.None);
+        var claimed = await repository.TryClaimNextAsync("worker", now, now.AddMinutes(-1), CancellationToken.None);
+
+        Assert.AreEqual(3, await repository.CountAsync(CancellationToken.None));
+        Assert.IsTrue(await repository.CompleteAsync(claimed!.Id, "worker", CancellationToken.None));
+        Assert.AreEqual(2, await repository.CountAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task TryClaimNextAsync_StaleClaim_IsTakenOver_AndTheOldWorkerCannotCompleteIt()
     {
         var now = DateTimeOffset.UtcNow;

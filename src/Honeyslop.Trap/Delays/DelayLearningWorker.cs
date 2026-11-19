@@ -1,5 +1,6 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Trap.Monitoring;
 using Honeyslop.Trap.Options;
 using Honeyslop.Trap.Settings;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,9 @@ internal sealed partial class DelayLearningWorker(
     private const int Attempts = 5;
     private static readonly TimeSpan Idle = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan Lease = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan CountEvery = TimeSpan.FromSeconds(10);
+
+    private long? _countedAt;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -52,7 +56,16 @@ internal sealed partial class DelayLearningWorker(
         var instance = options.Value.InstanceName;
         var job = await jobs.TryClaimNextAsync(instance, now, now - Lease, cancellationToken);
         if (job is null)
+        {
+            TrapMetrics.DelayJobsWaiting.Set(0);
             return false;
+        }
+
+        if (_countedAt is not { } countedAt || timeProvider.GetElapsedTime(countedAt) >= CountEvery)
+        {
+            TrapMetrics.DelayJobsWaiting.Set(await jobs.CountAsync(cancellationToken));
+            _countedAt = timeProvider.GetTimestamp();
+        }
 
         await LearnAsync(scope.ServiceProvider.GetRequiredService<IClientProbeRepository>(), job, settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds, now, cancellationToken);
         await jobs.CompleteAsync(job.Id, instance, cancellationToken);
@@ -69,9 +82,13 @@ internal sealed partial class DelayLearningWorker(
                 ? await probes.TryAddAsync(next, cancellationToken)
                 : await probes.TryReplaceAsync(next, current.Version, cancellationToken);
             if (saved)
+            {
+                TrapMetrics.DelayJobs.WithLabels("learned").Inc();
                 return;
+            }
         }
 
+        TrapMetrics.DelayJobs.WithLabels("contended").Inc();
         LogContended(logger, job.ClientIp);
     }
 

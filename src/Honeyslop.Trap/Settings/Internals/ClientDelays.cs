@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Trap.Monitoring;
 
 namespace Honeyslop.Trap.Settings.Internals;
 
@@ -48,6 +49,8 @@ internal sealed partial class ClientDelays(
                 _snapshot = new Snapshot(
                     manual.ToFrozenDictionary(x => x.ClientIp, x => TimeSpan.FromMilliseconds(x.ResponseDelayMilliseconds), StringComparer.Ordinal),
                     learned.ToFrozenDictionary(x => x.ClientIp, x => TimeSpan.FromMilliseconds(x.DelayMilliseconds), StringComparer.Ordinal));
+                TrapMetrics.PersonalDelays.WithLabels("manual").Set(manual.Length);
+                TrapMetrics.PersonalDelays.WithLabels("learned").Set(learned.Length);
             }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
             {

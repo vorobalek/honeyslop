@@ -18,6 +18,11 @@ internal sealed class DelayJobRepository(ApplicationDbContext dbContext) : IDela
         dbContext.ChangeTracker.Clear();
     }
 
+    public Task<int> CountAsync(CancellationToken cancellationToken)
+    {
+        return dbContext.DelayJobs.CountAsync(cancellationToken);
+    }
+
     public async Task<DelayJob?> TryClaimNextAsync(string claimedBy, DateTimeOffset now, DateTimeOffset staleBefore, CancellationToken cancellationToken)
     {
         var worker = claimedBy.Truncate(Entry.ClaimedByMaxLength);
