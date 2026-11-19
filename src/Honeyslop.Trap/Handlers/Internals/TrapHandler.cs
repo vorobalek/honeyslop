@@ -102,7 +102,7 @@ internal sealed partial class TrapHandler(
             status = response.Status;
             entryId = response.EntryId > 0 ? response.EntryId : null;
             if (outcome is RequestOutcome.Hit or RequestOutcome.Generated)
-                await DelayAsync(httpContext.Connection.RemoteIpAddress, response, httpContext.RequestAborted);
+                await DelayAsync(httpContext.Connection.RemoteIpAddress, response, startedAt, httpContext.RequestAborted);
             await ResponseWriter.WriteAsync(httpContext, response, httpContext.RequestAborted);
         }
         catch (Exception exception) when (exception is OperationCanceledException or IOException &&
@@ -179,15 +179,16 @@ internal sealed partial class TrapHandler(
         return (RequestOutcome.Generated, generated);
     }
 
-    private async Task DelayAsync(IPAddress? client, CachedResponse response, CancellationToken cancellationToken)
+    private async Task DelayAsync(IPAddress? client, CachedResponse response, long startedAt, CancellationToken cancellationToken)
     {
         var delay = (client is null ? null : await clientDelays.GetAsync(ClientAddress.Key(client), cancellationToken)) ??
                     response.Delay ??
                     ((await settingsProvider.GetAsync(cancellationToken)).ResponseDelayMilliseconds is { } milliseconds
                         ? TimeSpan.FromMilliseconds(milliseconds)
                         : options.Value.ResponseDelay);
-        if (delay > TimeSpan.Zero)
-            await Task.Delay(delay, timeProvider, cancellationToken);
+        var remaining = delay - timeProvider.GetElapsedTime(startedAt);
+        if (remaining > TimeSpan.Zero)
+            await Task.Delay(remaining, timeProvider, cancellationToken);
     }
 
     private CachedResponse ServeReady(EntryKey key, Entry entry, DateTimeOffset servedAt, long cacheVersion)

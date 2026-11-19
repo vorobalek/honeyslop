@@ -32,12 +32,12 @@ const ClientDelayButton: React.FC<ClientDelayButtonProps> = ({ ip, milliseconds 
                     detail={(value) =>
                         value === null
                             ? 'The trap goes back to the delays of the entries and the default for this address.'
-                            : `The trap waits ${value} ms before every response it serves this address from an entry.`
+                            : `The trap answers this address from an entry no sooner than ${value} ms after a request.`
                     }
                     notice={(value) =>
                         value === null
                             ? 'The address gets the delays of the entries again.'
-                            : `The address waits ${value} ms before every response.`
+                            : `The address gets answers no sooner than ${value} ms after a request.`
                     }
                     save={async (value) => {
                         const result = await invokeHub<ClientDelayChangeType>('setClientDelay', ip, value);

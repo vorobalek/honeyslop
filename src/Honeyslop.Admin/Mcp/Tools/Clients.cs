@@ -42,7 +42,7 @@ public sealed class Clients(IClientsService clientsService)
 
     [McpServerTool(Name = "set_client_delay", Title = "Delay the responses to a client", Destructive = false, Idempotent = true)]
     [Description(
-        "Makes the trap wait this many milliseconds before every response it serves to the address from an entry, whatever delay the entry or the settings ask for, to hold a scanner's connections open longer. Without milliseconds the address goes back to the entries' delays and the default. Returns the delay as saved, or what was wrong.")]
+        "Makes the trap answer the address no sooner than this many milliseconds after a request arrives when it serves the response from an entry, whatever delay the entry or the settings ask for, to hold a scanner's connections open longer; time spent generating counts towards it. Without milliseconds the address goes back to the entries' delays and the default. Returns the delay as saved, or what was wrong.")]
     public Task<ClientDelayChangeDto> SetDelayAsync(
         [Description("Client address.")] string ip,
         [Description("Milliseconds from 0 to 600000; leave out to clear.")]

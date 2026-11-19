@@ -149,6 +149,26 @@ public sealed class TrapHandlerTests
     }
 
     [TestMethod]
+    [DataRow(1_000, 2_250)]
+    [DataRow(3_250, 0)]
+    [DataRow(5_700, 0)]
+    public async Task HandleAsync_TimeAlreadySpentOnTheRequest_CountsTowardsTheDelay(int spentMs, int waitedMs)
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time);
+        var entry = ReadyEntry(7);
+        entry.ResponseDelayMilliseconds = 3_250;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .Callback(() => time.Advance(TimeSpan.FromMilliseconds(spentMs)))
+            .ReturnsAsync(entry);
+
+        await sut.Handler.HandleAsync(Request("GET", "/.env"));
+
+        CollectionAssert.AreEqual(waitedMs == 0 ? Array.Empty<TimeSpan>() : new[] { TimeSpan.FromMilliseconds(waitedMs) }, time.Delays);
+    }
+
+    [TestMethod]
     public async Task HandleAsync_ClientWithADelay_WaitsThatLongEvenIfTheEntryHasItsOwn()
     {
         var time = new DelayRecorder();
@@ -450,6 +470,19 @@ public sealed class TrapHandlerTests
     private sealed class DelayRecorder : TimeProvider
     {
         private readonly List<TimeSpan> _delays = [];
+        private long _timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            return Interlocked.Read(ref _timestamp);
+        }
+
+        public void Advance(TimeSpan elapsed)
+        {
+            Interlocked.Add(ref _timestamp, elapsed.Ticks);
+        }
 
         public TimeSpan[] Delays
         {

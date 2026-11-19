@@ -46,12 +46,12 @@ const EntryDelayButton: React.FC<EntryDelayButtonProps> = ({ watch }) => {
                     placeholder={String(opened.fallback)}
                     hint={`Empty uses the default, ${opened.fallback} ms now. A delay set on a client wins over it.`}
                     detail={(value) =>
-                        `The trap waits ${value ?? opened.fallback} ms before every response it serves from this entry.`
+                        `The trap answers from this entry no sooner than ${value ?? opened.fallback} ms after a request.`
                     }
                     notice={(value) =>
                         value === null
-                            ? `The entry waits the default ${opened.fallback} ms again.`
-                            : `The entry waits ${value} ms before every response.`
+                            ? `The entry uses the default ${opened.fallback} ms again.`
+                            : `The entry answers no sooner than ${value} ms after a request.`
                     }
                     save={async (value) => {
                         const result = await invokeHub<EntryChangeType>('setEntryDelay', [opened.id], value);

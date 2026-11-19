@@ -70,7 +70,9 @@ const DelayDialog: React.FC<DelayDialogProps> = ({
                 <p className='dialog-title'>{title}</p>
                 <fieldset disabled={sending}>
                     <div className='setting'>
-                        <label htmlFor='delay-milliseconds'>Hold every response for, milliseconds</label>
+                        <label htmlFor='delay-milliseconds'>
+                            Answer no sooner than, milliseconds after the request
+                        </label>
                         <input
                             type='number'
                             id='delay-milliseconds'

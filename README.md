@@ -20,18 +20,18 @@ the addresses that bounced them.
 
 ### Configuration
 
-| Trap                                | Default        |                                                               |
-| ----------------------------------- | -------------- | ------------------------------------------------------------- |
-| `DB_CONNECTION_STRING`              |                | PostgreSQL                                                    |
-| `LLM_URL`                           |                | Model servers: a headless service or comma-separated URLs     |
-| `TRAP_PORT`, `MANAGEMENT_PORT`      | `8080`, `8081` | Catch-all; health and metrics                                 |
-| `TRUSTED_NETWORKS`                  | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                        |
-| `GENERATION_WORKERS`                | `6`            | Concurrent generations per instance                           |
-| `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                       |
-| `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                         |
-| `MAX_TARGET_LENGTH`                 | `1024`         | Longer paths get a 414 without the model, at most 2048        |
-| `RESPONSE_DELAY_MILLISECONDS`       | `0`            | Wait before a response from an entry, unless set in the admin |
-| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                               |
+| Trap                                | Default        |                                                                               |
+| ----------------------------------- | -------------- | ----------------------------------------------------------------------------- |
+| `DB_CONNECTION_STRING`              |                | PostgreSQL                                                                    |
+| `LLM_URL`                           |                | Model servers: a headless service or comma-separated URLs                     |
+| `TRAP_PORT`, `MANAGEMENT_PORT`      | `8080`, `8081` | Catch-all; health and metrics                                                 |
+| `TRUSTED_NETWORKS`                  | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                                        |
+| `GENERATION_WORKERS`                | `6`            | Concurrent generations per instance                                           |
+| `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                                       |
+| `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                                         |
+| `MAX_TARGET_LENGTH`                 | `1024`         | Longer paths get a 414 without the model, at most 2048                        |
+| `RESPONSE_DELAY_MILLISECONDS`       | `0`            | Least time from a request to an answer from an entry, unless set in the admin |
+| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                                               |
 
 | Admin                                                                   | Default                                               |                                                                              |
 | ----------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------- |

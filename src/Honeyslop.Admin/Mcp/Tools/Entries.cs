@@ -139,7 +139,7 @@ public sealed class Entries(IEntriesService entriesService)
 
     [McpServerTool(Name = "set_entry_delay", Title = "Delay the responses of entries", Destructive = false, Idempotent = true)]
     [Description(
-        "Makes the trap wait this many milliseconds before every response it serves from these entries, to hold a scanner's connections open longer. A delay set on a client wins over it. Without milliseconds the entries go back to the default delay from the settings. Expired entries are left alone. Returns the ids of the changed entries, or what was wrong.")]
+        "Makes the trap answer no sooner than this many milliseconds after a request arrives when it serves the response from these entries, to hold a scanner's connections open longer; time spent generating counts towards it. A delay set on a client wins over it. Without milliseconds the entries go back to the default delay from the settings. Expired entries are left alone. Returns the ids of the changed entries, or what was wrong.")]
     public Task<EntryChangeDto> SetDelayAsync(
         [Description("Entry ids.")] long[] ids,
         [Description("Milliseconds from 0 to 600000; leave out to use the default.")]
