@@ -33,12 +33,14 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
                 cancellationToken);
     }
 
-    public Task<Entry[]> GetActiveAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken)
+    public Task<Entry[]> GetChangeableAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken)
     {
         return dbContext
             .Entries
             .AsNoTracking()
-            .Where(x => ids.Contains(x.Id) && x.Status != EntryStatus.Expired)
+            .Where(x => ids.Contains(x.Id) &&
+                        (x.Status != EntryStatus.Expired ||
+                         !dbContext.Entries.Any(current => current.KeyHash == x.KeyHash && current.Status != EntryStatus.Expired)))
             .OrderBy(x => x.Id)
             .ToArrayAsync(cancellationToken);
     }

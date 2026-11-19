@@ -31,12 +31,10 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({ id, watch }) => {
             <PageNotice />
             <EntryStateNotice watch={watch} />
             <EntryHeading watch={watch} />
-            {state !== 'Expired' && (
-                <EntryActions
-                    id={id}
-                    watch={watch}
-                />
-            )}
+            <EntryActions
+                id={id}
+                watch={watch}
+            />
             <p>
                 <Link to={href('/requests', { EntryId: id })}>Every request answered with this entry →</Link>
             </p>

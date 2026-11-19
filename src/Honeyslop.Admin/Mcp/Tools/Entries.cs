@@ -66,7 +66,7 @@ public sealed class Entries(IEntriesService entriesService)
 
     [McpServerTool(Name = "regenerate_entries", Title = "Regenerate cached responses", Destructive = true, Idempotent = false)]
     [Description(
-        "Expires these cached responses and queues each path to be generated again, optionally with guidance for the model such as the software to answer as. Expired entries are skipped. Returns the ids of the new entries, or what was wrong.")]
+        "Expires these cached responses and queues each path to be generated again, optionally with guidance for the model such as the software to answer as. An expired entry is changed only when its path has no newer entry. Returns the ids of the new entries, or what was wrong.")]
     public Task<EntryChangeDto> RegenerateAsync(
         [Description("Entry ids.")] long[] ids,
         [Description("Guidance for the model, at most 2048 characters.")]
@@ -78,7 +78,7 @@ public sealed class Entries(IEntriesService entriesService)
 
     [McpServerTool(Name = "replace_entries", Title = "Write cached responses", Destructive = true, Idempotent = false)]
     [Description(
-        "Expires these cached responses and serves the given response for each path instead. Headers the server sets itself, such as Content-Length, are refused; Content-Type defaults to text/html. Expired entries are skipped. Returns the ids of the new entries, or what was wrong.")]
+        "Expires these cached responses and serves the given response for each path instead. Headers the server sets itself, such as Content-Length, are refused; Content-Type defaults to text/html. An expired entry is changed only when its path has no newer entry. Returns the ids of the new entries, or what was wrong.")]
     public Task<EntryChangeDto> ReplaceAsync(
         [Description("Entry ids.")] long[] ids,
         [Description("HTTP status, 200 to 599.")]

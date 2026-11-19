@@ -95,8 +95,10 @@ const ResponseChangeDialog: React.FC<ResponseChangeDialogProps> = ({ ids, curren
                 {errors[GENERAL_ERROR] && <p className='error'>{errors[GENERAL_ERROR]}</p>}
                 <p className='hint'>
                     {single
-                        ? 'The entry expires and a new one takes its place.'
-                        : 'The selected entries expire and new ones take their place. Entries already expired are left as they are.'}
+                        ? current?.status === 'Expired'
+                            ? 'A new entry answers this path from now on.'
+                            : 'The entry expires and a new one takes its place.'
+                        : 'The selected entries expire and new ones take their place. An expired entry is skipped when its path already has a newer one.'}
                 </p>
                 <div className='actions'>
                     <button

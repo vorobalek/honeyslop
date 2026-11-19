@@ -109,11 +109,17 @@ internal sealed partial class EntriesService(
         Func<Entry, DateTimeOffset, Entry> replace,
         CancellationToken cancellationToken)
     {
-        var current = ids.Count > 0 ? await entryRepository.GetActiveAsync(ids, cancellationToken) : [];
-        if (current.Length == 0)
-            return Refused("Entries", "None of these entries is active any more.");
+        var changeable = ids.Count > 0 ? await entryRepository.GetChangeableAsync(ids, cancellationToken) : [];
+        if (changeable.Length == 0)
+            return Refused("Entries", "Each of these paths already has a newer entry, change that one instead.");
         var now = await serverTime.GetNowAsync(cancellationToken);
-        Entry[] replacements = [.. current.Select(x => replace(x, now))];
+        Entry[] replacements =
+        [
+            .. changeable
+                .GroupBy(x => Convert.ToHexString(x.KeyHash))
+                .Select(x => x.OrderBy(entry => entry.Status == EntryStatus.Expired).ThenByDescending(entry => entry.Id).First())
+                .Select(x => replace(x, now))
+        ];
         if (!await entryRepository.TryReplaceAsync(replacements, now, cancellationToken))
             return Refused("Entries", "Another change to these entries got there first, reload them and try again.");
         return new EntryChangeDto(new Dictionary<string, string>(), [.. replacements.Select(x => x.Id)]);

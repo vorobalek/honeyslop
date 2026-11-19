@@ -9,7 +9,7 @@ public interface IEntryRepository
     Task<Entry?> GetByKeyHashOrDefaultAsync(byte[] keyHash, CancellationToken cancellationToken);
     Task<Entry?> GetByIdOrDefaultAsync(long id, CancellationToken cancellationToken);
     Task<bool> TryAddAsync(Entry entry, CancellationToken cancellationToken);
-    Task<Entry[]> GetActiveAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken);
+    Task<Entry[]> GetChangeableAsync(IReadOnlyCollection<long> ids, CancellationToken cancellationToken);
     Task<bool> TryReplaceAsync(IReadOnlyCollection<Entry> replacements, DateTimeOffset now, CancellationToken cancellationToken);
     Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken);
 

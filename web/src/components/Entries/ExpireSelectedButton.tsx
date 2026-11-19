@@ -1,23 +1,35 @@
-import { useSelectionSize } from '../../hooks/useSelection';
+import { useSelectionSizeExcept } from '../../hooks/useSelection';
 import { useSession } from '../../hooks/useSession';
+import { useWatched } from '../../hooks/useWatched';
 import { perform } from '../../lib/actions';
 import { confirmAction } from '../../lib/confirmation';
 import { invokeHub } from '../../lib/hubConnection';
 import { postNotice } from '../../lib/noticeStore';
 import { SelectionStore } from '../../lib/selectionStore';
+import { Watch } from '../../lib/watchStore';
+import { EntriesViewType } from '../../types/entriesViewType';
 import { expiredNotice } from './expiredNotice';
-import React, { type FormEvent } from 'react';
+import React, { useMemo, type FormEvent } from 'react';
 
 type ExpireSelectedButtonProps = {
+    watch: Watch<EntriesViewType>;
     selection: SelectionStore;
 };
 
-const ExpireSelectedButton: React.FC<ExpireSelectedButtonProps> = ({ selection }) => {
+const selectExpiredIds = (view: EntriesViewType) =>
+    view.entries.items
+        .filter((entry) => entry.state === 'Expired')
+        .map((entry) => entry.id)
+        .join(',');
+
+const ExpireSelectedButton: React.FC<ExpireSelectedButtonProps> = ({ watch, selection }) => {
     const { canOperate } = useSession();
-    const selected = useSelectionSize(selection);
+    const expiredIds = useWatched(watch, selectExpiredIds);
+    const expired = useMemo(() => new Set(expiredIds === '' ? [] : expiredIds.split(',').map(Number)), [expiredIds]);
+    const selected = useSelectionSizeExcept(selection, expired);
     const expire = async (event: FormEvent) => {
         event.preventDefault();
-        const ids = selection.ids();
+        const ids = selection.ids().filter((id) => !expired.has(id));
         const subject = ids.length === 1 ? 'the selected entry' : `${ids.length} selected entries`;
         const regenerated = ids.length === 1 ? 'It will' : 'They will';
         const question = `Expire ${subject}? ${regenerated} be generated again on the next request.`;

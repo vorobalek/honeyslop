@@ -20,7 +20,7 @@ type ExpireMatchingButtonProps = {
 const ExpireMatchingButton: React.FC<ExpireMatchingButtonProps> = ({ watch, filter }) => {
     const { canOperate } = useSession();
     const total = useWatched(watch, (view) => view.entries.total);
-    if (total === 0) return null;
+    if (total === 0 || filter.state === 'Expired') return null;
     const expire = async (event: FormEvent) => {
         event.preventDefault();
         if (!(await confirmAction({ question: `Expire all ${total} entries matching the filter?` }))) return;

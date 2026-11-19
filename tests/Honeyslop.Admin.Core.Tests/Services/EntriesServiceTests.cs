@@ -60,6 +60,24 @@ public sealed class EntriesServiceTests
     }
 
     [TestMethod]
+    public async Task RegenerateAsync_ExpiredEntriesOfOnePath_GetOneReplacementFromTheLatest()
+    {
+        var older = Ready(1, "/SDK/webLanguage");
+        var latest = Ready(2, "/SDK/webLanguage");
+        older.Status = latest.Status = EntryStatus.Expired;
+        latest.KeyHash = older.KeyHash;
+        latest.RequestHeaders = "User-Agent: latest";
+        Active(older, latest);
+
+        var change = await Service(Viewers.Operator).RegenerateAsync([1, 2], null, CancellationToken.None);
+
+        Assert.IsTrue(change.Changed);
+        Assert.HasCount(1, _replacements);
+        Assert.AreEqual("User-Agent: latest", _replacements[0].RequestHeaders);
+        Assert.AreEqual(EntryStatus.Pending, _replacements[0].Status);
+    }
+
+    [TestMethod]
     public async Task RegenerateAsync_WhenAnotherChangeGetsThereFirst_IsRefused()
     {
         Active(Ready(1, "/SDK/webLanguage"));
@@ -157,7 +175,7 @@ public sealed class EntriesServiceTests
     private void Active(params Entry[] entries)
     {
         _entries
-            .Setup(x => x.GetActiveAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetChangeableAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);
     }
 

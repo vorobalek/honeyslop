@@ -554,18 +554,23 @@ public sealed class EntryRepositoryTests
     }
 
     [TestMethod]
-    public async Task GetActiveAsync_LeavesOutExpiredEntries()
+    public async Task GetChangeableAsync_LeavesOutExpiredEntriesWhosePathHasANewerOne()
     {
         var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
-        var expired = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Expired));
+        var alone = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Expired));
+        var replacedKey = RandomNumberGenerator.GetBytes(32);
+        var replaced = await AddAsync(PendingEntry(replacedKey, EntryStatus.Expired));
+        var current = await AddAsync(PendingEntry(replacedKey, EntryStatus.Ready));
         await using var scope = PostgresDatabase.CreateScope();
 
-        var active = await scope.Repository().GetActiveAsync([ready.Id, expired.Id], CancellationToken.None);
+        var changeable = await scope.Repository().GetChangeableAsync([ready.Id, alone.Id, replaced.Id, current.Id], CancellationToken.None);
 
         CollectionAssert.AreEqual(new[]
         {
-            ready.Id
-        }, active.Select(x => x.Id).ToArray());
+            ready.Id,
+            alone.Id,
+            current.Id
+        }, changeable.Select(x => x.Id).ToArray());
     }
 
     private static Entry PendingEntry(

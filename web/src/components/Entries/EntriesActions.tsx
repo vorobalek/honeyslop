@@ -20,7 +20,10 @@ const EntriesActions: React.FC<EntriesActionsProps> = ({ watch, selection, filte
     return (
         <div className='actions'>
             <ChangeSelectedButton selection={selection} />
-            <ExpireSelectedButton selection={selection} />
+            <ExpireSelectedButton
+                watch={watch}
+                selection={selection}
+            />
             {filtered && (
                 <ExpireMatchingButton
                     watch={watch}
