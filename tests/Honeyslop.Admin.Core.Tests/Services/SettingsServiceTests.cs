@@ -70,6 +70,20 @@ public sealed class SettingsServiceTests
     }
 
     [TestMethod]
+    [DataRow(-1, 30_000, "AutoDelayMinMilliseconds")]
+    [DataRow(30_000, 30_000, "AutoDelayMinMilliseconds")]
+    [DataRow(0, 600_001, "AutoDelayMaxMilliseconds")]
+    public async Task SaveAsync_WrongAutoDelayRange_IsRejected(int min, int max, string field)
+    {
+        var result = await Service(Viewers.Operator).SaveAsync(
+            HoneyslopSettings.Default with { AutoDelayEnabled = true, AutoDelayMinMilliseconds = min, AutoDelayMaxMilliseconds = max },
+            CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { field }, result.Errors.Keys.ToArray());
+        _settings.Verify(x => x.SaveAsync(It.IsAny<HoneyslopSettings>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
     public async Task GetAsync_ShowsTheDefaultDelayFromTheEnvironment()
     {
         _settings.Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Settings());

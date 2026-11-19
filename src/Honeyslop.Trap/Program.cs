@@ -7,6 +7,7 @@ using Honeyslop.Llm;
 using Honeyslop.Trap.Caching;
 using Honeyslop.Trap.Caching.Internals;
 using Honeyslop.Trap.Configuration;
+using Honeyslop.Trap.Delays;
 using Honeyslop.Trap.Generation;
 using Honeyslop.Trap.Generation.Internals;
 using Honeyslop.Trap.Handlers;
@@ -57,6 +58,7 @@ await Host
                 .AddScoped<ITrapHandler, TrapHandler>()
                 .AddHostedService<GenerationWorker>()
                 .AddHostedService<HitFlushService>()
+                .AddHostedService<DelayLearningWorker>()
                 .AddHostedService(serviceProvider => ActivatorUtilities.CreateInstance<ChangeListener>(
                     serviceProvider,
                     AppConfiguration.DbConnectionString))

@@ -12,4 +12,7 @@ public sealed record SettingsFormDto(
     long GenerationTimeLimitSeconds,
     bool PublicView,
     string? UserAgent,
-    int? ResponseDelayMilliseconds);
+    int? ResponseDelayMilliseconds,
+    bool AutoDelayEnabled,
+    int AutoDelayMinMilliseconds,
+    int AutoDelayMaxMilliseconds);

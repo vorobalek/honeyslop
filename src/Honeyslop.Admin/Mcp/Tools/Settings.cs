@@ -43,6 +43,13 @@ public sealed class Settings(ISettingsService settingsService)
         string? userAgent = null,
         [Description("Milliseconds after a request arrives before the trap answers it from an entry when neither the client nor the entry sets a delay of its own, 0 to 600000; time spent generating counts towards it; -1 goes back to RESPONSE_DELAY_MILLISECONDS.")]
         int? responseDelayMilliseconds = null,
+        [Description(
+            "Auto-Delay: the trap learns for every client address how long it waits before dropping the connection and holds it just below that, within the range; a new address starts in the middle and responses trickle so the last byte leaves at the client's delay. A delay set on a client by hand wins.")]
+        bool? autoDelayEnabled = null,
+        [Description("Shortest Auto-Delay in milliseconds, 0 or more.")]
+        int? autoDelayMinMilliseconds = null,
+        [Description("Longest Auto-Delay in milliseconds, at most 600000.")]
+        int? autoDelayMaxMilliseconds = null,
         CancellationToken cancellationToken = default)
     {
         var current = (await settingsService.GetAsync(cancellationToken)).Settings;
@@ -64,7 +71,10 @@ public sealed class Settings(ISettingsService settingsService)
                 null => current.ResponseDelayMilliseconds,
                 -1 => null,
                 { } milliseconds => milliseconds
-            }
+            },
+            AutoDelayEnabled = autoDelayEnabled ?? current.AutoDelayEnabled,
+            AutoDelayMinMilliseconds = autoDelayMinMilliseconds ?? current.AutoDelayMinMilliseconds,
+            AutoDelayMaxMilliseconds = autoDelayMaxMilliseconds ?? current.AutoDelayMaxMilliseconds
         };
         return await settingsService.SaveAsync(settings, cancellationToken);
     }

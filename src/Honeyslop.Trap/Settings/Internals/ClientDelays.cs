@@ -9,38 +9,45 @@ internal sealed partial class ClientDelays(
     ILogger<ClientDelays> logger) : IClientDelays
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan ChangedRefreshInterval = TimeSpan.FromSeconds(1);
 
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private DateTimeOffset _loadedAt = DateTimeOffset.MinValue;
-    private FrozenDictionary<string, TimeSpan> _delays = FrozenDictionary<string, TimeSpan>.Empty;
+    private volatile bool _changed;
+    private Snapshot _snapshot = new(FrozenDictionary<string, TimeSpan>.Empty, FrozenDictionary<string, TimeSpan>.Empty);
 
-    public async ValueTask<TimeSpan?> GetAsync(string clientIp, CancellationToken cancellationToken)
+    public async ValueTask<PersonalDelay> GetAsync(string clientIp, CancellationToken cancellationToken)
     {
-        var delays = timeProvider.GetUtcNow() - _loadedAt < RefreshInterval ? _delays : await RefreshAsync(cancellationToken);
-        return delays.TryGetValue(clientIp, out var delay) ? delay : null;
+        var snapshot = Fresh ? _snapshot : await RefreshAsync(cancellationToken);
+        return new PersonalDelay(
+            snapshot.Manual.TryGetValue(clientIp, out var manual) ? manual : null,
+            snapshot.Learned.TryGetValue(clientIp, out var learned) ? learned : null);
     }
 
     public void Reset()
     {
-        _loadedAt = DateTimeOffset.MinValue;
+        _changed = true;
     }
 
-    private async Task<FrozenDictionary<string, TimeSpan>> RefreshAsync(CancellationToken cancellationToken)
+    private bool Fresh => timeProvider.GetUtcNow() - _loadedAt < (_changed ? ChangedRefreshInterval : RefreshInterval);
+
+    private async Task<Snapshot> RefreshAsync(CancellationToken cancellationToken)
     {
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            if (timeProvider.GetUtcNow() - _loadedAt < RefreshInterval)
-                return _delays;
+            if (Fresh)
+                return _snapshot;
 
+            _changed = false;
             try
             {
                 await using var asyncScope = serviceScopeFactory.CreateAsyncScope();
-                var delays = await asyncScope
-                    .ServiceProvider
-                    .GetRequiredService<IClientDelayRepository>()
-                    .GetAllAsync(cancellationToken);
-                _delays = delays.ToFrozenDictionary(x => x.ClientIp, x => TimeSpan.FromMilliseconds(x.ResponseDelayMilliseconds), StringComparer.Ordinal);
+                var manual = await asyncScope.ServiceProvider.GetRequiredService<IClientDelayRepository>().GetAllAsync(cancellationToken);
+                var learned = await asyncScope.ServiceProvider.GetRequiredService<IClientProbeRepository>().GetAllAsync(cancellationToken);
+                _snapshot = new Snapshot(
+                    manual.ToFrozenDictionary(x => x.ClientIp, x => TimeSpan.FromMilliseconds(x.ResponseDelayMilliseconds), StringComparer.Ordinal),
+                    learned.ToFrozenDictionary(x => x.ClientIp, x => TimeSpan.FromMilliseconds(x.DelayMilliseconds), StringComparer.Ordinal));
             }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
             {
@@ -48,7 +55,7 @@ internal sealed partial class ClientDelays(
             }
 
             _loadedAt = timeProvider.GetUtcNow();
-            return _delays;
+            return _snapshot;
         }
         finally
         {
@@ -58,4 +65,6 @@ internal sealed partial class ClientDelays(
 
     [LoggerMessage(LogLevel.Warning, "Failed to load client delays, keeping the previous ones")]
     static partial void LogRefreshFailed(ILogger<ClientDelays> logger, Exception exception);
+
+    private sealed record Snapshot(FrozenDictionary<string, TimeSpan> Manual, FrozenDictionary<string, TimeSpan> Learned);
 }

@@ -6,6 +6,8 @@ import { timeSpanSeconds } from '../../lib/time';
 import { MaintenanceType } from '../../types/maintenanceType';
 import { SettingsSaveType } from '../../types/settingsSaveType';
 import { SettingsViewType } from '../../types/settingsViewType';
+import AutoDelayRange from './AutoDelayRange';
+import AutoDelayResets from './AutoDelayResets';
 import CheckboxSetting from './CheckboxSetting';
 import DurationSetting from './DurationSetting';
 import ResponseDelaySetting from './ResponseDelaySetting';
@@ -159,6 +161,26 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     fallback={view.defaultUserAgent}
                     error={errors.UserAgent}
                 />
+
+                <h2>Tricks</h2>
+                <CheckboxSetting
+                    name='AutoDelayEnabled'
+                    label='Auto-Delay: learn how long each client waits'
+                    checked={settings.autoDelayEnabled}
+                >
+                    For every client without a delay set by hand the trap learns how long it waits before dropping the
+                    connection and holds it just below that: a drop sets its timeout, and now and then a slightly longer
+                    wait checks whether it got more patient. Responses trickle, at least a piece a second, so the last
+                    byte leaves exactly at the client&apos;s delay; clients that only time out between bytes are held as
+                    long as the range allows. Off: learned delays are kept but not used.
+                </CheckboxSetting>
+                <AutoDelayRange
+                    min={settings.autoDelayMinMilliseconds}
+                    max={settings.autoDelayMaxMilliseconds}
+                    minError={errors.AutoDelayMin}
+                    maxError={errors.AutoDelayMax}
+                />
+                <AutoDelayResets />
 
                 <button
                     type='submit'

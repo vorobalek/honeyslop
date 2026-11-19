@@ -52,6 +52,20 @@ public sealed class Clients(IClientsService clientsService)
         return clientsService.SetResponseDelayAsync(ip, milliseconds, cancellationToken);
     }
 
+    [McpServerTool(Name = "reset_client_delays", Title = "Remove every delay set on a client by hand", Destructive = true, Idempotent = true)]
+    [Description("Removes the delay set by hand on every client address; learned delays and the defaults apply to them again. Returns how many were removed.")]
+    public Task<ClientDelaysChangeDto> ResetDelaysAsync(CancellationToken cancellationToken = default)
+    {
+        return clientsService.ResetResponseDelaysAsync(cancellationToken);
+    }
+
+    [McpServerTool(Name = "reset_learned_delays", Title = "Forget every learned client delay", Destructive = true, Idempotent = true)]
+    [Description("Forgets what Auto-Delay learned about every client, so each starts again from the middle of the range. Returns how many were forgotten.")]
+    public Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync(CancellationToken cancellationToken = default)
+    {
+        return clientsService.ResetLearnedDelaysAsync(cancellationToken);
+    }
+
     [McpServerTool(Name = "send_abuse_report", Title = "Send an abuse report", Destructive = false, Idempotent = false, OpenWorld = true)]
     [Description(
         "Queues an abuse report about the address to the abuse contacts RIPEstat publishes for its network; the reporter mails it within seconds with every recorded request attached, and it cannot be taken back. Refused while a report about the address is on its way, when nothing new arrived since the last sent one, and when the network publishes no abuse contact.")]

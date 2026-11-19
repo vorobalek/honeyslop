@@ -1,12 +1,18 @@
+using System.Net;
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
+using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Monitoring;
+using Honeyslop.Trap.Settings;
 
 namespace Honeyslop.Trap.Requests;
 
 internal sealed partial class RequestLogWriter(
     IRequestLog requestLog,
     IServiceScopeFactory serviceScopeFactory,
+    ISettingsProvider settingsProvider,
+    TimeProvider timeProvider,
     ILogger<RequestLogWriter> logger) : BackgroundService
 {
     private const int BatchSize = 500;
@@ -69,12 +75,35 @@ internal sealed partial class RequestLogWriter(
             if (stored.Length > 0)
                 await repository.UpdateRangeAsync(stored, cancellationToken);
             TrapMetrics.RequestLogWritten.Inc(inserts.Length + lost.Length);
+            if ((await settingsProvider.GetAsync(cancellationToken)).AutoDelayEnabled)
+                await asyncScope.ServiceProvider.GetRequiredService<IDelayJobRepository>().AddRangeAsync(Jobs(batch), cancellationToken);
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
             TrapMetrics.RequestLogDropped.Inc(batch.Count);
             LogWriteFailed(logger, exception, batch.Count);
         }
+    }
+
+    private DelayJob[] Jobs(List<RequestLogItem> batch)
+    {
+        var now = timeProvider.GetUtcNow();
+        return
+        [
+            .. batch
+                .Select(x => x.Record)
+                .Distinct(ReferenceEqualityComparer.Instance)
+                .Cast<RequestRecord>()
+                .Where(x => x.Outcome is RequestOutcome.Hit or RequestOutcome.Generated or RequestOutcome.Abandoned)
+                .Where(x => IPAddress.TryParse(x.ClientIp, out _))
+                .Select(x => new DelayJob
+                {
+                    ClientIp = ClientAddress.Key(IPAddress.Parse(x.ClientIp)),
+                    Answered = x.Outcome != RequestOutcome.Abandoned,
+                    DurationMs = x.DurationMs,
+                    CreatedAt = now
+                })
+        ];
     }
 
     [LoggerMessage(LogLevel.Warning, "Failed to store {count} request records")]

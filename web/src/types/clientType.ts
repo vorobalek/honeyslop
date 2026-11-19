@@ -6,4 +6,6 @@ export interface ClientType {
     country: CountryType | null;
     activity: ClientActivityType | null;
     responseDelayMilliseconds: number | null;
+    learnedDelayMilliseconds: number | null;
+    learnedTimeoutMilliseconds: number | null;
 }

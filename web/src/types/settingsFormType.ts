@@ -11,4 +11,7 @@ export interface SettingsFormType {
     publicView: boolean;
     userAgent: string | null;
     responseDelayMilliseconds: number | null;
+    autoDelayEnabled: boolean;
+    autoDelayMinMilliseconds: number;
+    autoDelayMaxMilliseconds: number;
 }

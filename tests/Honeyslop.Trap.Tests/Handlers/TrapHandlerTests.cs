@@ -169,6 +169,91 @@ public sealed class TrapHandlerTests
     }
 
     [TestMethod]
+    public async Task HandleAsync_AutoDelay_TricklesTheBodySoTheLastByteLeavesAtTheLearnedDelay()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time);
+        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true };
+        sut.ClientDelays
+            .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonalDelay(null, TimeSpan.FromMilliseconds(3_250)));
+        var entry = ReadyEntry(7);
+        entry.ResponseDelayMilliseconds = 60_000;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var context = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("APP_KEY=base64:fake", Body(context));
+        Assert.AreEqual(19, context.Response.ContentLength);
+        Assert.HasCount(4, time.Delays);
+        Assert.AreEqual(3_250, time.Delays.Sum(x => x.TotalMilliseconds), 2);
+        Assert.IsTrue(time.Delays.All(x => x <= TimeSpan.FromSeconds(1)));
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_AutoDelay_NewClientWaitsTheMiddleOfTheRange_OneChunkASecondAtMost()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time);
+        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true, AutoDelayMinMilliseconds = 0, AutoDelayMaxMilliseconds = 30_000 };
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ReadyEntry(7));
+
+        var context = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("APP_KEY=base64:fake", Body(context));
+        CollectionAssert.AreEqual(Enumerable.Repeat(TimeSpan.FromSeconds(1), 15).ToArray(), time.Delays);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_AutoDelay_TooShortABody_WaitsFirstAndThenSendsAByteASecond()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time);
+        sut.CurrentSettings = sut.CurrentSettings with { AutoDelayEnabled = true };
+        sut.ClientDelays
+            .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonalDelay(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20)));
+        var entry = ReadyEntry(7);
+        entry.ResponseBody = "ok!";
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var context = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("ok!", Body(context));
+        CollectionAssert.AreEqual(new[] { TimeSpan.FromSeconds(7), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1) }, time.Delays);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_AutoDelayOff_IgnoresLearnedDelaysAndAnswersInOnePiece()
+    {
+        var time = new DelayRecorder();
+        using var sut = new Sut(time);
+        sut.ClientDelays
+            .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonalDelay(null, TimeSpan.FromSeconds(20)));
+        var entry = ReadyEntry(7);
+        entry.ResponseDelayMilliseconds = 1_500;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var context = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("APP_KEY=base64:fake", Body(context));
+        CollectionAssert.AreEqual(new[] { TimeSpan.FromMilliseconds(1_500) }, time.Delays);
+    }
+
+    [TestMethod]
     public async Task HandleAsync_ClientWithADelay_WaitsThatLongEvenIfTheEntryHasItsOwn()
     {
         var time = new DelayRecorder();
@@ -176,7 +261,7 @@ public sealed class TrapHandlerTests
         sut.CurrentSettings = sut.CurrentSettings with { ResponseDelayMilliseconds = 10_000 };
         sut.ClientDelays
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(TimeSpan.FromMilliseconds(750));
+            .ReturnsAsync(new PersonalDelay(TimeSpan.FromMilliseconds(750), null));
         var entry = ReadyEntry(7);
         entry.ResponseDelayMilliseconds = 3_250;
         sut.Repository
@@ -497,6 +582,7 @@ public sealed class TrapHandlerTests
         {
             lock (_delays)
                 _delays.Add(dueTime);
+            Advance(dueTime);
             return base.CreateTimer(callback, state, TimeSpan.Zero, period);
         }
     }

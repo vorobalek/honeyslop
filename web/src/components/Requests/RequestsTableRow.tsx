@@ -9,9 +9,11 @@ import React from 'react';
 type RequestsTableRowProps = {
     request: RequestRowType;
     country: CountryType | undefined;
+    delay: number | undefined;
+    learned: boolean;
 };
 
-const RequestsTableRow: React.FC<RequestsTableRowProps> = ({ request, country }) => (
+const RequestsTableRow: React.FC<RequestsTableRowProps> = ({ request, country, delay, learned }) => (
     <tr>
         <td className='time'>
             <Link to={`/requests/${request.id}`}>{display(request.receivedAt)}</Link>
@@ -20,6 +22,8 @@ const RequestsTableRow: React.FC<RequestsTableRowProps> = ({ request, country })
             <ClientIp
                 ip={request.clientIp}
                 country={country}
+                delay={delay}
+                learned={learned}
             />
         </td>
         <td className='mono'>{request.method}</td>

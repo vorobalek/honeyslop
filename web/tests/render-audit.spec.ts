@@ -124,7 +124,7 @@ const BUDGETS: Record<string, Budget> = {
         forbidden: [...STILL_BUT_DIALOG, 'ClientPage', 'AbuseReport', 'SendReportForm', 'RequestsTableRow'],
         max: { ConfirmDialog: 1 },
     },
-    'go to the settings': { renders: 21, forbidden: SHELL },
+    'go to the settings': { renders: 23, forbidden: SHELL },
     'type into a setting': { idle: true },
     'ask to save the settings': {
         renders: 1,
@@ -333,7 +333,7 @@ test('render audit', async ({ browser }, testInfo) => {
         await step(testInfo, page, 'go to the settings', () => app.navigateTo('Settings', '/settings'));
         await step(testInfo, page, 'type into a setting', () => app.typeInto('#UserAgent', ' audit'), TYPING);
         await step(testInfo, page, 'ask to save the settings', async () => {
-            await page.locator('fieldset.settings button.danger').click();
+            await page.locator('form > fieldset.settings > button[type=submit].danger').click();
             await page.locator('dialog.confirm[open]').waitFor();
         });
         await step(testInfo, page, 'keep the settings', async () => {

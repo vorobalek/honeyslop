@@ -10,11 +10,21 @@ type ClientMetaProps = {
     watch: Watch<ClientType>;
 };
 
+function delayText(manual: number | null, learned: number | null, timeout: number | null): string {
+    if (manual !== null) return `${manual} ms, set on this address`;
+    if (learned === null) return 'none; the delays of the entries apply';
+    return timeout === null
+        ? `${learned} ms, learned; it has not dropped a connection yet`
+        : `${learned} ms, learned; it drops the connection at about ${timeout} ms`;
+}
+
 const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
     const country = useWatched(watch, (client) => client.country);
     const activity = useWatched(watch, (client) => client.activity);
     const ip = useWatched(watch, (client) => client.ip);
     const delay = useWatched(watch, (client) => client.responseDelayMilliseconds);
+    const learned = useWatched(watch, (client) => client.learnedDelayMilliseconds);
+    const timeout = useWatched(watch, (client) => client.learnedTimeoutMilliseconds);
     return (
         <>
             <dl className='meta'>
@@ -36,7 +46,7 @@ const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
                 )}
                 <dt>Delay</dt>
                 <dd>
-                    {delay !== null ? `${delay} ms, set on this address` : 'none; the delays of the entries apply'}{' '}
+                    {delayText(delay, learned, timeout)}{' '}
                     <ClientDelayButton
                         ip={ip}
                         milliseconds={delay}

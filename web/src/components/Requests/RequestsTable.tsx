@@ -29,6 +29,8 @@ const COLUMNS: ReadonlyArray<[string, string, string?]> = [
 const RequestsTable: React.FC<RequestsTableProps> = ({ watch, path, links, sorting }) => {
     const items = useWatched(watch, (view) => view.requests.items);
     const countries = useWatched(watch, (view) => view.countries);
+    const delays = useWatched(watch, (view) => view.delays);
+    const learnedDelays = useWatched(watch, (view) => view.learnedDelays);
     return (
         <div className='table-scroll'>
             <table className='entries'>
@@ -53,6 +55,10 @@ const RequestsTable: React.FC<RequestsTableProps> = ({ watch, path, links, sorti
                             key={request.id}
                             request={request}
                             country={countries[request.clientIp]}
+                            delay={delays[request.clientIp] ?? learnedDelays[request.clientIp]}
+                            learned={
+                                delays[request.clientIp] === undefined && learnedDelays[request.clientIp] !== undefined
+                            }
                         />
                     ))}
                     {items.length === 0 && (

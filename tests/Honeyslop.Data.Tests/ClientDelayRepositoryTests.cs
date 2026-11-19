@@ -29,6 +29,21 @@ public sealed class ClientDelayRepositoryTests
         Assert.IsNull(await GetAsync(ip));
     }
 
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task ClearAsync_RemovesEveryManualDelay()
+    {
+        var ip = $"198.51.100.{Random.Shared.Next(1, 254)}-{Unique.String(6)}";
+        await SetAsync(ip, 7900, "operator", DateTimeOffset.UtcNow);
+
+        int cleared;
+        await using (var scope = PostgresDatabase.CreateScope())
+            cleared = await Repository(scope).ClearAsync(CancellationToken.None);
+
+        Assert.IsGreaterThanOrEqualTo(1, cleared);
+        Assert.IsNull(await GetAsync(ip));
+    }
+
     private static async Task SetAsync(string ip, int? milliseconds, string changedBy, DateTimeOffset now)
     {
         await using var scope = PostgresDatabase.CreateScope();

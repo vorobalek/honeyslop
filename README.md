@@ -2,11 +2,12 @@
 
 Catch-all for HTTP requests that no real route answers. A small language model writes what the software a request probes
 for would return (a camera's device info, a leaked `.env`, a WordPress installer), once per method, host and path; the
-answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a comment
-for the model or writes it by hand. Entries can also be made by hand before anyone asks, and responses can be held back
-by a delay set on a client, on an entry or as the default, to keep scanners waiting. Every request is recorded, and the
-networks that scan can be sent an abuse report with their request log attached; the reports that bounce show up next to
-the addresses that bounced them.
+answer is cached in PostgreSQL and served to everyone who asks again, until an operator has it regenerated with a
+comment for the model or writes it by hand. Entries can also be made by hand before anyone asks, and responses can be
+held back by a delay set on a client, on an entry or as the default, to keep scanners waiting. With Auto-Delay on, each
+client without a delay of its own is held, within a set range, just short of when it has been seen to give up, and its
+answer is sent a little at a time until then. Every request is recorded, and the networks that scan can be sent an abuse
+report with their request log attached; the reports that bounce show up next to the addresses that bounced them.
 
 ### Services
 
@@ -59,8 +60,8 @@ the addresses that bounced them.
 | `IMAP_POLL_SECONDS`                           | `300`         |                                                             |
 | `MANAGEMENT_PORT`                             | `8081`        | Health and metrics                                          |
 
-Cache lifetimes, generation limits, request retention, the public view, the default response delay and the abuse
-addresses that never get reports are edited in the admin or over MCP.
+Cache lifetimes, generation limits, request retention, the public view, the default response delay, Auto-Delay with its
+range and the abuse addresses that never get reports are edited in the admin or over MCP.
 
 ### Development
 

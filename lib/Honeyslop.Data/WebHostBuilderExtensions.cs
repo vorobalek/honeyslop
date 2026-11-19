@@ -23,6 +23,8 @@ public static class WebHostBuilderExtensions
                 .AddScoped<IAbuseReportBounceRepository, AbuseReportBounceRepository>()
                 .AddScoped<IMailboxCursorRepository, MailboxCursorRepository>()
                 .AddScoped<IClientDelayRepository, ClientDelayRepository>()
+                .AddScoped<IClientProbeRepository, ClientProbeRepository>()
+                .AddScoped<IDelayJobRepository, DelayJobRepository>()
                 .AddScoped<IServerTimeRepository, ServerTimeRepository>()
                 .AddScoped<IDataProtectionKeyRepository, DataProtectionKeyRepository>()
                 .AddDbContext<ApplicationDbContext>(optionsBuilder => optionsBuilder

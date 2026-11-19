@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
                     async (views, request, cancellationToken) => await views.GetEntryAsync(request.Id, cancellationToken))
                 .AddWatch<RequestsWatch, object>(
                     WatchAudience.Shared,
-                    _ => new LiveInterest([LiveTopic.Requests]),
+                    _ => new LiveInterest([LiveTopic.Requests, LiveTopic.Clients]),
                     async (views, request, cancellationToken) => await views.GetRequestsAsync(request.Query, cancellationToken))
                 .AddWatch<RequestWatch, object?>(
                     WatchAudience.Shared,
@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
                     async (views, request, cancellationToken) => await views.GetRequestAsync(request.Id, cancellationToken))
                 .AddWatch<ClientsWatch, object>(
                     WatchAudience.Shared,
-                    _ => LiveInterest.Nothing,
+                    _ => new LiveInterest([LiveTopic.Clients]),
                     async (views, request, cancellationToken) => await views.GetClientsAsync(request.Query, cancellationToken))
                 .AddWatch<ClientWatch, object?>(
                     WatchAudience.Shared,

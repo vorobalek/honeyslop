@@ -17,4 +17,6 @@ public partial class ApplicationDbContext
     public required DbSet<AbuseReportBounce> AbuseReportBounces { get; set; }
     public required DbSet<MailboxCursor> MailboxCursors { get; set; }
     public required DbSet<ClientDelay> ClientDelays { get; set; }
+    public required DbSet<ClientProbe> ClientProbes { get; set; }
+    public required DbSet<DelayJob> DelayJobs { get; set; }
 }

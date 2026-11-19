@@ -12,6 +12,9 @@ namespace Honeyslop.Admin.Core.Services.Internals;
 
 internal sealed class RequestsService(
     IRequestRepository requestRepository,
+    IClientDelayRepository clientDelayRepository,
+    IClientProbeRepository clientProbeRepository,
+    ISettingsRepository settingsRepository,
     ICountryLookup countryLookup,
     IAccessGuard access,
     IServerTimeRepository serverTime) : IRequestsService
@@ -26,6 +29,10 @@ internal sealed class RequestsService(
         return new RequestsPageDto(
             new PagedDto<RequestRecord>(requests, total, page, IRequestsService.PageSize),
             countryLookup.FindAll(requests.Select(x => x.ClientIp)),
+            await clientDelayRepository.FindAllAsync(requests.Select(x => x.ClientIp), cancellationToken),
+            (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.AutoDelayEnabled
+                ? await clientProbeRepository.FindAllAsync(requests.Select(x => x.ClientIp), cancellationToken)
+                : new Dictionary<string, int>(),
             asOf);
     }
 

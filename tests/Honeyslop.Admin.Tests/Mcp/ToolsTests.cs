@@ -88,7 +88,7 @@ public sealed class ToolsTests
         requests
             .Setup(x => x.GetPageAsync(It.IsAny<RequestsQuery>(), It.IsAny<CancellationToken>()))
             .Callback<RequestsQuery, CancellationToken>((query, _) => asked = query)
-            .ReturnsAsync(new RequestsPageDto(new PagedDto<RequestRecord>([], 0, 0, 100), new Dictionary<string, CountryDto>(), DateTimeOffset.UnixEpoch));
+            .ReturnsAsync(new RequestsPageDto(new PagedDto<RequestRecord>([], 0, 0, 100), new Dictionary<string, CountryDto>(), new Dictionary<string, int>(), new Dictionary<string, int>(), DateTimeOffset.UnixEpoch));
         var since = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
 
         await new Requests(requests.Object).ListAsync(
@@ -129,7 +129,7 @@ public sealed class ToolsTests
 
         await new Settings(settings.Object).UpdateAsync(3600, publicView: true);
         var kept = saved;
-        await new Settings(settings.Object).UpdateAsync(responseDelayMilliseconds: -1);
+        await new Settings(settings.Object).UpdateAsync(responseDelayMilliseconds: -1, autoDelayEnabled: true, autoDelayMaxMilliseconds: 45_000);
 
         Assert.AreEqual(current with
         {
@@ -137,5 +137,6 @@ public sealed class ToolsTests
             PublicView = true
         }, kept);
         Assert.IsNull(saved?.ResponseDelayMilliseconds);
+        Assert.AreEqual((true, 0, 45_000), (saved!.AutoDelayEnabled, saved.AutoDelayMinMilliseconds, saved.AutoDelayMaxMilliseconds));
     }
 }

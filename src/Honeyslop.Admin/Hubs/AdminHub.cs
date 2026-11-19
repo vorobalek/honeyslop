@@ -103,6 +103,18 @@ public sealed class AdminHub(
         return clientsService.SetResponseDelayAsync(ip, milliseconds, Context.ConnectionAborted);
     }
 
+    [HubMethodName("resetLearnedDelays")]
+    public Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync()
+    {
+        return clientsService.ResetLearnedDelaysAsync(Context.ConnectionAborted);
+    }
+
+    [HubMethodName("resetClientDelays")]
+    public Task<ClientDelaysChangeDto> ResetClientDelaysAsync()
+    {
+        return clientsService.ResetResponseDelaysAsync(Context.ConnectionAborted);
+    }
+
     [HubMethodName("setEntryDelay")]
     public Task<EntryChangeDto> SetEntryDelayAsync(long[] ids, int? milliseconds)
     {
@@ -128,10 +140,11 @@ public sealed class AdminHub(
     }
 
     [HubMethodName("saveSettings")]
-    public Task<SettingsSaveDto> SaveSettingsAsync(SettingsFormDto form)
+    public async Task<SettingsSaveDto> SaveSettingsAsync(SettingsFormDto form)
     {
-        return settingsService.SaveAsync(
-            new HoneyslopSettings
+        var current = (await settingsService.GetAsync(Context.ConnectionAborted)).Settings;
+        return await settingsService.SaveAsync(
+            current with
             {
                 CacheTtl = TimeSpan.FromSeconds(form.CacheTtlSeconds),
                 KeepUnused = TimeSpan.FromSeconds(form.KeepUnusedSeconds),
@@ -144,7 +157,10 @@ public sealed class AdminHub(
                 GenerationTimeLimit = TimeSpan.FromSeconds(form.GenerationTimeLimitSeconds),
                 PublicView = form.PublicView,
                 UserAgent = string.IsNullOrWhiteSpace(form.UserAgent) ? null : form.UserAgent.Trim(),
-                ResponseDelayMilliseconds = form.ResponseDelayMilliseconds
+                ResponseDelayMilliseconds = form.ResponseDelayMilliseconds,
+                AutoDelayEnabled = form.AutoDelayEnabled,
+                AutoDelayMinMilliseconds = form.AutoDelayMinMilliseconds,
+                AutoDelayMaxMilliseconds = form.AutoDelayMaxMilliseconds
             },
             Context.ConnectionAborted);
     }

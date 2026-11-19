@@ -33,7 +33,7 @@ public sealed class RequestsServiceTests
         var countries = new Mock<ICountryLookup>();
         countries.Setup(x => x.Find(It.Is<string>(ip => ip.StartsWith("192.", StringComparison.Ordinal)))).Returns(new CountryDto("DE", "Germany"));
         countries.Setup(x => x.Find("198.51.100.1")).Returns(new CountryDto("NL", "The Netherlands"));
-        var service = new RequestsService(repository.Object, countries.Object, Viewers.Guard(Viewers.Operator), Viewers.ServerTime(DateTimeOffset.UnixEpoch));
+        var service = new RequestsService(repository.Object, Mock.Of<IClientDelayRepository>(), Mock.Of<IClientProbeRepository>(), Mock.Of<ISettingsRepository>(), countries.Object, Viewers.Guard(Viewers.Operator), Viewers.ServerTime(DateTimeOffset.UnixEpoch));
 
         var breakdown = await service.GetBreakdownAsync(new RequestsBreakdownQuery(new RequestFilter(), BreakdownDimension.Country, 2), CancellationToken.None);
 

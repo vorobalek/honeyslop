@@ -23,6 +23,20 @@ internal sealed class ClientDelayRepository(ApplicationDbContext dbContext) : IC
             .SingleOrDefaultAsync(x => x.ClientIp == clientIp, cancellationToken);
     }
 
+    public Task<ClientDelay[]> GetAnyOfAsync(IReadOnlyCollection<string> clientIps, CancellationToken cancellationToken)
+    {
+        return dbContext
+            .ClientDelays
+            .AsNoTracking()
+            .Where(x => clientIps.Contains(x.ClientIp))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public Task<int> ClearAsync(CancellationToken cancellationToken)
+    {
+        return dbContext.ClientDelays.ExecuteDeleteAsync(cancellationToken);
+    }
+
     public async Task SetAsync(string clientIp, int? milliseconds, string? changedBy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var changer = changedBy?.Truncate(Entry.ChangedByMaxLength);

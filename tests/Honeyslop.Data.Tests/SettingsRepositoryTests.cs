@@ -29,7 +29,10 @@ public sealed class SettingsRepositoryTests
             GenerationTimeLimit = TimeSpan.FromMinutes(4),
             PublicView = true,
             UserAgent = "Honeyslop-test (+https://example.test)",
-            ResponseDelayMilliseconds = 1500
+            ResponseDelayMilliseconds = 1500,
+            AutoDelayEnabled = true,
+            AutoDelayMinMilliseconds = 500,
+            AutoDelayMaxMilliseconds = 45_000
         };
         await repository.SaveAsync(saved, DateTimeOffset.UtcNow, CancellationToken.None);
         await repository.SaveAsync(saved with

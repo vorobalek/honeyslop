@@ -83,6 +83,10 @@ internal sealed class SettingsService(
             errors[nameof(settings.RequestRetention)] = "Must be zero or positive.";
         if (settings.ResponseDelayMilliseconds is < 0 or > Entry.ResponseDelayMaxMilliseconds)
             errors[nameof(settings.ResponseDelayMilliseconds)] = $"Must be from 0 to {Entry.ResponseDelayMaxMilliseconds} milliseconds.";
+        if (settings.AutoDelayMinMilliseconds < 0 || settings.AutoDelayMinMilliseconds >= settings.AutoDelayMaxMilliseconds)
+            errors[nameof(settings.AutoDelayMinMilliseconds)] = "Must be zero or more and below the maximum.";
+        if (settings.AutoDelayMaxMilliseconds > Entry.ResponseDelayMaxMilliseconds)
+            errors[nameof(settings.AutoDelayMaxMilliseconds)] = $"Must be at most {Entry.ResponseDelayMaxMilliseconds} milliseconds.";
         if (settings.UserAgent is not null && !UserAgentHeader.IsValid(settings.UserAgent))
             errors[nameof(settings.UserAgent)] = "Must be a valid User-Agent header of at most 512 characters.";
         return errors;

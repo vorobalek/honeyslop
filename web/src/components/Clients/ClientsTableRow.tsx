@@ -7,14 +7,18 @@ import React from 'react';
 type ClientsTableRowProps = {
     client: ClientActivityType;
     country: CountryType | undefined;
+    delay: number | undefined;
+    learned: boolean;
 };
 
-const ClientsTableRow: React.FC<ClientsTableRowProps> = ({ client, country }) => (
+const ClientsTableRow: React.FC<ClientsTableRowProps> = ({ client, country, delay, learned }) => (
     <tr>
         <td className='mono'>
             <ClientIp
                 ip={client.clientIp}
                 country={country}
+                delay={delay}
+                learned={learned}
             />
         </td>
         <td className='number'>{client.requests}</td>

@@ -26,6 +26,8 @@ internal sealed partial class ClientsService(
     IBlockedAbuseContactRepository blockedContactRepository,
     IAbuseReportBounceRepository bounceRepository,
     IClientDelayRepository clientDelayRepository,
+    IClientProbeRepository clientProbeRepository,
+    IDelayJobRepository delayJobRepository,
     IRequestArchiveBuilder archiveBuilder,
     ICountryLookup countryLookup,
     IWhoisLookup whoisLookup,
@@ -43,9 +45,12 @@ internal sealed partial class ClientsService(
         var total = await requestRepository.CountClientsAsync(since, cancellationToken);
         var (order, direction) = query.Sort.ToOrder();
         var clients = await requestRepository.GetClientsAsync(since, order, direction, page, IClientsService.PageSize, cancellationToken);
+        var learning = (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.AutoDelayEnabled;
         return new ClientsPageDto(
             new PagedDto<ClientActivity>(clients, total, page, IClientsService.PageSize),
             countryLookup.FindAll(clients.Select(x => x.ClientIp)),
+            await clientDelayRepository.FindAllAsync(clients.Select(x => x.ClientIp), cancellationToken),
+            learning ? await clientProbeRepository.FindAllAsync(clients.Select(x => x.ClientIp), cancellationToken) : new Dictionary<string, int>(),
             asOf);
     }
 
@@ -54,8 +59,12 @@ internal sealed partial class ClientsService(
         await access.EnsureCanReadAsync(cancellationToken);
         if (await FindAsync(ip, cancellationToken) is not { } known)
             return null;
-        var delay = await clientDelayRepository.GetOrDefaultAsync(ClientAddress.Key(IPAddress.Parse(ip)), cancellationToken);
-        return new ClientDto(ip, countryLookup.Find(ip), known.Summary, delay?.ResponseDelayMilliseconds);
+        var key = ClientAddress.Key(IPAddress.Parse(ip));
+        var delay = await clientDelayRepository.GetOrDefaultAsync(key, cancellationToken);
+        var learned = (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.AutoDelayEnabled
+            ? await clientProbeRepository.GetOrDefaultAsync(key, cancellationToken)
+            : null;
+        return new ClientDto(ip, countryLookup.Find(ip), known.Summary, delay?.ResponseDelayMilliseconds, learned?.DelayMilliseconds, learned?.TimeoutMilliseconds);
     }
 
     public async Task<ClientAbuseDto?> GetAbuseAsync(string ip, CancellationToken cancellationToken)
@@ -147,6 +156,19 @@ internal sealed partial class ClientsService(
             return DelayRefused(nameof(Entry.ResponseDelayMilliseconds), $"Must be from 0 to {Entry.ResponseDelayMaxMilliseconds} milliseconds.");
         await clientDelayRepository.SetAsync(ClientAddress.Key(address), milliseconds, access.Viewer.Name, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
         return new ClientDelayChangeDto(new Dictionary<string, string>(), milliseconds);
+    }
+
+    public async Task<ClientDelaysChangeDto> ResetResponseDelaysAsync(CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        return new ClientDelaysChangeDto(await clientDelayRepository.ClearAsync(cancellationToken));
+    }
+
+    public async Task<ClientDelaysChangeDto> ResetLearnedDelaysAsync(CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        await delayJobRepository.ClearAsync(cancellationToken);
+        return new ClientDelaysChangeDto(await clientProbeRepository.ClearAsync(cancellationToken));
     }
 
     private static ClientDelayChangeDto DelayRefused(string field, string message)

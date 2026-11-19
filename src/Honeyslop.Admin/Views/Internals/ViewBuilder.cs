@@ -39,7 +39,7 @@ internal sealed class ViewBuilder(
     public async Task<RequestsViewDto> GetRequestsAsync(RequestsQuery query, CancellationToken cancellationToken)
     {
         var page = await requestsService.GetPageAsync(query, cancellationToken);
-        return new RequestsViewDto(Rows(page.Requests, ToRow), page.Countries, page.AsOf);
+        return new RequestsViewDto(Rows(page.Requests, ToRow), page.Countries, page.Delays, page.LearnedDelays, page.AsOf);
     }
 
     public Task<RequestDetailsDto?> GetRequestAsync(long id, CancellationToken cancellationToken)

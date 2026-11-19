@@ -11,6 +11,8 @@ export const FIELD_OF_ERROR: Record<string, string> = {
     RequestRetention: 'RequestRetention',
     UserAgent: 'UserAgent',
     ResponseDelayMilliseconds: 'ResponseDelay',
+    AutoDelayMinMilliseconds: 'AutoDelayMin',
+    AutoDelayMaxMilliseconds: 'AutoDelayMax',
 };
 
 export function readSettingsForm(form: HTMLFormElement): SettingsFormType {
@@ -29,6 +31,9 @@ export function readSettingsForm(form: HTMLFormElement): SettingsFormType {
         publicView: data.has('PublicView'),
         userAgent: String(data.get('UserAgent') ?? ''),
         responseDelayMilliseconds: optionalInteger(data.get('ResponseDelay')),
+        autoDelayEnabled: data.has('AutoDelayEnabled'),
+        autoDelayMinMilliseconds: Number(data.get('AutoDelayMin')),
+        autoDelayMaxMilliseconds: Number(data.get('AutoDelayMax')),
     };
 }
 

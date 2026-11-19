@@ -261,6 +261,51 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("client_delay", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.ClientProbe", b =>
+                {
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<int>("AnswersSinceProbe")
+                        .HasColumnType("integer")
+                        .HasColumnName("answers_since_probe");
+
+                    b.Property<int>("DelayMilliseconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("delay_milliseconds");
+
+                    b.Property<int?>("EarlyDropMilliseconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("early_drop_milliseconds");
+
+                    b.Property<int>("ProbeEvery")
+                        .HasColumnType("integer")
+                        .HasColumnName("probe_every");
+
+                    b.Property<bool>("Probing")
+                        .HasColumnType("boolean")
+                        .HasColumnName("probing");
+
+                    b.Property<int?>("TimeoutMilliseconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_milliseconds");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("ClientIp")
+                        .HasName("pk_client_probe");
+
+                    b.ToTable("client_probe", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.ClientWhois", b =>
                 {
                     b.Property<string>("ClientIp")
@@ -314,6 +359,51 @@ namespace Honeyslop.Migrator.Migrations
                         .HasName("pk_data_protection_key");
 
                     b.ToTable("data_protection_key", "public");
+                });
+
+            modelBuilder.Entity("Honeyslop.Data.Entities.DelayJob", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Answered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("answered");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<string>("ClaimedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("claimed_by");
+
+                    b.Property<string>("ClientIp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_ms");
+
+                    b.HasKey("Id")
+                        .HasName("pk_delay_job");
+
+                    b.HasIndex("ClaimedAt", "Id")
+                        .HasDatabaseName("ix_delay_job_claimed_at_id");
+
+                    b.ToTable("delay_job", "public");
                 });
 
             modelBuilder.Entity("Honeyslop.Data.Entities.Entry", b =>

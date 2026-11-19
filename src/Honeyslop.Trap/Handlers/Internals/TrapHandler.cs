@@ -6,6 +6,7 @@ using Honeyslop.Data.Enums;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching;
+using Honeyslop.Trap.Delays;
 using Honeyslop.Trap.Generation;
 using Honeyslop.Trap.Hits;
 using Honeyslop.Trap.Monitoring;
@@ -102,8 +103,9 @@ internal sealed partial class TrapHandler(
             status = response.Status;
             entryId = response.EntryId > 0 ? response.EntryId : null;
             if (outcome is RequestOutcome.Hit or RequestOutcome.Generated)
-                await DelayAsync(httpContext.Connection.RemoteIpAddress, response, startedAt, httpContext.RequestAborted);
-            await ResponseWriter.WriteAsync(httpContext, response, httpContext.RequestAborted);
+                await RespondLateAsync(httpContext, response, startedAt, httpContext.RequestAborted);
+            else
+                await ResponseWriter.WriteAsync(httpContext, response, httpContext.RequestAborted);
         }
         catch (Exception exception) when (exception is OperationCanceledException or IOException &&
                                           httpContext.RequestAborted.IsCancellationRequested)
@@ -179,16 +181,27 @@ internal sealed partial class TrapHandler(
         return (RequestOutcome.Generated, generated);
     }
 
-    private async Task DelayAsync(IPAddress? client, CachedResponse response, long startedAt, CancellationToken cancellationToken)
+    private async Task RespondLateAsync(HttpContext httpContext, CachedResponse response, long startedAt, CancellationToken cancellationToken)
     {
-        var delay = (client is null ? null : await clientDelays.GetAsync(ClientAddress.Key(client), cancellationToken)) ??
+        var settings = await settingsProvider.GetAsync(cancellationToken);
+        var client = httpContext.Connection.RemoteIpAddress is { } address
+            ? await clientDelays.GetAsync(ClientAddress.Key(address), cancellationToken)
+            : new PersonalDelay(null, null);
+        var learning = settings.AutoDelayEnabled;
+        var delay = client.Manual ??
+                    (learning ? client.Learned ?? TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)) : (TimeSpan?)null) ??
                     response.Delay ??
-                    ((await settingsProvider.GetAsync(cancellationToken)).ResponseDelayMilliseconds is { } milliseconds
-                        ? TimeSpan.FromMilliseconds(milliseconds)
-                        : options.Value.ResponseDelay);
+                    (settings.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : options.Value.ResponseDelay);
         var remaining = delay - timeProvider.GetElapsedTime(startedAt);
+        if (learning)
+        {
+            await ResponseWriter.TrickleAsync(httpContext, response, remaining, timeProvider, cancellationToken);
+            return;
+        }
+
         if (remaining > TimeSpan.Zero)
             await Task.Delay(remaining, timeProvider, cancellationToken);
+        await ResponseWriter.WriteAsync(httpContext, response, cancellationToken);
     }
 
     private CachedResponse ServeReady(EntryKey key, Entry entry, DateTimeOffset servedAt, long cacheVersion)

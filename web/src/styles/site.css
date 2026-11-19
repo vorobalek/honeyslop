@@ -172,6 +172,19 @@ button.link.danger {
     font-size: 12px;
 }
 
+.client-delay {
+    white-space: nowrap;
+}
+
+.setting .label {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.setting .actions {
+    margin: 4px 0 0;
+}
+
 .setting input[type=text] {
     display: block;
     width: 100%;

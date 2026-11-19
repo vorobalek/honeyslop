@@ -17,6 +17,9 @@ internal static class SettingsConverter
     private const string PublicView = "public_view";
     private const string UserAgent = "user_agent";
     private const string ResponseDelayMilliseconds = "response_delay_milliseconds";
+    private const string AutoDelayEnabled = "auto_delay_enabled";
+    private const string AutoDelayMinMilliseconds = "auto_delay_min_milliseconds";
+    private const string AutoDelayMaxMilliseconds = "auto_delay_max_milliseconds";
     private const string SenderName = "sender_name";
 
     public static HoneyslopSettings ToSettings(IReadOnlyDictionary<string, string> values)
@@ -35,7 +38,10 @@ internal static class SettingsConverter
             GenerationTimeLimit = ReadSeconds(values, GenerationTimeLimitSeconds, defaults.GenerationTimeLimit),
             PublicView = ReadFlag(values, PublicView, defaults.PublicView),
             UserAgent = values.GetValueOrDefault(UserAgent),
-            ResponseDelayMilliseconds = ReadOptionalInteger(values, ResponseDelayMilliseconds)
+            ResponseDelayMilliseconds = ReadOptionalInteger(values, ResponseDelayMilliseconds),
+            AutoDelayEnabled = ReadFlag(values, AutoDelayEnabled, defaults.AutoDelayEnabled),
+            AutoDelayMinMilliseconds = ReadOptionalInteger(values, AutoDelayMinMilliseconds) ?? defaults.AutoDelayMinMilliseconds,
+            AutoDelayMaxMilliseconds = ReadOptionalInteger(values, AutoDelayMaxMilliseconds) ?? defaults.AutoDelayMaxMilliseconds
         };
     }
 
@@ -54,7 +60,10 @@ internal static class SettingsConverter
             [GenerationTimeLimitSeconds] = Seconds(settings.GenerationTimeLimit),
             [PublicView] = settings.PublicView.ToString(CultureInfo.InvariantCulture),
             [UserAgent] = settings.UserAgent,
-            [ResponseDelayMilliseconds] = settings.ResponseDelayMilliseconds?.ToString(CultureInfo.InvariantCulture)
+            [ResponseDelayMilliseconds] = settings.ResponseDelayMilliseconds?.ToString(CultureInfo.InvariantCulture),
+            [AutoDelayEnabled] = settings.AutoDelayEnabled.ToString(CultureInfo.InvariantCulture),
+            [AutoDelayMinMilliseconds] = settings.AutoDelayMinMilliseconds.ToString(CultureInfo.InvariantCulture),
+            [AutoDelayMaxMilliseconds] = settings.AutoDelayMaxMilliseconds.ToString(CultureInfo.InvariantCulture)
         };
     }
 

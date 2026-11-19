@@ -186,6 +186,36 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
+    public async Task ResetResponseDelaysAsync_RemovesEveryClientDelay()
+    {
+        var setup = new Setup();
+        setup.Delays.Setup(x => x.ClearAsync(It.IsAny<CancellationToken>())).ReturnsAsync(7);
+
+        Assert.AreEqual(7, (await setup.Service().ResetResponseDelaysAsync(CancellationToken.None)).Changed);
+    }
+
+    [TestMethod]
+    public async Task ResetLearnedDelaysAsync_ForgetsTheLearnedDelaysAndTheQueuedObservations()
+    {
+        var setup = new Setup();
+        setup.Probes.Setup(x => x.ClearAsync(It.IsAny<CancellationToken>())).ReturnsAsync(412);
+
+        var change = await setup.Service().ResetLearnedDelaysAsync(CancellationToken.None);
+
+        Assert.AreEqual(412, change.Changed);
+        setup.Jobs.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ResetDelaysAsync_Anonymous_AreDenied()
+    {
+        var setup = new Setup();
+
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() => setup.Service(ViewerDto.Anonymous).ResetLearnedDelaysAsync(CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() => setup.Service(ViewerDto.Anonymous).ResetResponseDelaysAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task SetResponseDelayAsync_Anonymous_IsDenied()
     {
         await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
@@ -280,12 +310,15 @@ public sealed class ClientsServiceTests
         public BouncedContact[] Bounced { get; init; } = [];
         public List<string[]> BounceLookups { get; } = [];
         public Mock<IClientDelayRepository> Delays { get; } = new();
+        public Mock<IClientProbeRepository> Probes { get; } = new();
+        public Mock<IDelayJobRepository> Jobs { get; } = new();
+        public Mock<IRequestRepository> Requests { get; } = new();
         public Mock<IAbuseReportRepository> Repository { get; } = new();
         public AbuseReport? Added { get; private set; }
 
         public ClientsService Service(ViewerDto? viewer = null)
         {
-            var requests = new Mock<IRequestRepository>();
+            var requests = Requests;
             requests.Setup(x => x.GetClientOrDefaultAsync(Ip, It.IsAny<CancellationToken>())).ReturnsAsync(Summary);
             requests.Setup(x => x.CountAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<RequestOutcome?>(), It.IsAny<long?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset?>(),
                 It.IsAny<DateTimeOffset?>(), It.Is<long?>(id => id != null), It.IsAny<CancellationToken>())).ReturnsAsync(NewSinceLastSent);
@@ -338,6 +371,8 @@ public sealed class ClientsServiceTests
                 blocked.Object,
                 bounces.Object,
                 Delays.Object,
+                Probes.Object,
+                Jobs.Object,
                 Mock.Of<IRequestArchiveBuilder>(),
                 Mock.Of<ICountryLookup>(),
                 whois.Object,
