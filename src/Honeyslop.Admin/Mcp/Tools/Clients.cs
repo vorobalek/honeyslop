@@ -68,7 +68,7 @@ public sealed class Clients(IClientsService clientsService)
 
     [McpServerTool(Name = "send_abuse_report", Title = "Send an abuse report", Destructive = false, Idempotent = false, OpenWorld = true)]
     [Description(
-        "Queues an abuse report about the address to the abuse contacts RIPEstat publishes for its network; the reporter mails it within seconds with every recorded request attached, and it cannot be taken back. Refused while a report about the address is on its way, when nothing new arrived since the last sent one, and when the network publishes no abuse contact.")]
+        "Queues an abuse report about the address to the abuse contacts RIPEstat publishes for its network; the worker mails it within seconds with every recorded request attached, and it cannot be taken back. Refused while a report about the address is on its way, when nothing new arrived since the last sent one, and when the network publishes no abuse contact.")]
     public Task<ReportRequestDto> ReportAsync(
         [Description("Client address.")] string ip,
         [Description("Name to sign the letter with; the operator's saved name when omitted.")]

@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Honeyslop.Trap.Tests"/>
+        <InternalsVisibleTo Include="Honeyslop.Worker.Tests"/>
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
     </ItemGroup>
 

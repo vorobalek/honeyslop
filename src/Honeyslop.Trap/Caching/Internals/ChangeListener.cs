@@ -1,4 +1,5 @@
 using System.Globalization;
+using Honeyslop.Data.Providers;
 using Honeyslop.Trap.Settings;
 using Npgsql;
 

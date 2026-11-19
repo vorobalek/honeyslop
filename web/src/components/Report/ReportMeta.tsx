@@ -34,7 +34,7 @@ const ReportMeta: React.FC<ReportMetaProps> = ({ details }) => {
                     {details.fromIsExpected ? (
                         <dd>
                             <span className='mono hint'>{details.from}</span>{' '}
-                            <span className='hint'>· expected; fixed when the reporter sends it</span>
+                            <span className='hint'>· expected; fixed when the worker sends it</span>
                         </dd>
                     ) : (
                         <dd className='mono'>{details.from}</dd>

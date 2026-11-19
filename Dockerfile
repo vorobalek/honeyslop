@@ -25,7 +25,7 @@ COPY --from=web /repo/src/Honeyslop.Admin/wwwroot src/Honeyslop.Admin/wwwroot
 RUN dotnet publish "src/Honeyslop.Migrator/Honeyslop.Migrator.csproj" -c Release -o /app/migrator /p:UseAppHost=false --no-build
 RUN dotnet publish "src/Honeyslop.Trap/Honeyslop.Trap.csproj" -c Release -o /app/trap /p:UseAppHost=false --no-build
 RUN dotnet publish "src/Honeyslop.Admin/Honeyslop.Admin.csproj" -c Release -o /app/admin /p:UseAppHost=false --no-build
-RUN dotnet publish "src/Honeyslop.Reporter/Honeyslop.Reporter.csproj" -c Release -o /app/reporter /p:UseAppHost=false --no-build
+RUN dotnet publish "src/Honeyslop.Worker/Honeyslop.Worker.csproj" -c Release -o /app/worker /p:UseAppHost=false --no-build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS geoip
 ARG USER_AGENT="Honeyslop (+https://github.com/vorobalek/honeyslop)"
@@ -58,8 +58,8 @@ COPY --from=publish /app/admin .
 COPY --from=geoip /geoip/country.mmdb /geoip/NOTICE /app/geoip/
 ENTRYPOINT ["dotnet", "Honeyslop.Admin.dll"]
 
-### reporter
-FROM base AS reporter
+### worker
+FROM base AS worker
 WORKDIR /app
-COPY --from=publish /app/reporter .
-ENTRYPOINT ["dotnet", "Honeyslop.Reporter.dll"]
+COPY --from=publish /app/worker .
+ENTRYPOINT ["dotnet", "Honeyslop.Worker.dll"]

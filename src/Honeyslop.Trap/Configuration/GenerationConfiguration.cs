@@ -5,9 +5,6 @@ namespace Honeyslop.Trap.Configuration;
 
 public static class GenerationConfiguration
 {
-    public static readonly int Workers = "GENERATION_WORKERS"
-        .GetEnvironmentValueWithFallback(6);
-
     public static readonly int MaxWaiters = "GENERATION_MAX_WAITERS"
         .GetEnvironmentValueWithFallback(500);
 

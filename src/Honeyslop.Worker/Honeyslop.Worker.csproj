@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Honeyslop.Worker.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\lib\Honeyslop.Data\Honeyslop.Data.csproj"/>
+        <ProjectReference Include="..\..\lib\Honeyslop.Llm\Honeyslop.Llm.csproj"/>
+        <ProjectReference Include="..\..\lib\Honeyslop.Reports\Honeyslop.Reports.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MailKit"/>
+        <PackageReference Include="prometheus-net.AspNetCore"/>
+    </ItemGroup>
+
+</Project>

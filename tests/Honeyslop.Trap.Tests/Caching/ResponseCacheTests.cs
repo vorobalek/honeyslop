@@ -1,3 +1,4 @@
+using Honeyslop.Data.Providers;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching.Internals;
 using Honeyslop.Trap.Responses;

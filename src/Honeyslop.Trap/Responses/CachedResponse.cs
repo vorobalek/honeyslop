@@ -20,15 +20,6 @@ public sealed record CachedResponse(
             DelayOf(entry));
     }
 
-    public static CachedResponse From(long entryId, GeneratedResponse response)
-    {
-        return new CachedResponse(
-            entryId,
-            response.Status,
-            response.Headers,
-            Encoding.UTF8.GetBytes(response.Body));
-    }
-
     public static TimeSpan? DelayOf(Entry entry)
     {
         return entry.ResponseDelayMilliseconds is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : null;

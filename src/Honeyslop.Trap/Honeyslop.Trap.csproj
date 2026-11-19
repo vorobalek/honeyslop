@@ -2,7 +2,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\lib\Honeyslop.Data\Honeyslop.Data.csproj"/>
-        <ProjectReference Include="..\..\lib\Honeyslop.Llm\Honeyslop.Llm.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

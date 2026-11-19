@@ -1,6 +1,7 @@
 using System.Net;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
+using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Monitoring;

@@ -10,7 +10,6 @@ internal static class TestOptions
         var options = new TrapOptions
         {
             InstanceName = "test",
-            Workers = 1,
             MaxWaiters = 10,
             MaxAttempts = 3,
             MaxRequestBodyBytes = 2048,

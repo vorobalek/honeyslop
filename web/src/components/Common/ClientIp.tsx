@@ -19,7 +19,7 @@ const ClientIp: React.FC<ClientIpProps> = ({ ip, country, delay, learned }) => (
             {country && <CountryFlag country={country} />}
             {ip}
         </Link>
-        {delay !== undefined && <span className='hint client-delay'>{` (+${delay} ms${learned ? ' auto' : ''})`}</span>}
+        {delay !== undefined && <span className='hint client-delay'>{` (+${delay}ms${learned ? ' auto' : ''})`}</span>}
     </>
 );
 

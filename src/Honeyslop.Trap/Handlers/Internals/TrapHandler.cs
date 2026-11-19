@@ -1,12 +1,13 @@
 using System.Net;
 using System.Text;
 using Honeyslop.Common;
+using Honeyslop.Data.Delays;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
+using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching;
-using Honeyslop.Trap.Delays;
 using Honeyslop.Trap.Generation;
 using Honeyslop.Trap.Hits;
 using Honeyslop.Trap.Monitoring;
@@ -24,7 +25,6 @@ internal sealed partial class TrapHandler(
     IResponseCache responseCache,
     IEntryRepository entryRepository,
     IServerTimeRepository serverTime,
-    IGenerationSignal generationSignal,
     IEntryWatcher entryWatcher,
     IHitCounter hitCounter,
     ISettingsProvider settingsProvider,
@@ -238,7 +238,6 @@ internal sealed partial class TrapHandler(
         if (!await entryRepository.TryAddAsync(queued, cancellationToken))
             return await entryRepository.GetByKeyHashOrDefaultAsync(key.Hash, cancellationToken);
 
-        generationSignal.Notify();
         return queued;
     }
 

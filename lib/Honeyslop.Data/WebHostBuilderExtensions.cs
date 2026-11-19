@@ -1,3 +1,5 @@
+using Honeyslop.Data.Providers;
+using Honeyslop.Data.Providers.Internals;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Repositories.Internals;
 using Microsoft.AspNetCore.Hosting;
@@ -27,6 +29,7 @@ public static class WebHostBuilderExtensions
                 .AddScoped<IDelayLearningJobRepository, DelayLearningJobRepository>()
                 .AddScoped<IServerTimeRepository, ServerTimeRepository>()
                 .AddScoped<IDataProtectionKeyRepository, DataProtectionKeyRepository>()
+                .AddSingleton<ISettingsProvider, SettingsProvider>()
                 .AddDbContext<ApplicationDbContext>(optionsBuilder => optionsBuilder
                     .UseNpgsql(
                         connectionString ?? context.Configuration.GetConnectionString("Default"),

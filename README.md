@@ -11,28 +11,25 @@ report with their request log attached; the reports that bounce show up next to 
 
 ### Services
 
-|                          |                                                                             |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `src/Honeyslop.Trap`     | The catch-all, with a generation queue shared by all instances              |
-| `src/Honeyslop.Admin`    | Admin web app from `web/` (React, updated live over SignalR), MCP at `/mcp` |
-| `src/Honeyslop.Reporter` | Mails queued abuse reports and reads their bounces from a mailbox           |
-| `src/Honeyslop.Migrator` | Creates the database and applies migrations                                 |
-| `llm/`, `model/`         | `llama-server` and the Qwen3-4B model images                                |
+|                          |                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `src/Honeyslop.Trap`     | The catch-all: answers from the cache, queues what it has not seen and waits for it        |
+| `src/Honeyslop.Worker`   | The queues: generations, Auto-Delay learning, abuse reports and the bounces of the reports |
+| `src/Honeyslop.Admin`    | Admin web app from `web/` (React, updated live over SignalR), MCP at `/mcp`                |
+| `src/Honeyslop.Migrator` | Creates the database and applies migrations                                                |
+| `llm/`, `model/`         | `llama-server` and the Qwen3-4B model images                                               |
 
 ### Configuration
 
-| Trap                                | Default        |                                                                               |
-| ----------------------------------- | -------------- | ----------------------------------------------------------------------------- |
-| `DB_CONNECTION_STRING`              |                | PostgreSQL                                                                    |
-| `LLM_URL`                           |                | Model servers: a headless service or comma-separated URLs                     |
-| `TRAP_PORT`, `MANAGEMENT_PORT`      | `8080`, `8081` | Catch-all; health and metrics                                                 |
-| `TRUSTED_NETWORKS`                  | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                                        |
-| `GENERATION_WORKERS`                | `6`            | Concurrent generations per instance                                           |
-| `GENERATION_MAX_ATTEMPTS`           | `3`            | Broken answers before a path gets a 404                                       |
-| `STATIC_EXTENSIONS`                 | built in       | Extensions answered without the model                                         |
-| `MAX_TARGET_LENGTH`                 | `1024`         | Longer paths get a 414 without the model, at most 2048                        |
-| `RESPONSE_DELAY_MILLISECONDS`       | `0`            | Least time from a request to an answer from an entry, unless set in the admin |
-| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `1024`, `0.7`  |                                                                               |
+| Trap                           | Default        |                                                                               |
+| ------------------------------ | -------------- | ----------------------------------------------------------------------------- |
+| `DB_CONNECTION_STRING`         |                | PostgreSQL                                                                    |
+| `TRAP_PORT`, `MANAGEMENT_PORT` | `8080`, `8081` | Catch-all; health and metrics                                                 |
+| `TRUSTED_NETWORKS`             | `10.0.0.0/8`   | Proxies trusted with `X-Forwarded-For`                                        |
+| `GENERATION_MAX_ATTEMPTS`      | `3`            | Broken answers before a path gets a 404                                       |
+| `STATIC_EXTENSIONS`            | built in       | Extensions answered without the model                                         |
+| `MAX_TARGET_LENGTH`            | `1024`         | Longer paths get a 414 without the model, at most 2048                        |
+| `RESPONSE_DELAY_MILLISECONDS`  | `0`            | Least time from a request to an answer from an entry, unless set in the admin |
 
 | Admin                                                                   | Default                                               |                                                                              |
 | ----------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -48,9 +45,13 @@ report with their request log attached; the reports that bounce show up next to 
 | `MAINTENANCE_INTERVAL_SECONDS`                                          | `60`                                                  | Expiration and pruning                                                       |
 | `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_MILLISECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
 
-| Reporter                                      | Default       |                                                             |
+| Worker                                        | Default       |                                                             |
 | --------------------------------------------- | ------------- | ----------------------------------------------------------- |
 | `DB_CONNECTION_STRING`                        |               | PostgreSQL                                                  |
+| `LLM_URL`                                     |               | Model servers: a headless service or comma-separated URLs   |
+| `GENERATION_WORKERS`                          | `6`           | Concurrent generations per instance                         |
+| `GENERATION_MAX_ATTEMPTS`                     | `3`           | As for the trap                                             |
+| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE`           | `1024`, `0.7` |                                                             |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`     | `587`, `true` |                                                             |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` |               |                                                             |
 | `MAX_ATTACHED_REQUESTS`                       | `50000`       | Requests in the attached archive                            |

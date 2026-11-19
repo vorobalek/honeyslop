@@ -29,9 +29,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Llm", "lib\Honeys
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Admin.Tests", "tests\Honeyslop.Admin.Tests\Honeyslop.Admin.Tests.csproj", "{9A72527B-3547-4587-B19A-827A5D702149}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Reporter", "src\Honeyslop.Reporter\Honeyslop.Reporter.csproj", "{4C1DAAA6-F7C1-45C8-80C1-FDFFEA7D0D13}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Worker", "src\Honeyslop.Worker\Honeyslop.Worker.csproj", "{4C1DAAA6-F7C1-45C8-80C1-FDFFEA7D0D13}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Reporter.Tests", "tests\Honeyslop.Reporter.Tests\Honeyslop.Reporter.Tests.csproj", "{2523E80B-3EB7-40DC-94AE-2ECFB35637FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Worker.Tests", "tests\Honeyslop.Worker.Tests\Honeyslop.Worker.Tests.csproj", "{2523E80B-3EB7-40DC-94AE-2ECFB35637FC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Honeyslop.Reports", "lib\Honeyslop.Reports\Honeyslop.Reports.csproj", "{8FA9B997-1775-41A8-AA1C-5C5D464C3576}"
 EndProject

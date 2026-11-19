@@ -233,7 +233,7 @@ internal sealed class AbuseReportRepository(ApplicationDbContext dbContext) : IA
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var abandoned = $"Gave up after {maxAttempts} attempts: the reporter stopped while sending";
+        var abandoned = $"Gave up after {maxAttempts} attempts: the worker stopped while sending";
         return dbContext
             .AbuseReports
             .Where(x =>

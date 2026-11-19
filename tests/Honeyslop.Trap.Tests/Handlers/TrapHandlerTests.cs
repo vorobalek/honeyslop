@@ -4,6 +4,7 @@ using Honeyslop.Common;
 using Honeyslop.Data.Contracts;
 using Honeyslop.Data.Entities;
 using Honeyslop.Data.Enums;
+using Honeyslop.Data.Providers;
 using Honeyslop.Data.Repositories;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching.Internals;
@@ -517,7 +518,8 @@ public sealed class TrapHandlerTests
 
     private static CachedResponse Generated(long entryId, int status, string body)
     {
-        return CachedResponse.From(entryId, new GeneratedResponse(
+        return new CachedResponse(
+            entryId,
             status,
             [
                 new ResponseHeader
@@ -526,7 +528,7 @@ public sealed class TrapHandlerTests
                     Value = "application/json"
                 }
             ],
-            body));
+            Encoding.UTF8.GetBytes(body));
     }
 
     private static DefaultHttpContext Request(string method, string target, string? body = null)
@@ -613,7 +615,6 @@ public sealed class TrapHandlerTests
                 Cache,
                 Repository.Object,
                 serverTime.Object,
-                new GenerationSignal(options),
                 Watcher,
                 Hits,
                 Settings.Object,
