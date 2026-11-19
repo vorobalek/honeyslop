@@ -69,7 +69,7 @@ public sealed class MigrationTests
                 await command.ExecuteNonQueryAsync();
         }
 
-        await migrator.MigrateAsync();
+        await migrator.MigrateAsync("20261119180806_ef_millisecond_and_client_delays");
 
         await using var check = new NpgsqlConnection(connectionString);
         await check.OpenAsync();
@@ -78,5 +78,14 @@ public sealed class MigrationTests
         await using var setting = new NpgsqlCommand("select value from setting where key = 'response_delay_milliseconds'", check);
         Assert.AreEqual(3000, await delay.ExecuteScalarAsync());
         Assert.AreEqual("7000", await setting.ExecuteScalarAsync());
+
+        await migrator.MigrateAsync();
+
+        await using var left = new NpgsqlCommand(
+            "select (select count(*) from information_schema.columns where table_name = 'entry' and column_name = 'response_delay_seconds') + " +
+            "(select count(*) from setting where key = 'response_delay_seconds')",
+            check);
+        Assert.AreEqual(0L, await left.ExecuteScalarAsync());
+        Assert.AreEqual(3000, await delay.ExecuteScalarAsync());
     }
 }
