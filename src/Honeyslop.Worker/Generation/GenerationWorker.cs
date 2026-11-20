@@ -97,21 +97,12 @@ internal sealed partial class GenerationWorker(
             token => StreamOutputAsync(entryId, progress, token));
         try
         {
-            var completion = await llmDispatcher.CompleteAsync(
-                promptBuilder.Build(entry, settings.AllowRefusals),
-                settings.GenerationTimeLimit,
+            var (generated, completion) = await RespondAsync(
+                entry,
+                settings,
                 progress,
                 (generator, token) => entryRepository.MarkDispatchedAsync(entryId, instance, generator, token),
                 cancellationToken);
-            if (completion.FinishReason == "length")
-                throw new LlmException(Rejections.CutOff);
-
-            var profile = RequestProfiler.Profile(entry.Host, entry.Target, entry.RequestBody);
-            var generated = responseSanitizer.Sanitize(
-                LlmResponseParser.Parse(completion.Content),
-                entry.Host,
-                profile,
-                !string.IsNullOrWhiteSpace(entry.Guidance) || (settings.AllowRefusals && profile.Kind == ResponseKind.Site));
             var elapsed = timeProvider.GetElapsedTime(startedAt);
             var completed = new Entry
             {
@@ -119,10 +110,10 @@ internal sealed partial class GenerationWorker(
                 ResponseStatus = generated.Status,
                 ResponseHeaders = [.. generated.Headers],
                 ResponseBody = generated.Body,
-                Model = completion.Model,
-                Generator = completion.Endpoint,
-                PromptTokens = completion.PromptTokens,
-                CompletionTokens = completion.CompletionTokens,
+                Model = completion?.Model,
+                Generator = completion?.Endpoint,
+                PromptTokens = completion?.PromptTokens,
+                CompletionTokens = completion?.CompletionTokens,
                 GenerationMs = (int)elapsed.TotalMilliseconds
             };
             var stored = await entryRepository.CompleteAsync(completed, instance, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
@@ -131,7 +122,7 @@ internal sealed partial class GenerationWorker(
 
             WorkerMetrics.Generations.WithLabels("ready").Inc();
             WorkerMetrics.GenerationDuration.Observe(elapsed.TotalSeconds);
-            WorkerMetrics.CompletionTokens.Inc(completion.CompletionTokens ?? 0);
+            WorkerMetrics.CompletionTokens.Inc(completion?.CompletionTokens ?? 0);
             LogGenerated(
                 logger,
                 entryId,
@@ -140,7 +131,7 @@ internal sealed partial class GenerationWorker(
                 entry.Target,
                 generated.Status,
                 (int)elapsed.TotalMilliseconds,
-                completion.CompletionTokens);
+                completion?.CompletionTokens);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -175,6 +166,35 @@ internal sealed partial class GenerationWorker(
                 (int)timeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
                 exception.Message);
         }
+    }
+
+    private async Task<(GeneratedResponse Response, LlmCompletion? Completion)> RespondAsync(
+        Entry entry,
+        HoneyslopSettings settings,
+        IProgress<LlmProgress> progress,
+        Func<string, CancellationToken, Task> dispatched,
+        CancellationToken cancellationToken)
+    {
+        var profile = RequestProfiler.Profile(entry.Host, entry.Target, entry.RequestBody);
+        var asked = !string.IsNullOrWhiteSpace(entry.Guidance);
+        if (!asked && FixedResponses.Respond(entry.Host, entry.Target, profile, settings.AllowRefusals) is { } fixedResponse)
+            return (fixedResponse, null);
+
+        var completion = await llmDispatcher.CompleteAsync(
+            promptBuilder.Build(entry, settings.AllowRefusals),
+            settings.GenerationTimeLimit,
+            progress,
+            dispatched,
+            cancellationToken);
+        if (completion.FinishReason == "length")
+            throw new LlmException(Rejections.CutOff);
+
+        var parsed = LlmResponseParser.Parse(completion.Content);
+        var mayRefuse = asked || (settings.AllowRefusals && profile.Refusable);
+        if (!asked && mayRefuse && parsed.Status == StatusCodes.Status404NotFound && FixedResponses.NotFound(profile.Server, entry.Host, entry.Target) is { } notFound)
+            return (notFound, completion);
+
+        return (responseSanitizer.Sanitize(parsed, entry.Host, profile, mayRefuse), completion);
     }
 
     private async Task StreamOutputAsync(long entryId, LatestProgress progress, CancellationToken cancellationToken)

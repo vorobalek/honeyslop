@@ -36,6 +36,18 @@ internal sealed class LlmClient(
         }
         """)!;
 
+    private static JsonNode SchemaFor(IReadOnlyList<int>? statuses)
+    {
+        var schema = ResponseSchema.DeepClone();
+        if (statuses is { Count: > 0 })
+            schema["properties"]!["status"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["enum"] = new JsonArray([.. statuses.Select(x => JsonValue.Create(x))])
+            };
+        return schema;
+    }
+
     public async Task<int?> GetIdleSlotsAsync(Uri endpoint, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -136,7 +148,7 @@ internal sealed class LlmClient(
             options.Value.MaxTokens,
             new ChatResponseFormat(
                 "json_schema",
-                new ChatJsonSchema("http_response", true, ResponseSchema.DeepClone())),
+                new ChatJsonSchema("http_response", true, SchemaFor(prompt.Statuses))),
             true,
             new ChatStreamOptions(true));
 

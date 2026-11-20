@@ -34,6 +34,32 @@ public sealed class ResponseSanitizerTests
     }
 
     [TestMethod]
+    public void Sanitize_DropsHeadersThatOnlyRequestsCarry()
+    {
+        var response = Sanitize(200, "body",
+            ("Host", Host),
+            ("User-Agent", "Mozilla/5.0"),
+            ("Accept", "*/*"),
+            ("Referer", "https://kms.example.test/"),
+            ("X-Powered-By", "PHP/7.4.3"),
+            ("Content-Type", "text/html"));
+
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "X-Powered-By", "Server", "Content-Type"
+        }, response.Headers.Select(x => x.Name).ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("commit 4f1c2d3e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d")]
+    [DataRow("Call 1-800-123-4567 or +1 (234) 567-8901")]
+    [DataRow("<p>For example, users can sign in with their e-mail.</p>")]
+    public void Sanitize_RealisticValues_AreKept(string body)
+    {
+        Assert.AreEqual(body, Sanitize(200, body, ("Content-Type", "text/html")).Body);
+    }
+
+    [TestMethod]
     public void Sanitize_TextualContentTypeWithoutCharset_AddsUtf8()
     {
         var response = Sanitize(200, "{}", ("Content-Type", "application/json"));
@@ -193,6 +219,12 @@ public sealed class ResponseSanitizerTests
     [DataRow("Note: This is a demonstration server. No real data is stored.")]
     [DataRow("Do not attempt to access sensitive files directly.")]
     [DataRow("These are dummy credentials for testing purposes.")]
+    [DataRow("session_id=a1b2c3d4e5f6a7b8")]
+    [DataRow("Serial: SN1234567890")]
+    [DataRow("MAC 00:11:22:33:44:55")]
+    [DataRow("token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")]
+    [DataRow("<td>Password Example</td>")]
+    [DataRow("<p>Example user: admin</p>")]
     public void Sanitize_PlaceholderOrGiveaway_IsRefused(string body)
     {
         Assert.ThrowsExactly<LlmException>(() => Sanitize(200, body, ("Content-Type", "text/html")));

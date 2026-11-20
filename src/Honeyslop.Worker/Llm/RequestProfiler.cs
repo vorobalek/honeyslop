@@ -79,19 +79,21 @@ public static partial class RequestProfiler
         (Path(@"^/graphql"), ResponseKind.Api, "GraphQL API of {host}", WebServer)
     ];
 
+    private static readonly Regex BinaryFile = Path(@"/\.git/(index$|objects/|.*\.(pack|idx)$)|/\.ds_store$|\.(sqlite3?|db|mdb|bin|dat)$");
+
     private static readonly Regex[] ExposedFiles =
     [
         Path(@"/\.(env|git/|git-credentials|aws/|ssh/|htpasswd|npmrc|docker/|kube/|bash_history)"),
         Path(@"/(wp-config|config|configuration|settings|database|db|secrets?|credentials|appsettings[^/]*)(\.(php|json|ya?ml|ini|xml|txt|bak|old|orig|save|swp|dist))+~?$"),
-        Path(@"/docker-compose\.ya?ml$|/web\.config$|/\.ds_store$")
+        Path(@"/docker-compose\.ya?ml$|/web\.config$")
     ];
 
     private static readonly Regex FileExtension = Path(@"\.(env|ini|conf|cfg|config|ya?ml|toml|properties|sql|bak|old|orig|save|swp|log|pem|key|sh|txt)$");
 
     public static RequestProfile Profile(string host, string target, string? body)
     {
-        var questionMark = target.IndexOf('?');
-        var path = Uri.UnescapeDataString(questionMark >= 0 ? target[..questionMark] : target).ToLowerInvariant();
+        var original = LocalPath(target);
+        var path = original.ToLowerInvariant();
         var onIp = IPAddress.TryParse(host, out _);
         var web = WebServer(host);
         var site = onIp ? $"the web server at {host}" : $"the website {host}";
@@ -104,19 +106,32 @@ public static partial class RequestProfiler
         var server = software is null ? web : known.Server(host);
         if (Outcome(Uri.UnescapeDataString(target) + "\n" + body) is { } outcome)
             return new RequestProfile(ResponseKind.Exploit, $"{software ?? $"{site}, served by {web}"}, and {outcome}", server);
+        if (BinaryFile.IsMatch(path))
+            return new RequestProfile(ResponseKind.File, $"the file {original} on {site}, served by {web}", web, true);
         if (ExposedFiles.Any(x => x.IsMatch(path)))
-            return File(path, site, web);
+            return new RequestProfile(ResponseKind.File, $"the file {original}, readable on {site}, served by {web}", web);
         if (software is not null)
             return new RequestProfile(known.Kind, software, server);
         if (FileExtension.IsMatch(path))
-            return File(path, site, web);
+            return new RequestProfile(ResponseKind.File, $"the file {original} on {site}, served by {web}", web, true);
         if (path.StartsWith("/api/", StringComparison.Ordinal) || path.StartsWith("/v1/", StringComparison.Ordinal) || path.StartsWith("/rest/", StringComparison.Ordinal))
             return new RequestProfile(ResponseKind.Api, $"the JSON API of {site}, served by {web}", web);
         if (path is "/admin" or "/login" or "/signin" || path.StartsWith("/admin/", StringComparison.Ordinal) || path.StartsWith("/user/login", StringComparison.Ordinal))
             return new RequestProfile(ResponseKind.App, $"the login page of {site}, served by {web}", web);
         if (path is "/" or "/index.html" or "/index.htm" or "/index.php" or "/home")
             return new RequestProfile(ResponseKind.Site, onIp ? $"the default page of a freshly installed web server at {host}, served by {web}" : $"the home page of the website {host}, served by {web}", web);
-        return new RequestProfile(ResponseKind.Site, $"the page {path} of {site}, served by {web}", web);
+        return new RequestProfile(ResponseKind.Site, $"the page {original} of {site}, served by {web}", web, true);
+    }
+
+    public static string LocalPath(string target)
+    {
+        var questionMark = target.IndexOf('?');
+        return Uri.UnescapeDataString(questionMark >= 0 ? target[..questionMark] : target);
+    }
+
+    public static bool IsBinaryFile(string target)
+    {
+        return BinaryFile.IsMatch(LocalPath(target));
     }
 
     public static string WebServer(string host)
@@ -141,11 +156,6 @@ public static partial class RequestProfiler
         foreach (var symbol in host.ToLowerInvariant())
             hash = (hash ^ symbol) * 16777619u;
         return hash;
-    }
-
-    private static RequestProfile File(string path, string site, string server)
-    {
-        return new RequestProfile(ResponseKind.File, $"the file {path}, readable on {site}, served by {server}", server);
     }
 
     private static string? Outcome(string payload)
