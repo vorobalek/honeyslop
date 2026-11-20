@@ -106,7 +106,12 @@ internal sealed partial class GenerationWorker(
             if (completion.FinishReason == "length")
                 throw new LlmException("Model output was cut at the token limit.");
 
-            var generated = responseSanitizer.Sanitize(LlmResponseParser.Parse(completion.Content), entry.Host);
+            var profile = RequestProfiler.Profile(entry.Host, entry.Target, entry.RequestBody);
+            var generated = responseSanitizer.Sanitize(
+                LlmResponseParser.Parse(completion.Content),
+                entry.Host,
+                profile,
+                !string.IsNullOrWhiteSpace(entry.Guidance) || (settings.AllowRefusals && profile.Kind == ResponseKind.Site));
             var elapsed = timeProvider.GetElapsedTime(startedAt);
             var completed = new Entry
             {

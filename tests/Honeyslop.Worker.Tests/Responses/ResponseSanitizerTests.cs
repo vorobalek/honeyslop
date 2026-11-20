@@ -1,5 +1,6 @@
 using Honeyslop.Data.Entities;
 using Honeyslop.Llm.Exceptions;
+using Honeyslop.Worker.Llm;
 using Honeyslop.Worker.Responses;
 using Honeyslop.Worker.Responses.Internals;
 
@@ -9,6 +10,7 @@ namespace Honeyslop.Worker.Tests.Responses;
 public sealed class ResponseSanitizerTests
 {
     private const string Host = "kms.example.test";
+    private static readonly RequestProfile SitePage = new(ResponseKind.Site, "the page /x of the website kms.example.test, served by nginx/1.18.0", "nginx/1.18.0");
     private readonly ResponseSanitizer _sanitizer = new();
 
     [TestMethod]
@@ -95,10 +97,10 @@ public sealed class ResponseSanitizerTests
     [TestMethod]
     public void Sanitize_DuplicateHeaders_KeepsTheFirst()
     {
-        var response = Sanitize(200, string.Empty, ("Server", "nginx"), ("server", "Apache"), ("Content-Type", "text/html"));
+        var response = Sanitize(200, string.Empty, ("X-Powered-By", "PHP/7.4.3"), ("x-powered-by", "ASP.NET"), ("Content-Type", "text/html"));
 
-        Assert.AreEqual("nginx", Header(response, "Server"));
-        Assert.AreEqual(1, response.Headers.Count(x => x.Name.Equals("Server", StringComparison.OrdinalIgnoreCase)));
+        Assert.AreEqual("PHP/7.4.3", Header(response, "X-Powered-By"));
+        Assert.AreEqual(1, response.Headers.Count(x => x.Name.Equals("X-Powered-By", StringComparison.OrdinalIgnoreCase)));
     }
 
     [TestMethod]
@@ -168,7 +170,7 @@ public sealed class ResponseSanitizerTests
     [TestMethod]
     public void Sanitize_ReservedNames_BecomeTheHost()
     {
-        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "MAIL_FROM=noreply@example.com\nAPI=https://api.example.org/v1\nGIT=gitlab.northwind.test\nPEER=198.51.100.23"), "shop.ru:8080");
+        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "MAIL_FROM=noreply@example.com\nAPI=https://api.example.org/v1\nGIT=gitlab.northwind.test\nPEER=198.51.100.23"), "shop.ru:8080", SitePage, true);
 
         Assert.AreEqual("MAIL_FROM=noreply@shop.ru\nAPI=https://shop.ru/v1\nGIT=shop.ru\nPEER=198.51.100.23", response.Body);
     }
@@ -176,7 +178,7 @@ public sealed class ResponseSanitizerTests
     [TestMethod]
     public void Sanitize_ReservedNamesOnAnAddress_BecomeLocal()
     {
-        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "admin@northwind.test from 203.0.113.9"), "85.10.202.87");
+        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "admin@northwind.test from 203.0.113.9"), "85.10.202.87", SitePage, true);
 
         Assert.AreEqual("admin@localdomain from 85.10.202.87", response.Body);
     }
@@ -187,9 +189,40 @@ public sealed class ResponseSanitizerTests
     [DataRow("password=<placeholder>")]
     [DataRow("<!-- this honeypot page was generated -->")]
     [DataRow("As an AI language model I cannot")]
+    [DataRow("This server is vulnerable to path traversal.")]
+    [DataRow("Note: This is a demonstration server. No real data is stored.")]
+    [DataRow("Do not attempt to access sensitive files directly.")]
+    [DataRow("These are dummy credentials for testing purposes.")]
     public void Sanitize_PlaceholderOrGiveaway_IsRefused(string body)
     {
         Assert.ThrowsExactly<LlmException>(() => Sanitize(200, body, ("Content-Type", "text/html")));
+    }
+
+    [TestMethod]
+    public void Sanitize_Server_IsTheOneTheProfileNames()
+    {
+        var boa = _sanitizer.Sanitize(new GeneratedResponse(200, [new ResponseHeader { Name = "Server", Value = "phpMyAdmin 4.9.12" }], "ok"), Host, new RequestProfile(ResponseKind.App, "router", "Boa/0.94.14rc21"), true);
+        var none = _sanitizer.Sanitize(new GeneratedResponse(200, [new ResponseHeader { Name = "Server", Value = "Spring Boot Actuator/2.7.12" }], "{}"), Host, new RequestProfile(ResponseKind.Api, "Spring Boot Actuator", string.Empty), true);
+
+        Assert.AreEqual("Boa/0.94.14rc21", boa.Headers.Single(x => x.Name == "Server").Value);
+        Assert.IsFalse(none.Headers.Any(x => x.Name.Equals("Server", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [TestMethod]
+    [DataRow(401)]
+    [DataRow(403)]
+    [DataRow(404)]
+    public void Sanitize_RefusalWhereItMayNotRefuse_IsRefused(int status)
+    {
+        Assert.ThrowsExactly<LlmException>(() => _sanitizer.Sanitize(new GeneratedResponse(status, [], "Forbidden"), Host, new RequestProfile(ResponseKind.File, "x", "nginx/1.18.0"), false));
+    }
+
+    [TestMethod]
+    public void Sanitize_RefusalWhereItMayRefuse_IsKept()
+    {
+        var response = _sanitizer.Sanitize(new GeneratedResponse(404, [], "Not Found"), Host, SitePage, true);
+
+        Assert.AreEqual(404, response.Status);
     }
 
     private GeneratedResponse Sanitize(int status, string body, params (string Name, string Value)[] headers)
@@ -205,7 +238,9 @@ public sealed class ResponseSanitizerTests
                     })
                 ],
                 body),
-            Host);
+            Host,
+            SitePage,
+            true);
     }
 
     private static string? Header(GeneratedResponse response, string name)
