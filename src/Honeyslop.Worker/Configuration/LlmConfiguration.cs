@@ -16,6 +16,15 @@ public static class LlmConfiguration
     public static readonly double Temperature = "LLM_TEMPERATURE"
         .GetEnvironmentValueWithFallback(0.7);
 
+    public static readonly double TopP = "LLM_TOP_P"
+        .GetEnvironmentValueWithFallback(0.8);
+
+    public static readonly int TopK = "LLM_TOP_K"
+        .GetEnvironmentValueWithFallback(20);
+
+    public static readonly double MinP = "LLM_MIN_P"
+        .GetEnvironmentValueWithFallback(0.0);
+
     public static readonly int DiscoverySeconds = "LLM_DISCOVERY_SECONDS"
         .GetEnvironmentValueWithFallback(15);
 

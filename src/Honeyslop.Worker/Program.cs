@@ -69,6 +69,9 @@ await Host
                     x.Model = LlmConfiguration.Model;
                     x.MaxTokens = LlmConfiguration.MaxTokens;
                     x.Temperature = LlmConfiguration.Temperature;
+                    x.TopP = LlmConfiguration.TopP;
+                    x.TopK = LlmConfiguration.TopK;
+                    x.MinP = LlmConfiguration.MinP;
                     x.Timeout = Timeout.InfiniteTimeSpan;
                     x.DiscoveryInterval = TimeSpan.FromSeconds(LlmConfiguration.DiscoverySeconds);
                     x.SlotPollInterval = TimeSpan.FromMilliseconds(LlmConfiguration.SlotPollMilliseconds);

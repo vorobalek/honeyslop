@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Honeyslop.Llm;
 using Honeyslop.Llm.Contracts;
 using Honeyslop.Llm.Exceptions;
@@ -51,6 +52,26 @@ public sealed class LlmClientTests
     }
 
     [TestMethod]
+    public async Task CompleteAsync_SendsQwensSamplingSettings()
+    {
+        var requests = new List<string>();
+        var sut = Create(
+            """
+            data: {"model":"honeyslop","choices":[{"delta":{"content":"{}"},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """,
+            requests: requests);
+
+        await sut.CompleteAsync(Endpoint, Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+
+        using var request = JsonDocument.Parse(requests.Single());
+        var root = request.RootElement;
+        Assert.AreEqual((0.7, 0.8, 20, 0.0), (root.GetProperty("temperature").GetDouble(), root.GetProperty("top_p").GetDouble(), root.GetProperty("top_k").GetInt32(), root.GetProperty("min_p").GetDouble()));
+    }
+
+    [TestMethod]
     public async Task CompleteAsync_StreamEndsBeforeTheFinish_IsUnavailable()
     {
         var sut = Create(
@@ -86,24 +107,31 @@ public sealed class LlmClientTests
             sut.CompleteAsync(Endpoint, Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None));
     }
 
-    private static LlmClient Create(string stream, HttpStatusCode statusCode = HttpStatusCode.OK)
+    private static LlmClient Create(string stream, HttpStatusCode statusCode = HttpStatusCode.OK, List<string>? requests = null)
     {
         var httpClientFactory = new Mock<IHttpClientFactory>();
         httpClientFactory
             .Setup(x => x.CreateClient(LlmClient.HttpClientName))
-            .Returns(() => new HttpClient(new StreamHandler(stream, statusCode)));
-        return new LlmClient(httpClientFactory.Object, new OptionsWrapper<LlmOptions>(new LlmOptions()));
+            .Returns(() => new HttpClient(new StreamHandler(stream, statusCode, requests ?? [])));
+        return new LlmClient(httpClientFactory.Object, new OptionsWrapper<LlmOptions>(new LlmOptions
+        {
+            Model = "honeyslop",
+            Temperature = 0.7,
+            MaxTokens = 1024
+        }));
     }
 
     private sealed class StreamHandler(string stream,
-        HttpStatusCode statusCode) : HttpMessageHandler
+        HttpStatusCode statusCode,
+        List<string> requests) : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new HttpResponseMessage(statusCode)
+            requests.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
+            return new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(stream, Encoding.UTF8, "text/event-stream")
-            });
+            };
         }
     }
 

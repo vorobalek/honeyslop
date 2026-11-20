@@ -45,21 +45,22 @@ report with their request log attached; the reports that bounce show up next to 
 | `MAINTENANCE_INTERVAL_SECONDS`                                          | `60`                                                  | Expiration and pruning                                                       |
 | `STATIC_EXTENSIONS`, `MAX_TARGET_LENGTH`, `RESPONSE_DELAY_MILLISECONDS` | as for the trap                                       | Set like the trap's: they check hand-made entries and show the default delay |
 
-| Worker                                        | Default       |                                                             |
-| --------------------------------------------- | ------------- | ----------------------------------------------------------- |
-| `DB_CONNECTION_STRING`                        |               | PostgreSQL                                                  |
-| `LLM_URL`                                     |               | Model servers: a headless service or comma-separated URLs   |
-| `GENERATION_WORKERS`                          | `6`           | Concurrent generations per instance                         |
-| `GENERATION_MAX_ATTEMPTS`                     | `3`           | As for the trap                                             |
-| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE`           | `1024`, `0.7` |                                                             |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`     | `587`, `true` |                                                             |
-| `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` |               |                                                             |
-| `MAX_ATTACHED_REQUESTS`                       | `50000`       | Requests in the attached archive                            |
-| `IMAP_HOST`, `IMAP_PORT`                      | `993`         | Mailbox that receives the bounces; without it none are read |
-| `IMAP_USERNAME`, `IMAP_PASSWORD`              |               |                                                             |
-| `IMAP_FOLDERS`                                | `INBOX`       | Comma-separated folders to read                             |
-| `IMAP_POLL_SECONDS`                           | `300`         |                                                             |
-| `MANAGEMENT_PORT`                             | `8081`        | Health and metrics                                          |
+| Worker                                        | Default          |                                                             |
+| --------------------------------------------- | ---------------- | ----------------------------------------------------------- |
+| `DB_CONNECTION_STRING`                        |                  | PostgreSQL                                                  |
+| `LLM_URL`                                     |                  | Model servers: a headless service or comma-separated URLs   |
+| `GENERATION_WORKERS`                          | `6`              | Concurrent generations per instance                         |
+| `GENERATION_MAX_ATTEMPTS`                     | `3`              | As for the trap                                             |
+| `LLM_MAX_TOKENS`, `LLM_TEMPERATURE`           | `1024`, `0.7`    |                                                             |
+| `LLM_TOP_P`, `LLM_TOP_K`, `LLM_MIN_P`         | `0.8`, `20`, `0` | Sampling, as Qwen recommends for the model                  |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`     | `587`, `true`    |                                                             |
+| `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` |                  |                                                             |
+| `MAX_ATTACHED_REQUESTS`                       | `50000`          | Requests in the attached archive                            |
+| `IMAP_HOST`, `IMAP_PORT`                      | `993`            | Mailbox that receives the bounces; without it none are read |
+| `IMAP_USERNAME`, `IMAP_PASSWORD`              |                  |                                                             |
+| `IMAP_FOLDERS`                                | `INBOX`          | Comma-separated folders to read                             |
+| `IMAP_POLL_SECONDS`                           | `300`            |                                                             |
+| `MANAGEMENT_PORT`                             | `8081`           | Health and metrics                                          |
 
 Cache lifetimes, generation limits, request retention, the public view, the default response delay, Auto-Delay with its
 range and the abuse addresses that never get reports are edited in the admin or over MCP.

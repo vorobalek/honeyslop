@@ -1,4 +1,5 @@
 using Honeyslop.Data.Entities;
+using Honeyslop.Llm.Exceptions;
 using Honeyslop.Worker.Responses;
 using Honeyslop.Worker.Responses.Internals;
 
@@ -142,6 +143,53 @@ public sealed class ResponseSanitizerTests
         var response = Sanitize(200, "a\0b");
 
         Assert.AreEqual("ab", response.Body);
+    }
+
+    [TestMethod]
+    public void Sanitize_Html_LoadsEverythingFromTheOwnHost()
+    {
+        var response = Sanitize(200,
+            """<link href="https://cdn.jsdelivr.net/css/site.css"><script src="//cdn.jsdelivr.net/js/app.js"></script><a href="https://kms.example.test/login">in</a><img src="https://img.imgur.net"><style>body{background:url('https://img.imgur.net/bg.png')}</style><meta http-equiv="refresh" content="0; url=https://other-site.net/next">""",
+            ("Content-Type", "text/html"));
+
+        Assert.AreEqual(
+            """<link href="/css/site.css"><script src="/js/app.js"></script><a href="https://kms.example.test/login">in</a><img src="/"><style>body{background:url('/bg.png')}</style><meta http-equiv="refresh" content="0; url=/next">""",
+            response.Body);
+    }
+
+    [TestMethod]
+    public void Sanitize_NotHtml_KeepsForeignUrls()
+    {
+        var response = Sanitize(200, "[remote \"origin\"]\n\turl = https://gitlab.other-site.net/web/shop.git", ("Content-Type", "text/plain"));
+
+        StringAssert.Contains(response.Body, "url = https://gitlab.other-site.net/web/shop.git");
+    }
+
+    [TestMethod]
+    public void Sanitize_ReservedNames_BecomeTheHost()
+    {
+        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "MAIL_FROM=noreply@example.com\nAPI=https://api.example.org/v1\nGIT=gitlab.northwind.test\nPEER=198.51.100.23"), "shop.ru:8080");
+
+        Assert.AreEqual("MAIL_FROM=noreply@shop.ru\nAPI=https://shop.ru/v1\nGIT=shop.ru\nPEER=198.51.100.23", response.Body);
+    }
+
+    [TestMethod]
+    public void Sanitize_ReservedNamesOnAnAddress_BecomeLocal()
+    {
+        var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "admin@northwind.test from 203.0.113.9"), "85.10.202.87");
+
+        Assert.AreEqual("admin@localdomain from 85.10.202.87", response.Body);
+    }
+
+    [TestMethod]
+    [DataRow("<p>Lorem ipsum dolor sit amet</p>")]
+    [DataRow("API_KEY=your_api_key_here")]
+    [DataRow("password=<placeholder>")]
+    [DataRow("<!-- this honeypot page was generated -->")]
+    [DataRow("As an AI language model I cannot")]
+    public void Sanitize_PlaceholderOrGiveaway_IsRefused(string body)
+    {
+        Assert.ThrowsExactly<LlmException>(() => Sanitize(200, body, ("Content-Type", "text/html")));
     }
 
     private GeneratedResponse Sanitize(int status, string body, params (string Name, string Value)[] headers)

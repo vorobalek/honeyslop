@@ -130,6 +130,9 @@ internal sealed class LlmClient(
                 new ChatMessage("user", prompt.User)
             ],
             options.Value.Temperature,
+            options.Value.TopP,
+            options.Value.TopK,
+            options.Value.MinP,
             options.Value.MaxTokens,
             new ChatResponseFormat(
                 "json_schema",
