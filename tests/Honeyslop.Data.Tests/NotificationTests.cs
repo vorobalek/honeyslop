@@ -193,6 +193,55 @@ public sealed class NotificationTests
     }
 
     [TestMethod]
+    [DoNotParallelize]
+    public async Task LearnedStateWithTheSameDelay_IsNotAnnounced_AndANewDelayIs()
+    {
+        var ip = $"203.0.113.{Random.Shared.Next(1, 254)}-{Unique.String(6)}";
+        var probe = new ClientProbe
+        {
+            ClientIp = ip,
+            DelayMilliseconds = 5_900,
+            TimeoutMilliseconds = 6_000,
+            ProbeEvery = 20,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        await using (var scope = PostgresDatabase.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IClientProbeRepository>().TryAddAsync(probe, CancellationToken.None);
+        }
+
+        await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);
+        await connection.OpenAsync();
+        var received = new List<string>();
+        connection.Notification += (_, notification) => received.Add(notification.Channel);
+        await using (var command = new NpgsqlCommand("listen honeyslop_clients", connection))
+        {
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await using (var scope = PostgresDatabase.CreateScope())
+        {
+            probe.AnswersSinceProbe = 3;
+            probe.LastRequestId = 42;
+            Assert.IsTrue(await scope.ServiceProvider.GetRequiredService<IClientProbeRepository>().TryReplaceAsync(probe, 0, CancellationToken.None));
+        }
+
+        await connection.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.IsEmpty(received);
+
+        await using (var scope = PostgresDatabase.CreateScope())
+        {
+            probe.DelayMilliseconds = 7_200;
+            probe.Probing = true;
+            Assert.IsTrue(await scope.ServiceProvider.GetRequiredService<IClientProbeRepository>().TryReplaceAsync(probe, 1, CancellationToken.None));
+        }
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!received.Contains("honeyslop_clients"))
+            await connection.WaitAsync(timeout.Token);
+    }
+
+    [TestMethod]
     public async Task GenerationOutput_IsAnnouncedWithItsContent()
     {
         await using var connection = new NpgsqlConnection(PostgresDatabase.RoleConnectionString);

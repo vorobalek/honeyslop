@@ -28,6 +28,7 @@ await Host
         .AddGlobalCancellationToken()
         .AddJsonConsoleLogging()
         .AddDatabase(AppConfiguration.DbConnectionString)
+        .AddSettingsCache()
         .ConfigureKestrel(options => options.AddServerHeader = false)
         .ConfigureServices(services =>
         {

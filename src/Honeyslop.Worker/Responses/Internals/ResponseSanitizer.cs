@@ -18,7 +18,7 @@ internal sealed partial class ResponseSanitizer : IResponseSanitizer
             ? response.Status
             : StatusCodes.Status200OK;
         if (status is StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden or StatusCodes.Status404NotFound && !mayRefuse)
-            throw new LlmException($"Model refused a path it has to answer: {status}");
+            throw new LlmException(Rejections.Refused + status);
 
         var headers = new List<ResponseHeader>();
         foreach (var header in response.Headers)
@@ -82,9 +82,9 @@ internal sealed partial class ResponseSanitizer : IResponseSanitizer
     private static void Refuse(string body)
     {
         if (PlaceholderRegex().Match(body) is { Success: true } placeholder)
-            throw new LlmException($"Model output has a placeholder: {placeholder.Value}");
+            throw new LlmException(Rejections.Placeholder + placeholder.Value);
         if (DisclosureRegex().Match(body) is { Success: true } disclosure)
-            throw new LlmException($"Model output gives itself away: {disclosure.Value}");
+            throw new LlmException(Rejections.GivesAway + disclosure.Value);
     }
 
     private static string OnOwnHost(string body, string host, bool html)

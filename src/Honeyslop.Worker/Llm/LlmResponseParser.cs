@@ -17,23 +17,23 @@ public static class LlmResponseParser
         }
         catch (JsonException exception)
         {
-            throw new LlmException($"Model output is not valid JSON: {exception.Message}");
+            throw new LlmException(Rejections.NotJson + exception.Message);
         }
 
         using (document)
         {
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
-                throw new LlmException("Model output is not a JSON object.");
+                throw new LlmException(Rejections.NotObject);
 
             if (!root.TryGetProperty("status", out var statusElement) ||
                 statusElement.ValueKind != JsonValueKind.Number ||
                 !statusElement.TryGetInt32(out var status))
-                throw new LlmException("Model output has no integer 'status'.");
+                throw new LlmException(Rejections.NoStatus);
 
             if (!root.TryGetProperty("body", out var bodyElement) ||
                 bodyElement.ValueKind != JsonValueKind.String)
-                throw new LlmException("Model output has no string 'body'.");
+                throw new LlmException(Rejections.NoBody);
 
             var headers = new List<ResponseHeader>();
             if (root.TryGetProperty("headers", out var headersElement) &&

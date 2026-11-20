@@ -137,6 +137,45 @@ public sealed class PromptBuilderTests
     }
 
     [TestMethod]
+    [DataRow("Model refused a path it has to answer: 403", "This path is served: reply with status 200 and its content.")]
+    [DataRow("Model output gives itself away: This is a sample", "Send only what the software itself sends.")]
+    [DataRow("Model output has a placeholder: lorem ipsum", "Fill every value with something specific and realistic.")]
+    [DataRow("Model output is not valid JSON: '}' is invalid", "Reply with JSON in exactly the required shape.")]
+    [DataRow("Model output was cut at the token limit.", "Keep the body well under 1500 characters.")]
+    public void Build_AfterARejectedReply_SaysWhatToDoWithoutQuotingIt(string error, string hint)
+    {
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/.env",
+            Attempts = 1,
+            Error = error
+        }, true);
+
+        StringAssert.Contains(prompt.System, "\n- The last reply to this request was turned down. " + hint + "\n\nReply with JSON");
+        Assert.DoesNotContain(error[(error.IndexOf(':') + 1)..].Trim(), prompt.System.Replace(hint, string.Empty));
+    }
+
+    [TestMethod]
+    [DataRow(0, "Model refused a path it has to answer: 403")]
+    [DataRow(1, "Model server 10.0.0.5:8080 is unavailable")]
+    [DataRow(1, null)]
+    public void Build_WithoutARejectedReply_GivesNoHint(int attempts, string? error)
+    {
+        var prompt = new PromptBuilder().Build(new Entry
+        {
+            Method = "GET",
+            Host = "a.test",
+            Target = "/.env",
+            Attempts = attempts,
+            Error = error
+        }, true);
+
+        Assert.DoesNotContain("turned down", prompt.System);
+    }
+
+    [TestMethod]
     public void Build_WithGuidance_PassesTheOwnersRequestOnOneLine()
     {
         var prompt = new PromptBuilder().Build(new Entry

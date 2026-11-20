@@ -104,7 +104,7 @@ internal sealed partial class GenerationWorker(
                 (generator, token) => entryRepository.MarkDispatchedAsync(entryId, instance, generator, token),
                 cancellationToken);
             if (completion.FinishReason == "length")
-                throw new LlmException("Model output was cut at the token limit.");
+                throw new LlmException(Rejections.CutOff);
 
             var profile = RequestProfiler.Profile(entry.Host, entry.Target, entry.RequestBody);
             var generated = responseSanitizer.Sanitize(

@@ -25,6 +25,8 @@ internal sealed class PromptBuilder : IPromptBuilder
 
     private const string GuidancePrefix = "\n- The owner of this server asks for this response: ";
 
+    private const string RetryPrefix = "\n- The last reply to this request was turned down. ";
+
     private static readonly Dictionary<ResponseKind, string> Kinds = new()
     {
         [ResponseKind.Site] = "Reply with a complete HTML page with inline CSS that fits the site: its name, navigation and content.",
@@ -64,6 +66,8 @@ internal sealed class PromptBuilder : IPromptBuilder
         var guidance = string.IsNullOrWhiteSpace(entry.Guidance)
             ? string.Empty
             : GuidancePrefix + string.Join(' ', entry.Guidance.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        if (entry.Attempts > 0 && Rejections.HintFor(entry.Error) is { } hint)
+            guidance += RetryPrefix + hint;
         var system = Systems[(profile.Kind, allowRefusals)].Replace("{guidance}", guidance, StringComparison.Ordinal);
         return new LlmPrompt(system, builder.ToString());
     }
