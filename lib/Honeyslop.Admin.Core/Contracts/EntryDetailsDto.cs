@@ -9,4 +9,5 @@ public sealed record EntryDetailsDto(
     long? CurrentId,
     GenerationOutputDto? Output,
     int DefaultResponseDelayMilliseconds,
+    bool NoiseEnabled,
     DateTimeOffset AsOf);

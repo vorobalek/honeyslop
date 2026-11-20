@@ -201,6 +201,88 @@ public sealed class ClientsServiceTests
     }
 
     [TestMethod]
+    public async Task SetNoiseAsync_SavesTheTierOfTheNormalizedAddress()
+    {
+        var setup = new Setup
+        {
+            NoiseEnabled = true
+        };
+
+        var v6 = await setup.Service().SetNoiseAsync("2001:DB8::0:7", NoiseTier.Tier3, CancellationToken.None);
+        var mapped = await setup.Service().SetNoiseAsync("::ffff:198.51.100.4", null, CancellationToken.None);
+
+        Assert.IsTrue(v6.Changed && mapped.Changed);
+        Assert.AreEqual(NoiseTier.Tier3, v6.Noise);
+        setup.Noise.Verify(x => x.SetAsync("2001:db8::7", NoiseTier.Tier3, "operator", Now, It.IsAny<CancellationToken>()), Times.Once);
+        setup.Noise.Verify(x => x.SetAsync("198.51.100.4", null, "operator", Now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task SetNoiseAsync_NoiseDefenceOff_RefusesATierButStillClearsOne()
+    {
+        var setup = new Setup();
+
+        var set = await setup.Service().SetNoiseAsync(Ip, NoiseTier.Tier1, CancellationToken.None);
+        var cleared = await setup.Service().SetNoiseAsync(Ip, null, CancellationToken.None);
+
+        Assert.AreEqual("Noise defence is off in the settings.", set.Errors["Noise"]);
+        Assert.IsTrue(cleared.Changed);
+        setup.Noise.Verify(x => x.SetAsync(Ip, NoiseTier.Tier1, It.IsAny<string?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+        setup.Noise.Verify(x => x.SetAsync(Ip, null, "operator", Now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    [DataRow("not-an-ip", 1, "Ip")]
+    [DataRow(Ip, 4, "Noise")]
+    [DataRow(Ip, 0, "Noise")]
+    public async Task SetNoiseAsync_WrongAddressOrTier_IsRefused(string ip, int tier, string field)
+    {
+        var setup = new Setup
+        {
+            NoiseEnabled = true
+        };
+
+        var change = await setup.Service().SetNoiseAsync(ip, (NoiseTier)tier, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[]
+        {
+            field
+        }, change.Errors.Keys.ToArray());
+        setup.Noise.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<NoiseTier?>(), It.IsAny<string?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task SetNoiseAsync_Anonymous_IsDenied()
+    {
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
+            new Setup().Service(ViewerDto.Anonymous).SetNoiseAsync(Ip, NoiseTier.Tier1, CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task GetAsync_ShowsTheNoiseTierOnlyWhileNoiseDefenceIsOn()
+    {
+        var on = new Setup
+        {
+            NoiseEnabled = true
+        };
+        on.Noise
+            .Setup(x => x.GetOrDefaultAsync(Ip, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClientNoise
+            {
+                ClientIp = Ip,
+                Tier = NoiseTier.Tier2
+            });
+        var off = new Setup();
+
+        var shown = await on.Service().GetAsync(Ip, CancellationToken.None);
+        var hidden = await off.Service().GetAsync(Ip, CancellationToken.None);
+
+        Assert.AreEqual((true, NoiseTier.Tier2), (shown!.NoiseEnabled, shown.Noise));
+        Assert.AreEqual((false, (NoiseTier?)null), (hidden!.NoiseEnabled, hidden.Noise));
+        off.Noise.Verify(x => x.GetOrDefaultAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
     public async Task ResetResponseDelaysAsync_RemovesEveryClientDelay()
     {
         var setup = new Setup();
@@ -334,6 +416,8 @@ public sealed class ClientsServiceTests
         public BouncedContact[] Bounced { get; init; } = [];
         public List<string[]> BounceLookups { get; } = [];
         public Mock<IClientDelayRepository> Delays { get; } = new();
+        public Mock<IClientNoiseRepository> Noise { get; } = new();
+        public bool NoiseEnabled { get; init; }
         public Mock<IClientProbeRepository> Probes { get; } = new();
         public Mock<IDelayLearningJobRepository> Jobs { get; } = new();
         public Mock<IRequestRepository> Requests { get; } = new();
@@ -364,6 +448,10 @@ public sealed class ClientsServiceTests
                 .Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string? userId, CancellationToken _) => new Settings
                 {
+                    Honeyslop = HoneyslopSettings.Default with
+                    {
+                        NoiseEnabled = NoiseEnabled
+                    },
                     User = userId is null
                         ? null
                         : new UserSettings
@@ -395,6 +483,7 @@ public sealed class ClientsServiceTests
                 blocked.Object,
                 bounces.Object,
                 Delays.Object,
+                Noise.Object,
                 Probes.Object,
                 Jobs.Object,
                 Mock.Of<IRequestArchiveBuilder>(),

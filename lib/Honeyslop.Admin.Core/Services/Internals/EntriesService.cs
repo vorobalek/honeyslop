@@ -54,12 +54,14 @@ internal sealed partial class EntriesService(
         var current = entry.Status == EntryStatus.Expired
             ? await entryRepository.GetByKeyHashOrDefaultAsync(entry.KeyHash, cancellationToken)
             : null;
+        var settings = (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop;
         return new EntryDetailsDto(
             entry,
             entry.ClientIp is null ? null : countryLookup.Find(entry.ClientIp),
             current?.Id,
             entry.State == EntryState.Generating ? outputStore.GetOrDefault(entry.Id) : null,
-            (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.ResponseDelayMilliseconds ?? responseDelayOptions.Value.DefaultMilliseconds,
+            settings.ResponseDelayMilliseconds ?? responseDelayOptions.Value.DefaultMilliseconds,
+            settings.NoiseEnabled,
             await serverTime.GetNowAsync(cancellationToken));
     }
 
@@ -160,6 +162,24 @@ internal sealed partial class EntriesService(
             return Refused(nameof(Entry.ResponseDelayMilliseconds), $"Must be from 0 to {Entry.ResponseDelayMaxMilliseconds} milliseconds.");
         var changed = ids.Count > 0
             ? await entryRepository.SetResponseDelayAsync(ids, milliseconds, await serverTime.GetNowAsync(cancellationToken), cancellationToken)
+            : [];
+        return changed.Length > 0
+            ? new EntryChangeDto(new Dictionary<string, string>(), changed)
+            : Refused("Entries", "None of these entries is served any more.");
+    }
+
+    public async Task<EntryChangeDto> SetNoiseAsync(
+        IReadOnlyCollection<long> ids,
+        NoiseTier? tier,
+        CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        if (tier is { } chosen && !Enum.IsDefined(chosen))
+            return Refused(nameof(Entry.Noise), "Must be tier 1, 2 or 3.");
+        if (tier is not null && !(await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.NoiseEnabled)
+            return Refused(nameof(Entry.Noise), "Noise defence is off in the settings.");
+        var changed = ids.Count > 0
+            ? await entryRepository.SetNoiseAsync(ids, tier, await serverTime.GetNowAsync(cancellationToken), cancellationToken)
             : [];
         return changed.Length > 0
             ? new EntryChangeDto(new Dictionary<string, string>(), changed)
@@ -270,7 +290,7 @@ internal sealed partial class EntriesService(
         var line = headers?
             .Split('\n')
             .FirstOrDefault(x => x.StartsWith("User-Agent:", StringComparison.OrdinalIgnoreCase));
-        return line?["User-Agent:".Length..].Trim().Truncate(Entry.UserAgentMaxLength);
+        return line?["User-Agent:".Length..]?.Trim().Truncate(Entry.UserAgentMaxLength);
     }
 
     private async Task<EntryChangeDto> ReplaceWithAsync(
@@ -333,6 +353,7 @@ internal sealed partial class EntriesService(
             RequestHeaders = current.RequestHeaders,
             RequestBody = current.RequestBody,
             ResponseDelayMilliseconds = current.ResponseDelayMilliseconds,
+            Noise = current.Noise,
             ChangedBy = access.Viewer.Name,
             CreatedAt = now,
             UpdatedAt = now

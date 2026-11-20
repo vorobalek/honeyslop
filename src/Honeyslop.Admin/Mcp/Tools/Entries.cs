@@ -149,6 +149,18 @@ public sealed class Entries(IEntriesService entriesService)
         return entriesService.SetResponseDelayAsync(ids, milliseconds, cancellationToken);
     }
 
+    [McpServerTool(Name = "set_entry_noise", Title = "Answer the requests of entries with noise", Destructive = false, Idempotent = true)]
+    [Description(
+        "While noise defence is on in the settings, the trap answers every request for these entries with a file of zero bytes instead of their response: 10 MB for Tier1, 20 MB for Tier2, 40 MB for Tier3, as fast as the connection takes it; an entry still waiting for its response gets the noise without it being generated. A noise tier set on a client wins over it. Without a tier the entries answer as usual again. Expired entries are left alone. Returns the ids of the changed entries, or what was wrong.")]
+    public Task<EntryChangeDto> SetNoiseAsync(
+        [Description("Entry ids.")] long[] ids,
+        [Description("Tier1, Tier2 or Tier3; leave out to stop the noise.")]
+        NoiseTier? tier = null,
+        CancellationToken cancellationToken = default)
+    {
+        return entriesService.SetNoiseAsync(ids, tier, cancellationToken);
+    }
+
     private static ResponseHeader[] Headers(Dictionary<string, string>? headers)
     {
         return

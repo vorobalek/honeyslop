@@ -9,7 +9,7 @@ internal sealed partial class ChangeListener(
     string connectionString,
     IResponseCache responseCache,
     ISettingsProvider settingsProvider,
-    IClientDelays clientDelays,
+    IClientSettings clientSettings,
     TimeProvider timeProvider,
     ILogger<ChangeListener> logger) : BackgroundService
 {
@@ -35,7 +35,7 @@ internal sealed partial class ChangeListener(
 
                 responseCache.Enable();
                 settingsProvider.Reset();
-                clientDelays.Reset();
+                clientSettings.Reset();
                 LogListening(logger);
                 while (!stoppingToken.IsCancellationRequested)
                     await connection.WaitAsync(stoppingToken);
@@ -56,7 +56,7 @@ internal sealed partial class ChangeListener(
         if (channel == "honeyslop_settings")
             settingsProvider.Reset();
         else if (channel == "honeyslop_clients")
-            clientDelays.Reset();
+            clientSettings.Reset();
         else if (long.TryParse(payload, NumberStyles.Integer, CultureInfo.InvariantCulture, out var entryId))
             responseCache.Evict(entryId);
         else

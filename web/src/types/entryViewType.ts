@@ -11,5 +11,6 @@ export interface EntryViewType {
     currentId: number | null;
     output: GenerationOutputType | null;
     defaultResponseDelayMilliseconds: number;
+    noiseEnabled: boolean;
     asOf: string;
 }

@@ -8,5 +8,6 @@ public enum RequestOutcome
     Static = 3,
     Abandoned = 4,
     Error = 5,
-    Waiting = 6
+    Waiting = 6,
+    Noise = 7
 }

@@ -1,4 +1,5 @@
 import { EntryStatusType } from './entryStatusType';
+import { NoiseTierType } from './noiseTierType';
 import { ResponseHeaderType } from './responseHeaderType';
 
 export interface EntryType {
@@ -32,4 +33,5 @@ export interface EntryType {
     guidance: string | null;
     changedBy: string | null;
     responseDelayMilliseconds: number | null;
+    noise: NoiseTierType | null;
 }

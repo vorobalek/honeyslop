@@ -93,6 +93,29 @@ internal sealed class EntryRepository(ApplicationDbContext dbContext) : IEntryRe
         return active;
     }
 
+    public async Task<long[]> SetNoiseAsync(
+        IReadOnlyCollection<long> ids,
+        NoiseTier? tier,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var active = await dbContext
+            .Entries
+            .Where(x => ids.Contains(x.Id) && x.Status != EntryStatus.Expired)
+            .Select(x => x.Id)
+            .OrderBy(x => x)
+            .ToArrayAsync(cancellationToken);
+        await dbContext
+            .Entries
+            .Where(x => active.Contains(x.Id) && x.Status != EntryStatus.Expired)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.Noise, tier)
+                    .SetProperty(x => x.UpdatedAt, now),
+                cancellationToken);
+        return active;
+    }
+
     public Task<bool> AnyFromClientAsync(string clientIp, CancellationToken cancellationToken)
     {
         return dbContext

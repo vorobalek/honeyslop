@@ -12,5 +12,6 @@ public class TrapOptions
     public long MemoryCacheSizeLimit { get; set; }
     public TimeSpan HitFlushInterval { get; set; }
     public TimeSpan ResponseDelay { get; set; }
+    public string NoiseDirectory { get; set; } = null!;
     public RequestRules Requests { get; set; } = new();
 }

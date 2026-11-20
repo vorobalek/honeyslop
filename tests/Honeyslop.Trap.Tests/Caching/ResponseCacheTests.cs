@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Honeyslop.Data.Providers;
 using Honeyslop.Data.Requests;
 using Honeyslop.Trap.Caching.Internals;
@@ -25,6 +26,7 @@ public sealed class ResponseCacheTests
 
         Assert.IsFalse(cache.TryGet(Key, out _));
         Assert.IsTrue(cache.TryGet(OtherKey, out var other));
+        Debug.Assert(other != null, nameof(other) + " != null");
         Assert.AreEqual(2, other.EntryId);
     }
 
@@ -50,6 +52,7 @@ public sealed class ResponseCacheTests
         cache.Evict(1);
 
         Assert.IsTrue(cache.TryGet(Key, out var response));
+        Debug.Assert(response != null, nameof(response) + " != null");
         Assert.AreEqual(2, response.EntryId);
     }
 
@@ -74,7 +77,7 @@ public sealed class ResponseCacheTests
             "Host=unused",
             cache,
             Mock.Of<ISettingsProvider>(),
-            Mock.Of<IClientDelays>(),
+            Mock.Of<IClientSettings>(),
             TimeProvider.System,
             NullLogger<ChangeListener>.Instance);
         cache.Set(Key, Response(1), cache.Version);
@@ -93,7 +96,7 @@ public sealed class ResponseCacheTests
     {
         using var cache = Enabled();
         var settings = new Mock<ISettingsProvider>();
-        var listener = new ChangeListener("Host=unused", cache, settings.Object, Mock.Of<IClientDelays>(), TimeProvider.System, NullLogger<ChangeListener>.Instance);
+        var listener = new ChangeListener("Host=unused", cache, settings.Object, Mock.Of<IClientSettings>(), TimeProvider.System, NullLogger<ChangeListener>.Instance);
         cache.Set(Key, Response(1), cache.Version);
 
         listener.Dispatch("honeyslop_settings", "");
@@ -106,13 +109,13 @@ public sealed class ResponseCacheTests
     public void ClientDelayChange_ReloadsTheClientDelaysAndKeepsTheCache()
     {
         using var cache = Enabled();
-        var clientDelays = new Mock<IClientDelays>();
-        var listener = new ChangeListener("Host=unused", cache, Mock.Of<ISettingsProvider>(), clientDelays.Object, TimeProvider.System, NullLogger<ChangeListener>.Instance);
+        var clientSettings = new Mock<IClientSettings>();
+        var listener = new ChangeListener("Host=unused", cache, Mock.Of<ISettingsProvider>(), clientSettings.Object, TimeProvider.System, NullLogger<ChangeListener>.Instance);
         cache.Set(Key, Response(1), cache.Version);
 
         listener.Dispatch("honeyslop_clients", "");
 
-        clientDelays.Verify(x => x.Reset(), Times.Once);
+        clientSettings.Verify(x => x.Reset(), Times.Once);
         Assert.IsTrue(cache.TryGet(Key, out _));
     }
 

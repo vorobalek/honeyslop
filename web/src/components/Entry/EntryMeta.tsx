@@ -1,10 +1,12 @@
 import { useWatched } from '../../hooks/useWatched';
+import { noiseLabel } from '../../lib/noise';
 import { oneDecimal } from '../../lib/numbers';
 import { display, displayOrDash } from '../../lib/time';
 import { Watch } from '../../lib/watchStore';
 import { EntryViewType } from '../../types/entryViewType';
 import ClientIp from '../Common/ClientIp';
 import EntryDelayButton from './EntryDelayButton';
+import EntryNoiseButton from './EntryNoiseButton';
 import React from 'react';
 
 type EntryMetaProps = {
@@ -15,6 +17,7 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
     const entry = useWatched(watch, (view) => view.entry);
     const country = useWatched(watch, (view) => view.country);
     const defaultDelay = useWatched(watch, (view) => view.defaultResponseDelayMilliseconds);
+    const noiseEnabled = useWatched(watch, (view) => view.noiseEnabled);
     const expired = useWatched(watch, (view) => view.state === 'Expired');
     const generation = entry.generationMs !== null ? `${oneDecimal(entry.generationMs / 1000)} s` : '—';
     return (
@@ -45,6 +48,20 @@ const EntryMeta: React.FC<EntryMetaProps> = ({ watch }) => {
                     </>
                 )}
             </dd>
+            {noiseEnabled && (
+                <>
+                    <dt>Noise</dt>
+                    <dd>
+                        {entry.noise === null ? 'none' : noiseLabel(entry.noise)}
+                        {!expired && (
+                            <>
+                                {' '}
+                                <EntryNoiseButton watch={watch} />
+                            </>
+                        )}
+                    </dd>
+                </>
+            )}
             <dt>Attempts</dt>
             <dd>{entry.attempts}</dd>
             <dt>Claimed by</dt>

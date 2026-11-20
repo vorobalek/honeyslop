@@ -106,4 +106,6 @@ public class Entry
     public string? ChangedBy { get; set; }
 
     public int? ResponseDelayMilliseconds { get; set; }
+
+    public NoiseTier? Noise { get; set; }
 }

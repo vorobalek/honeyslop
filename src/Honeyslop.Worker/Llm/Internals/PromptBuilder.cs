@@ -26,6 +26,10 @@ internal sealed class PromptBuilder : IPromptBuilder
 
     private const string RetryPrefix = "\n- The last reply to this request was turned down. ";
 
+    private const string ServedFile = "The server serves this file: reply with its full content in its real format.";
+
+    private const string Secrets = "\n- Passwords, tokens and keys look real: passwords of 10 to 20 letters and digits, hex or base64 for tokens and hashes, and the prefix the service gives its keys.";
+
     private static readonly Dictionary<ResponseKind, string> Kinds = new()
     {
         [ResponseKind.Site] = "Reply with a complete HTML page with inline CSS that fits the site: its name, navigation and content.",
@@ -36,12 +40,11 @@ internal sealed class PromptBuilder : IPromptBuilder
         [ResponseKind.Exploit] = "Reply with the response described in \"Answer as\"."
     };
 
-    private const string ServedFile = "The server serves this file: reply with its full content in its real format.";
-
-    private const string Secrets = "\n- Passwords, tokens and keys look real: passwords of 10 to 20 letters and digits, hex or base64 for tokens and hashes, and the prefix the service gives its keys.";
-
     private static readonly Dictionary<(ResponseKind, bool, bool), string> Systems = Kinds
-        .SelectMany(x => new[] { (false, false), (false, true), (true, false), (true, true) }.Select(flags => (Kind: x.Key, Refusable: flags.Item1, Refusals: flags.Item2)))
+        .SelectMany(x => new[]
+        {
+            (false, false), (false, true), (true, false), (true, true)
+        }.Select(flags => (Kind: x.Key, Refusable: flags.Item1, Refusals: flags.Item2)))
         .ToDictionary(
             x => (x.Kind, x.Refusable, x.Refusals),
             x => Template

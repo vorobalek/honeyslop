@@ -168,11 +168,9 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     label='Auto-Delay: learn how long each client waits'
                     checked={settings.autoDelayEnabled}
                 >
-                    For every client without a delay set by hand the trap learns how long it waits before dropping the
-                    connection and holds it just below that: a drop sets its timeout, and now and then a slightly longer
-                    wait checks whether it got more patient. Responses trickle, at least a piece a second, so the last
-                    byte leaves exactly at the client&apos;s delay; clients that only time out between bytes are held as
-                    long as the range allows. Off: learned delays are kept but not used.
+                    The trap learns how long each client waits before dropping the connection and holds it just below
+                    that, trickling the response so its last byte leaves at that moment. A delay set by hand wins. Off:
+                    learned delays are kept but not used.
                 </CheckboxSetting>
                 <AutoDelayRange
                     min={settings.autoDelayMinMilliseconds}
@@ -181,6 +179,15 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ view, onSaved }) => {
                     maxError={errors.AutoDelayMax}
                 />
                 <AutoDelayResets />
+                <CheckboxSetting
+                    name='NoiseEnabled'
+                    label='Enable noise defence'
+                    checked={settings.noiseEnabled}
+                >
+                    Addresses and entries given a noise tier get 10, 20 or 40 MB of zero bytes instead of any response,
+                    with nothing generated. The tier of an address wins over the tier of an entry. Off: tiers are kept
+                    but not used.
+                </CheckboxSetting>
 
                 <button
                     type='submit'

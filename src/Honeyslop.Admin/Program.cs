@@ -75,7 +75,7 @@ await Host
             {
                 x.Urls =
                 [
-                    ..(AppConfiguration.LlmUrl ?? string.Empty)
+                    .. (AppConfiguration.LlmUrl ?? string.Empty)
                     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Select(url => new Uri(url.TrimEnd('/') + "/"))
                 ];

@@ -15,6 +15,7 @@ export const REQUEST_OUTCOMES: readonly RequestOutcomeType[] = [
     'Abandoned',
     'Error',
     'Waiting',
+    'Noise',
 ];
 
 export const ENTRY_COLUMNS: readonly EntryColumnType[] = [

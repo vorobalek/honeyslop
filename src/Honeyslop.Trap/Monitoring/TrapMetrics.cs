@@ -40,4 +40,8 @@ internal static class TrapMetrics
         Constants.MetricsPrefix + "client_delays",
         "Clients with a delay of their own, by kind.",
         "kind");
+
+    public static readonly Gauge NoisyClients = Metrics.CreateGauge(
+        Constants.MetricsPrefix + "noisy_clients",
+        "Clients that get noise instead of answers.");
 }

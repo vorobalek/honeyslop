@@ -84,14 +84,20 @@ public sealed class LlmClientTests
             """,
             requests: requests);
 
-        await sut.CompleteAsync(Endpoint, Prompt with { Statuses = [200, 404] }, TimeSpan.FromMinutes(1), null, CancellationToken.None);
+        await sut.CompleteAsync(Endpoint, Prompt with
+        {
+            Statuses = [200, 404]
+        }, TimeSpan.FromMinutes(1), null, CancellationToken.None);
         await sut.CompleteAsync(Endpoint, Prompt, TimeSpan.FromMinutes(1), null, CancellationToken.None);
 
         using var limited = JsonDocument.Parse(requests[0]);
         using var open = JsonDocument.Parse(requests[1]);
         var limitedStatus = limited.RootElement.GetProperty("response_format").GetProperty("json_schema").GetProperty("schema").GetProperty("properties").GetProperty("status");
         var openStatus = open.RootElement.GetProperty("response_format").GetProperty("json_schema").GetProperty("schema").GetProperty("properties").GetProperty("status");
-        CollectionAssert.AreEqual(new[] { 200, 404 }, limitedStatus.GetProperty("enum").EnumerateArray().Select(x => x.GetInt32()).ToArray());
+        CollectionAssert.AreEqual(new[]
+        {
+            200, 404
+        }, limitedStatus.GetProperty("enum").EnumerateArray().Select(x => x.GetInt32()).ToArray());
         Assert.IsFalse(openStatus.TryGetProperty("enum", out _));
         Assert.AreEqual("integer", openStatus.GetProperty("type").GetString());
     }

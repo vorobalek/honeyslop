@@ -27,7 +27,7 @@ internal sealed partial class TrapHandler(
     IEntryWatcher entryWatcher,
     IHitCounter hitCounter,
     ISettingsProvider settingsProvider,
-    IClientDelays clientDelays,
+    IClientSettings clientSettings,
     IRequestLog requestLog,
     IGlobalCancellationTokenSource globalCancellationTokenSource,
     IOptions<TrapOptions> options,
@@ -84,6 +84,23 @@ internal sealed partial class TrapHandler(
             };
         }
 
+        async Task ServeNoiseAsync(string file, long? noisyEntryId)
+        {
+            outcome = RequestOutcome.Noise;
+            status = StatusCodes.Status200OK;
+            entryId = noisyEntryId;
+            var logged = record is not null;
+            var started = Record();
+            started.Outcome = RequestOutcome.Noise;
+            started.ResponseStatus = status;
+            started.EntryId = noisyEntryId;
+            if (logged)
+                requestLog.Update(started);
+            else
+                requestLog.Add(started);
+            await NoiseWriter.WriteAsync(httpContext, file, httpContext.RequestAborted);
+        }
+
         void LogWaiting(long waitingFor)
         {
             var waiting = Record();
@@ -95,10 +112,23 @@ internal sealed partial class TrapHandler(
         try
         {
             body = await ReadBodyAsync(httpContext);
+            var noiseEnabled = (await settingsProvider.GetAsync(httpContext.RequestAborted)).NoiseEnabled;
+            if (noiseEnabled && NoiseFile(await ClientNoiseAsync(httpContext)) is { } clientNoise)
+            {
+                await ServeNoiseAsync(clientNoise, null);
+                return;
+            }
+
             var classification = requestClassifier.Classify(request.Method, target);
-            (outcome, var response) = classification.Kind == ClassificationKind.Generate
-                ? await HandleGeneratedAsync(httpContext, classification.Method, host, target, body, receivedAt, LogWaiting)
-                : (RequestOutcome.Static, StaticResponses.For(classification.Kind));
+            (outcome, var response, var entryNoise) = classification.Kind == ClassificationKind.Generate
+                ? await HandleGeneratedAsync(httpContext, classification.Method, host, target, body, receivedAt, noiseEnabled, LogWaiting)
+                : (RequestOutcome.Static, StaticResponses.For(classification.Kind), null);
+            if (entryNoise is not null)
+            {
+                await ServeNoiseAsync(entryNoise, response.EntryId);
+                return;
+            }
+
             status = response.Status;
             entryId = response.EntryId > 0 ? response.EntryId : null;
             if (outcome is RequestOutcome.Hit or RequestOutcome.Generated)
@@ -109,7 +139,7 @@ internal sealed partial class TrapHandler(
         catch (Exception exception) when (exception is OperationCanceledException or IOException &&
                                           httpContext.RequestAborted.IsCancellationRequested)
         {
-            outcome = RequestOutcome.Abandoned;
+            outcome = outcome == RequestOutcome.Noise ? RequestOutcome.Noise : RequestOutcome.Abandoned;
             status = ClientClosedRequest;
         }
         finally
@@ -133,66 +163,93 @@ internal sealed partial class TrapHandler(
         }
     }
 
-    private async Task<(RequestOutcome Outcome, CachedResponse Response)> HandleGeneratedAsync(
+    private async Task<(RequestOutcome Outcome, CachedResponse Response, string? Noise)> HandleGeneratedAsync(
         HttpContext httpContext,
         string method,
         string host,
         string target,
         string? body,
         DateTimeOffset receivedAt,
+        bool noiseEnabled,
         Action<long> onWaiting)
     {
+        (RequestOutcome, CachedResponse, string?) Hit(CachedResponse response)
+        {
+            return (RequestOutcome.Hit, response, noiseEnabled ? NoiseFile(response.Noise) : null);
+        }
+
         var cancellationToken = httpContext.RequestAborted;
         var key = EntryKey.Create(method, host, target);
         var cacheVersion = responseCache.Version;
         if (responseCache.TryGet(key, out var cached))
         {
             hitCounter.Add(cached.EntryId, receivedAt);
-            return (RequestOutcome.Hit, cached);
+            return Hit(cached);
         }
 
         var entry = await entryRepository.GetByKeyHashOrDefaultAsync(key.Hash, cancellationToken);
         if (entry is { Status: EntryStatus.Ready })
-            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt, cacheVersion));
+            return Hit(ServeReady(key, entry, receivedAt, cacheVersion));
+        if (noiseEnabled && entry is not null && NoiseFile(entry.Noise) is { } noise)
+            return (RequestOutcome.Noise, CachedResponse.From(entry), noise);
 
         var settings = await settingsProvider.GetAsync(cancellationToken);
         if (!settings.GenerationEnabled)
-            return (RequestOutcome.Fallback, StaticResponses.NotFound);
+            return (RequestOutcome.Fallback, StaticResponses.NotFound, null);
 
         if (entry is not null)
             await entryRepository.TouchRequestedAsync(entry.Id, receivedAt, globalCancellationTokenSource.Token);
         entry ??= await EnqueueAsync(httpContext, key, body, receivedAt);
         if (entry is { Status: EntryStatus.Ready })
-            return (RequestOutcome.Hit, ServeReady(key, entry, receivedAt, cacheVersion));
+            return Hit(ServeReady(key, entry, receivedAt, cacheVersion));
         if (entry is null)
-            return (RequestOutcome.Fallback, StaticResponses.NotFound);
+            return (RequestOutcome.Fallback, StaticResponses.NotFound, null);
         if (entry.Status == EntryStatus.Failed && entry.Attempts >= options.Value.MaxAttempts)
-            return (RequestOutcome.Fallback, StaticResponses.NotFound);
+            return (RequestOutcome.Fallback, StaticResponses.NotFound, null);
 
         onWaiting(entry.Id);
         var generated = await entryWatcher.WaitAsync(entry.Id, settings.GenerationWait, cancellationToken);
         if (generated is null)
-            return (RequestOutcome.Fallback, StaticResponses.NotFound);
+            return (RequestOutcome.Fallback, StaticResponses.NotFound, null);
 
         generated = generated with
         {
-            Delay = CachedResponse.DelayOf(entry)
+            Delay = CachedResponse.DelayOf(entry),
+            Noise = entry.Noise
         };
         responseCache.Set(key, generated, cacheVersion);
         hitCounter.Add(generated.EntryId, await serverTime.GetNowAsync(globalCancellationTokenSource.Token));
-        return (RequestOutcome.Generated, generated);
+        return (RequestOutcome.Generated, generated, null);
+    }
+
+    private async Task<NoiseTier?> ClientNoiseAsync(HttpContext httpContext)
+    {
+        return httpContext.Connection.RemoteIpAddress is { } address
+            ? (await clientSettings.GetAsync(ClientAddress.Key(address), httpContext.RequestAborted)).Noise
+            : null;
+    }
+
+    private string? NoiseFile(NoiseTier? tier)
+    {
+        if (tier is not { } chosen)
+            return null;
+        var path = Path.Combine(options.Value.NoiseDirectory, $"noise{(int)chosen}");
+        if (File.Exists(path))
+            return path;
+        LogNoiseMissing(logger, path);
+        return null;
     }
 
     private async Task RespondLateAsync(HttpContext httpContext, CachedResponse response, long startedAt, CancellationToken cancellationToken)
     {
         var settings = await settingsProvider.GetAsync(cancellationToken);
         var client = httpContext.Connection.RemoteIpAddress is { } address
-            ? await clientDelays.GetAsync(ClientAddress.Key(address), cancellationToken)
-            : new PersonalDelay(null, null);
+            ? await clientSettings.GetAsync(ClientAddress.Key(address), cancellationToken)
+            : new PersonalSettings(null, null, null);
         var learning = settings.AutoDelayEnabled;
-        var (delay, source) = client.Manual is { } manual
+        var (delay, source) = client.ManualDelay is { } manual
             ? (manual, "manual")
-            : learning && client.Learned is { } learned
+            : learning && client.LearnedDelay is { } learned
                 ? (learned, "learned")
                 : learning
                     ? (TimeSpan.FromMilliseconds(DelayLearner.Middle(settings.AutoDelayMinMilliseconds, settings.AutoDelayMaxMilliseconds)), "start")
@@ -305,6 +362,9 @@ internal sealed partial class TrapHandler(
             return null;
         }
     }
+
+    [LoggerMessage(LogLevel.Warning, "Noise file {path} is missing, answering as usual")]
+    static partial void LogNoiseMissing(ILogger<TrapHandler> logger, string path);
 
     [LoggerMessage(LogLevel.Information, "{outcome} {method} {host}{target} -> {status} in {elapsedMs}ms from {clientIp}")]
     static partial void LogRequest(

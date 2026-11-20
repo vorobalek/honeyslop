@@ -15,7 +15,7 @@ internal sealed partial class DataProtectionKeyStore(
         using var scope = serviceScopeFactory.CreateScope();
         return
         [
-            ..scope
+            .. scope
                 .ServiceProvider
                 .GetRequiredService<IDataProtectionKeyRepository>()
                 .GetAll()

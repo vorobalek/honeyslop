@@ -20,6 +20,7 @@ internal static class SettingsConverter
     private const string AutoDelayEnabled = "auto_delay_enabled";
     private const string AutoDelayMinMilliseconds = "auto_delay_min_milliseconds";
     private const string AutoDelayMaxMilliseconds = "auto_delay_max_milliseconds";
+    private const string NoiseEnabled = "noise_enabled";
     private const string SenderName = "sender_name";
 
     public static HoneyslopSettings ToSettings(IReadOnlyDictionary<string, string> values)
@@ -41,7 +42,8 @@ internal static class SettingsConverter
             ResponseDelayMilliseconds = ReadOptionalInteger(values, ResponseDelayMilliseconds),
             AutoDelayEnabled = ReadFlag(values, AutoDelayEnabled, defaults.AutoDelayEnabled),
             AutoDelayMinMilliseconds = ReadOptionalInteger(values, AutoDelayMinMilliseconds) ?? defaults.AutoDelayMinMilliseconds,
-            AutoDelayMaxMilliseconds = ReadOptionalInteger(values, AutoDelayMaxMilliseconds) ?? defaults.AutoDelayMaxMilliseconds
+            AutoDelayMaxMilliseconds = ReadOptionalInteger(values, AutoDelayMaxMilliseconds) ?? defaults.AutoDelayMaxMilliseconds,
+            NoiseEnabled = ReadFlag(values, NoiseEnabled, defaults.NoiseEnabled)
         };
     }
 
@@ -63,7 +65,8 @@ internal static class SettingsConverter
             [ResponseDelayMilliseconds] = settings.ResponseDelayMilliseconds?.ToString(CultureInfo.InvariantCulture),
             [AutoDelayEnabled] = settings.AutoDelayEnabled.ToString(CultureInfo.InvariantCulture),
             [AutoDelayMinMilliseconds] = settings.AutoDelayMinMilliseconds.ToString(CultureInfo.InvariantCulture),
-            [AutoDelayMaxMilliseconds] = settings.AutoDelayMaxMilliseconds.ToString(CultureInfo.InvariantCulture)
+            [AutoDelayMaxMilliseconds] = settings.AutoDelayMaxMilliseconds.ToString(CultureInfo.InvariantCulture),
+            [NoiseEnabled] = settings.NoiseEnabled.ToString(CultureInfo.InvariantCulture)
         };
     }
 

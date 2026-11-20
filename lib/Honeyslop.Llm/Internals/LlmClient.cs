@@ -36,18 +36,6 @@ internal sealed class LlmClient(
         }
         """)!;
 
-    private static JsonNode SchemaFor(IReadOnlyList<int>? statuses)
-    {
-        var schema = ResponseSchema.DeepClone();
-        if (statuses is { Count: > 0 })
-            schema["properties"]!["status"] = new JsonObject
-            {
-                ["type"] = "integer",
-                ["enum"] = new JsonArray([.. statuses.Select(x => JsonValue.Create(x))])
-            };
-        return schema;
-    }
-
     public async Task<int?> GetIdleSlotsAsync(Uri endpoint, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -127,6 +115,18 @@ internal sealed class LlmClient(
         {
             throw new LlmException($"Generation on {endpoint.Authority} exceeded the time limit of {timeLimit}.");
         }
+    }
+
+    private static JsonNode SchemaFor(IReadOnlyList<int>? statuses)
+    {
+        var schema = ResponseSchema.DeepClone();
+        if (statuses is { Count: > 0 })
+            schema["properties"]!["status"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["enum"] = new JsonArray([.. statuses.Select(x => JsonValue.Create(x))])
+            };
+        return schema;
     }
 
     private async Task<LlmCompletion> CompleteWithinAsync(

@@ -51,6 +51,9 @@ public sealed class Settings(ISettingsService settingsService)
         int? autoDelayMinMilliseconds = null,
         [Description("Longest Auto-Delay in milliseconds, at most 600000.")]
         int? autoDelayMaxMilliseconds = null,
+        [Description(
+            "Noise defence: addresses and entries given a noise tier get 10, 20 or 40 MB of zero bytes instead of any response; the tier of an address wins over the tier of an entry. Off, the tiers are kept but not used.")]
+        bool? noiseEnabled = null,
         CancellationToken cancellationToken = default)
     {
         var current = (await settingsService.GetAsync(cancellationToken)).Settings;
@@ -75,7 +78,8 @@ public sealed class Settings(ISettingsService settingsService)
             },
             AutoDelayEnabled = autoDelayEnabled ?? current.AutoDelayEnabled,
             AutoDelayMinMilliseconds = autoDelayMinMilliseconds ?? current.AutoDelayMinMilliseconds,
-            AutoDelayMaxMilliseconds = autoDelayMaxMilliseconds ?? current.AutoDelayMaxMilliseconds
+            AutoDelayMaxMilliseconds = autoDelayMaxMilliseconds ?? current.AutoDelayMaxMilliseconds,
+            NoiseEnabled = noiseEnabled ?? current.NoiseEnabled
         };
         return await settingsService.SaveAsync(settings, cancellationToken);
     }

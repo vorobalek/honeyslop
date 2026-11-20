@@ -13,4 +13,5 @@ public sealed record EntryViewDto(
     long? CurrentId,
     GenerationOutputDto? Output,
     int DefaultResponseDelayMilliseconds,
+    bool NoiseEnabled,
     DateTimeOffset AsOf);

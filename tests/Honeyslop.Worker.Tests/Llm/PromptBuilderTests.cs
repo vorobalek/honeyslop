@@ -65,7 +65,10 @@ public sealed class PromptBuilderTests
         StringAssert.StartsWith(prompt.System, "You are a web server.");
         StringAssert.Contains(prompt.System, "- " + rule);
         Assert.DoesNotContain("Example", prompt.System);
-        foreach (var value in new[] { "nginx", "Apache", "IIS", "AKIA", "sk_live", "such as", "e.g.", "XML", "JSON this", "form fields", "vulnerab", "exploit", "unpatched", "scanner", "fake", "Server header" })
+        foreach (var value in new[]
+                 {
+                     "nginx", "Apache", "IIS", "AKIA", "sk_live", "such as", "e.g.", "XML", "JSON this", "form fields", "vulnerab", "exploit", "unpatched", "scanner", "fake", "Server header"
+                 })
             Assert.DoesNotContain(value, prompt.System);
         Assert.DoesNotContain("{kind}", prompt.System);
     }
@@ -196,17 +199,50 @@ public sealed class PromptBuilderTests
     }
 
     [TestMethod]
-    [DataRow("/.git/HEAD", true, new[] { 200 })]
-    [DataRow("/.git/HEAD", false, new[] { 200 })]
-    [DataRow("/", true, new[] { 200 })]
-    [DataRow("/catalog/shoes", true, new[] { 200, 404 })]
-    [DataRow("/catalog/shoes", false, new[] { 200 })]
-    [DataRow("/wp-login.php", true, new[] { 200, 302 })]
-    [DataRow("/HNAP1/", false, new[] { 200 })]
-    [DataRow("/k3j4h5x9.txt", true, new[] { 200, 404 })]
-    [DataRow("/k3j4h5x9.txt", false, new[] { 200 })]
-    [DataRow("/.git/index", true, new[] { 200, 404 })]
-    [DataRow("/.env", true, new[] { 200 })]
+    [DataRow("/.git/HEAD", true, new[]
+    {
+        200
+    })]
+    [DataRow("/.git/HEAD", false, new[]
+    {
+        200
+    })]
+    [DataRow("/", true, new[]
+    {
+        200
+    })]
+    [DataRow("/catalog/shoes", true, new[]
+    {
+        200, 404
+    })]
+    [DataRow("/catalog/shoes", false, new[]
+    {
+        200
+    })]
+    [DataRow("/wp-login.php", true, new[]
+    {
+        200, 302
+    })]
+    [DataRow("/HNAP1/", false, new[]
+    {
+        200
+    })]
+    [DataRow("/k3j4h5x9.txt", true, new[]
+    {
+        200, 404
+    })]
+    [DataRow("/k3j4h5x9.txt", false, new[]
+    {
+        200
+    })]
+    [DataRow("/.git/index", true, new[]
+    {
+        200, 404
+    })]
+    [DataRow("/.env", true, new[]
+    {
+        200
+    })]
     public void Build_LimitsTheStatusByKind(string target, bool refusals, int[] statuses)
     {
         var prompt = new PromptBuilder().Build(new Entry
@@ -280,7 +316,10 @@ public sealed class PromptBuilderTests
         }, refusals);
 
         var rule = prompt.System.Split('\n').Single(x => x.StartsWith("- Reply with status", StringComparison.Ordinal));
-        foreach (var status in new[] { 200, 302, 404 })
+        foreach (var status in new[]
+                 {
+                     200, 302, 404
+                 })
             Assert.AreEqual(prompt.Statuses!.Contains(status), rule.Contains(status.ToString()), $"{status} in {rule}");
     }
 

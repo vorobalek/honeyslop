@@ -3,6 +3,7 @@ using Honeyslop.Admin.Core.Contracts;
 using Honeyslop.Admin.Core.Enums;
 using Honeyslop.Admin.Core.Services;
 using Honeyslop.Admin.Extensions;
+using Honeyslop.Data.Enums;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
@@ -26,7 +27,7 @@ public sealed class Clients(IClientsService clientsService)
     }
 
     [McpServerTool(Name = "get_client", Title = "Get a client address", ReadOnly = true, Idempotent = true)]
-    [Description("One client address: country, request, host and path counts, first and last request, the last User-Agent and the response delay set on it.")]
+    [Description("One client address: country, request, host and path counts, first and last request, the last User-Agent, the response delay set on it and its noise tier while noise defence is on.")]
     public async Task<ClientDto> GetAsync([Description("Client address.")] string ip, CancellationToken cancellationToken = default)
     {
         return await clientsService.GetAsync(ip, cancellationToken) ?? throw new McpException($"{ip} never sent anything.");
@@ -50,6 +51,18 @@ public sealed class Clients(IClientsService clientsService)
         CancellationToken cancellationToken = default)
     {
         return clientsService.SetResponseDelayAsync(ip, milliseconds, cancellationToken);
+    }
+
+    [McpServerTool(Name = "set_client_noise", Title = "Answer a client with noise", Destructive = false, Idempotent = true)]
+    [Description(
+        "While noise defence is on in the settings, the trap answers every request of the address with a file of zero bytes instead of a response: 10 MB for Tier1, 20 MB for Tier2, 40 MB for Tier3, as fast as the connection takes it and without generating anything. For the worst offenders that ignore abuse reports. Without a tier the address gets ordinary answers again. Returns the tier as saved, or what was wrong.")]
+    public Task<ClientNoiseChangeDto> SetNoiseAsync(
+        [Description("Client address.")] string ip,
+        [Description("Tier1, Tier2 or Tier3; leave out to stop the noise.")]
+        NoiseTier? tier = null,
+        CancellationToken cancellationToken = default)
+    {
+        return clientsService.SetNoiseAsync(ip, tier, cancellationToken);
     }
 
     [McpServerTool(Name = "reset_client_delays", Title = "Remove every delay set on a client by hand", Destructive = true, Idempotent = true)]

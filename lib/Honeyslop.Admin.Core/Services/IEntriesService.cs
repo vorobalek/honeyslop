@@ -1,4 +1,5 @@
 using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Data.Enums;
 using Honeyslop.Llm.Contracts;
 
 namespace Honeyslop.Admin.Core.Services;
@@ -18,4 +19,5 @@ public interface IEntriesService
     Task<EntryChangeDto> CreateAsync(EntryRequestDto request, string? guidance, CancellationToken cancellationToken);
     Task<EntryChangeDto> CreateWithResponseAsync(EntryRequestDto request, EntryResponseDto response, CancellationToken cancellationToken);
     Task<EntryChangeDto> SetResponseDelayAsync(IReadOnlyCollection<long> ids, int? milliseconds, CancellationToken cancellationToken);
+    Task<EntryChangeDto> SetNoiseAsync(IReadOnlyCollection<long> ids, NoiseTier? tier, CancellationToken cancellationToken);
 }

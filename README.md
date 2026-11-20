@@ -30,6 +30,7 @@ report with their request log attached; the reports that bounce show up next to 
 | `STATIC_EXTENSIONS`            | built in       | Extensions answered without the model                                         |
 | `MAX_TARGET_LENGTH`            | `1024`         | Longer paths get a 414 without the model, at most 2048                        |
 | `RESPONSE_DELAY_MILLISECONDS`  | `0`            | Least time from a request to an answer from an entry, unless set in the admin |
+| `NOISE_DIRECTORY`              | `noise`        | `noise1`–`noise3` served to noisy clients and entries; the image builds them  |
 
 | Admin                                                                   | Default                                               |                                                                              |
 | ----------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -63,22 +64,17 @@ report with their request log attached; the reports that bounce show up next to 
 | `MANAGEMENT_PORT`                             | `8081`           | Health and metrics                                          |
 
 Cache lifetimes, generation limits, request retention, the public view, the default response delay, Auto-Delay with its
-range and the abuse addresses that never get reports are edited in the admin or over MCP.
+range, noise defence and the abuse addresses that never get reports are edited in the admin or over MCP.
 
 ### Development
 
 ```bash
-docker compose -f docker-compose.postgres.yaml up -d
-docker compose -f docker-compose.postgres.yaml exec postgres psql -c "create role honeyslop with login createdb password 'honeyslop'"
-dotnet run --project src/Honeyslop.Migrator
-dotnet run --project src/Honeyslop.Trap
-(cd web && npm ci && npm run build)
-dotnet run --project src/Honeyslop.Admin
+docker compose up -d --build
 ```
 
-`launchSettings.json` expects a model server on `:18080`; `docker-compose.oidc.yaml` with the `Honeyslop.Admin.Oidc`
-profile adds sign-in, and Mailpit on `:1025` with `SMTP_STARTTLS=false` receives abuse reports. `npm run dev` in `web`
-serves the app with hot reload against the admin at `HONEYSLOP_ADMIN_URL`.
+The admin is on `:8090` (sign in with any user name), the trap on `:8080`, Mailpit on `:8025`; `--profile llm` adds the
+model server on `:18080`. `npm run dev` in `web` serves the app with hot reload against the admin at
+`HONEYSLOP_ADMIN_URL`.
 
 ### Tests
 

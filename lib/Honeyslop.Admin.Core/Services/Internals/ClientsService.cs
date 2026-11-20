@@ -26,6 +26,7 @@ internal sealed partial class ClientsService(
     IBlockedAbuseContactRepository blockedContactRepository,
     IAbuseReportBounceRepository bounceRepository,
     IClientDelayRepository clientDelayRepository,
+    IClientNoiseRepository clientNoiseRepository,
     IClientProbeRepository clientProbeRepository,
     IDelayLearningJobRepository delayLearningJobRepository,
     IRequestArchiveBuilder archiveBuilder,
@@ -60,11 +61,23 @@ internal sealed partial class ClientsService(
         if (await FindAsync(ip, cancellationToken) is not { } known)
             return null;
         var key = ClientAddress.Key(IPAddress.Parse(ip));
+        var settings = (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop;
         var delay = await clientDelayRepository.GetOrDefaultAsync(key, cancellationToken);
-        var learned = (await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.AutoDelayEnabled
+        var learned = settings.AutoDelayEnabled
             ? await clientProbeRepository.GetOrDefaultAsync(key, cancellationToken)
             : null;
-        return new ClientDto(ip, countryLookup.Find(ip), known.Summary, delay?.ResponseDelayMilliseconds, learned?.DelayMilliseconds, learned?.TimeoutMilliseconds);
+        var noise = settings.NoiseEnabled
+            ? await clientNoiseRepository.GetOrDefaultAsync(key, cancellationToken)
+            : null;
+        return new ClientDto(
+            ip,
+            countryLookup.Find(ip),
+            known.Summary,
+            delay?.ResponseDelayMilliseconds,
+            learned?.DelayMilliseconds,
+            learned?.TimeoutMilliseconds,
+            settings.NoiseEnabled,
+            noise?.Tier);
     }
 
     public async Task<ClientAbuseDto?> GetAbuseAsync(string ip, CancellationToken cancellationToken)
@@ -178,6 +191,27 @@ internal sealed partial class ClientsService(
         ];
         await delayLearningJobRepository.EnqueueAsync(clients, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
         return new ClientDelaysChangeDto(forgotten);
+    }
+
+    public async Task<ClientNoiseChangeDto> SetNoiseAsync(string ip, NoiseTier? tier, CancellationToken cancellationToken)
+    {
+        access.EnsureCanOperate();
+        if (!IPAddress.TryParse(ip, out var address))
+            return NoiseRefused("Ip", "Must be an IP address.");
+        if (tier is { } chosen && !Enum.IsDefined(chosen))
+            return NoiseRefused("Noise", "Must be tier 1, 2 or 3.");
+        if (tier is not null && !(await settingsRepository.GetAsync(null, cancellationToken)).Honeyslop.NoiseEnabled)
+            return NoiseRefused("Noise", "Noise defence is off in the settings.");
+        await clientNoiseRepository.SetAsync(ClientAddress.Key(address), tier, access.Viewer.Name, await serverTime.GetNowAsync(cancellationToken), cancellationToken);
+        return new ClientNoiseChangeDto(new Dictionary<string, string>(), tier);
+    }
+
+    private static ClientNoiseChangeDto NoiseRefused(string field, string message)
+    {
+        return new ClientNoiseChangeDto(new Dictionary<string, string>
+        {
+            [field] = message
+        }, null);
     }
 
     private static ClientDelayChangeDto DelayRefused(string field, string message)

@@ -14,4 +14,5 @@ export interface SettingsFormType {
     autoDelayEnabled: boolean;
     autoDelayMinMilliseconds: number;
     autoDelayMaxMilliseconds: number;
+    noiseEnabled: boolean;
 }

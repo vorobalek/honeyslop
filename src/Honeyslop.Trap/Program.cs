@@ -41,7 +41,7 @@ await Host
                 .AddSingleton<IEntryWatcher, EntryWatcher>()
                 .AddSingleton<IHostedService>(serviceProvider => (IHostedService)serviceProvider.GetRequiredService<IEntryWatcher>())
                 .AddSingleton<IHitCounter, HitCounter>()
-                .AddSingleton<IClientDelays, ClientDelays>()
+                .AddSingleton<IClientSettings, ClientSettings>()
                 .AddSingleton<IRequestLog, RequestLog>()
                 .AddHostedService<RequestLogWriter>()
                 .AddScoped<ITrapHandler, TrapHandler>()
@@ -63,6 +63,7 @@ await Host
                     x.HitFlushInterval = TimeSpan.FromSeconds(GenerationConfiguration.HitFlushSeconds);
                     x.Requests.Apply(GenerationConfiguration.MaxTargetLength, GenerationConfiguration.StaticExtensions);
                     x.ResponseDelay = TimeSpan.FromMilliseconds(Math.Clamp(GenerationConfiguration.ResponseDelayMilliseconds, 0, Entry.ResponseDelayMaxMilliseconds));
+                    x.NoiseDirectory = AppConfiguration.NoiseDirectory;
                 });
             services
                 .Configure<ForwardedHeadersOptions>(x =>

@@ -1,4 +1,5 @@
 using Honeyslop.Admin.Core.Contracts;
+using Honeyslop.Data.Enums;
 using Honeyslop.Reports.Contracts;
 
 namespace Honeyslop.Admin.Core.Services;
@@ -15,4 +16,5 @@ public interface IClientsService
     Task<ClientDelayChangeDto> SetResponseDelayAsync(string ip, int? milliseconds, CancellationToken cancellationToken);
     Task<ClientDelaysChangeDto> ResetResponseDelaysAsync(CancellationToken cancellationToken);
     Task<ClientDelaysChangeDto> RelearnDelaysAsync(CancellationToken cancellationToken);
+    Task<ClientNoiseChangeDto> SetNoiseAsync(string ip, NoiseTier? tier, CancellationToken cancellationToken);
 }

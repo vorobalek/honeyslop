@@ -1,0 +1,147 @@
+name: honeyslop
+
+x-database: &database
+  DB_CONNECTION_STRING: Server=postgres;Port=5432;Database=honeyslop;User Id=honeyslop;Password=honeyslop;Include Error Detail=true
+
+x-mail: &mail
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+  SMTP_STARTTLS: "false"
+  SMTP_USERNAME: honeyslop
+  SMTP_PASSWORD: honeyslop
+  SMTP_FROM: abuse-reports@honeyslop.localhost
+
+services:
+  postgres:
+    image: postgres:18
+    ports:
+      - "${HONEYSLOP_POSTGRES_PORT:-5432}:5432"
+    environment:
+      PGUSER: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    configs:
+      - source: postgres-role
+        target: /docker-entrypoint-initdb.d/honeyslop.sql
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  noise:
+    build:
+      context: .
+      target: noise
+    volumes:
+      - ./var/noise:/out
+
+  migrator:
+    build:
+      context: .
+      target: migrator
+    environment:
+      <<: *database
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  trap:
+    build:
+      context: .
+      target: trap
+    ports:
+      - "${HONEYSLOP_TRAP_PORT:-8080}:8080"
+    environment:
+      <<: *database
+      NOISE_DIRECTORY: /noise
+      TRUSTED_NETWORKS: 0.0.0.0/0,::/0
+    volumes:
+      - ./var/noise:/noise:ro
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      noise:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+    environment:
+      <<: [ *database, *mail ]
+      LLM_URL: http://llm:8080
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      target: admin
+    ports:
+      - "${HONEYSLOP_ADMIN_PORT:-8090}:8080"
+    environment:
+      <<: [ *database, *mail ]
+      LLM_URL: http://llm:8080
+      OIDC_AUTHORITY: http://localhost:${HONEYSLOP_OIDC_PORT:-8099}/honeyslop
+      OIDC_CLIENT_SECRET: honeyslop
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      oidc:
+        condition: service_started
+    restart: unless-stopped
+
+  admin-oidc:
+    image: alpine/socat:1.8.1.1
+    network_mode: service:admin
+    command: [ "TCP-LISTEN:${HONEYSLOP_OIDC_PORT:-8099},fork,reuseaddr", "TCP:oidc:8080" ]
+    depends_on:
+      - admin
+      - oidc
+    restart: unless-stopped
+
+  oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.4
+    ports:
+      - "${HONEYSLOP_OIDC_PORT:-8099}:8080"
+    environment:
+      JSON_CONFIG: '{"interactiveLogin": true}'
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "${HONEYSLOP_SMTP_PORT:-1025}:1025"
+      - "${HONEYSLOP_MAILPIT_PORT:-8025}:8025"
+    restart: unless-stopped
+
+  llm:
+    profiles: [ llm ]
+    image: ghcr.io/ggml-org/llama.cpp:server-v1.0.0-b12359-b1b770d
+    command: [ "--hf-repo", "unsloth/Qwen3-4B-Instruct-2507-GGUF", "--hf-file", "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "--alias", "honeyslop", "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "12288", "--parallel", "4", "--no-webui", "--slots", "--metrics", "--reasoning", "off" ]
+    ports:
+      - "${HONEYSLOP_LLM_PORT:-18080}:8080"
+    environment:
+      LLAMA_CACHE: /cache
+    volumes:
+      - llm:/cache
+    restart: unless-stopped
+
+configs:
+  postgres-role:
+    content: |
+      create role honeyslop with login createdb password 'honeyslop';
+
+volumes:
+  postgres:
+  llm:

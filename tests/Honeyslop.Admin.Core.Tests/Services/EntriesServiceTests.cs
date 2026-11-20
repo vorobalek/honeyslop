@@ -333,6 +333,62 @@ public sealed class EntriesServiceTests
     }
 
     [TestMethod]
+    public async Task SetNoiseAsync_ReturnsTheEntriesItChanged()
+    {
+        _settings.Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Settings
+        {
+            Honeyslop = HoneyslopSettings.Default with
+            {
+                NoiseEnabled = true
+            }
+        });
+        _entries
+            .Setup(x => x.SetNoiseAsync(It.IsAny<IReadOnlyCollection<long>>(), NoiseTier.Tier2, Now, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([2]);
+
+        var change = await Service(Viewers.Operator).SetNoiseAsync([1, 2], NoiseTier.Tier2, CancellationToken.None);
+
+        Assert.IsTrue(change.Changed);
+        CollectionAssert.AreEqual(new long[]
+        {
+            2
+        }, change.Ids);
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(4)]
+    public async Task SetNoiseAsync_UnknownTier_IsRefused(int tier)
+    {
+        var change = await Service(Viewers.Operator).SetNoiseAsync([1], (NoiseTier)tier, CancellationToken.None);
+
+        Assert.AreEqual("Must be tier 1, 2 or 3.", change.Errors[nameof(Entry.Noise)]);
+        _entries.Verify(x => x.SetNoiseAsync(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<NoiseTier?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task SetNoiseAsync_NoiseDefenceOff_RefusesATierButStillClearsOne()
+    {
+        _settings.Setup(x => x.GetAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Settings());
+        _entries
+            .Setup(x => x.SetNoiseAsync(It.IsAny<IReadOnlyCollection<long>>(), null, Now, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1]);
+
+        var set = await Service(Viewers.Operator).SetNoiseAsync([1], NoiseTier.Tier1, CancellationToken.None);
+        var cleared = await Service(Viewers.Operator).SetNoiseAsync([1], null, CancellationToken.None);
+
+        Assert.AreEqual("Noise defence is off in the settings.", set.Errors[nameof(Entry.Noise)]);
+        Assert.IsTrue(cleared.Changed);
+    }
+
+    [TestMethod]
+    public async Task SetNoiseAsync_Anonymous_IsDenied()
+    {
+        await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>
+            Service(ViewerDto.Anonymous).SetNoiseAsync([1], NoiseTier.Tier1, CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task RegenerateAsync_Anonymous_IsDenied()
     {
         await Assert.ThrowsExactlyAsync<AccessDeniedException>(() =>

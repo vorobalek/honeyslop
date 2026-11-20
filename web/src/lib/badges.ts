@@ -28,6 +28,7 @@ export function outcomeBadge(outcome: RequestOutcomeType): string {
         case 'Abandoned':
             return 'badge badge-pending';
         case 'Error':
+        case 'Noise':
             return 'badge badge-failed';
         default:
             return 'badge badge-static';

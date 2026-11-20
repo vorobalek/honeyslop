@@ -39,6 +39,13 @@ RUN for month in "$(date -u +%Y-%m)" "$(date -u -d "$(date -u +%Y-%m-01) -1 mont
         "licensed under Creative Commons Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/)." \
         "It is redistributed here unmodified; only decompressed." > NOTICE
 
+FROM alpine:3.22 AS noise
+WORKDIR /noise
+RUN dd if=/dev/zero bs=1M count=10240 | gzip > noise1 && \
+    dd if=/dev/zero bs=1M count=20480 | gzip > noise2 && \
+    dd if=/dev/zero bs=1M count=40960 | gzip > noise3
+CMD ["sh", "-c", "cp -n /noise/noise* /out/"]
+
 ### migrator
 FROM base AS migrator
 WORKDIR /app
@@ -49,6 +56,7 @@ ENTRYPOINT ["dotnet", "Honeyslop.Migrator.dll"]
 FROM base AS trap
 WORKDIR /app
 COPY --from=publish /app/trap .
+COPY --from=noise /noise /app/noise
 ENTRYPOINT ["dotnet", "Honeyslop.Trap.dll"]
 
 ### admin

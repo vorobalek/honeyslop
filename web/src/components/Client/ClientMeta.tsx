@@ -1,9 +1,11 @@
 import { useWatched } from '../../hooks/useWatched';
+import { noiseLabel } from '../../lib/noise';
 import { countOf } from '../../lib/numbers';
 import { display } from '../../lib/time';
 import { Watch } from '../../lib/watchStore';
 import { ClientType } from '../../types/clientType';
 import ClientDelayButton from './ClientDelayButton';
+import ClientNoiseButton from './ClientNoiseButton';
 import React from 'react';
 
 type ClientMetaProps = {
@@ -25,6 +27,8 @@ const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
     const delay = useWatched(watch, (client) => client.responseDelayMilliseconds);
     const learned = useWatched(watch, (client) => client.learnedDelayMilliseconds);
     const timeout = useWatched(watch, (client) => client.learnedTimeoutMilliseconds);
+    const noiseEnabled = useWatched(watch, (client) => client.noiseEnabled);
+    const noise = useWatched(watch, (client) => client.noise);
     return (
         <>
             <dl className='meta'>
@@ -52,6 +56,18 @@ const ClientMeta: React.FC<ClientMetaProps> = ({ watch }) => {
                         milliseconds={delay}
                     />
                 </dd>
+                {noiseEnabled && (
+                    <>
+                        <dt>Noise</dt>
+                        <dd>
+                            {noise === null ? 'none' : noiseLabel(noise)}{' '}
+                            <ClientNoiseButton
+                                ip={ip}
+                                noise={noise}
+                            />
+                        </dd>
+                    </>
+                )}
             </dl>
             {!activity && (
                 <p className='notice'>

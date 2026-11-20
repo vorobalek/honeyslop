@@ -61,7 +61,7 @@ public sealed class WatchHandlersTests
     public async Task Handler_BuildsTheViewFromTheTypedRequest()
     {
         var views = new Mock<IViewBuilder>();
-        var view = new EntryViewDto(null!, default, false, null, null, null, 0, DateTimeOffset.UnixEpoch);
+        var view = new EntryViewDto(null!, default, false, null, null, null, 0, false, DateTimeOffset.UnixEpoch);
         views.Setup(x => x.GetEntryAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(view);
         var handler = _services.GetRequiredService<IWatchHandlers>().For(new EntryWatch(5));
 

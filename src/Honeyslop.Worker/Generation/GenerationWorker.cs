@@ -190,7 +190,7 @@ internal sealed partial class GenerationWorker(
             throw new LlmException(Rejections.CutOff);
 
         var parsed = LlmResponseParser.Parse(completion.Content);
-        var mayRefuse = asked || (settings.AllowRefusals && profile.Refusable);
+        var mayRefuse = asked || settings.AllowRefusals && profile.Refusable;
         if (!asked && mayRefuse && parsed.Status == StatusCodes.Status404NotFound && FixedResponses.NotFound(profile.Server, entry.Host, entry.Target) is { } notFound)
             return (notFound, completion);
 

@@ -8,6 +8,7 @@ using Honeyslop.Admin.Live.Contracts;
 using Honeyslop.Admin.Live.Contracts.Watches;
 using Honeyslop.Admin.Live.Enums;
 using Honeyslop.Admin.Views.Contracts;
+using Honeyslop.Data.Enums;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Honeyslop.Admin.Hubs;
@@ -102,6 +103,12 @@ public sealed class AdminHub(
         return clientsService.SetResponseDelayAsync(ip, milliseconds, Context.ConnectionAborted);
     }
 
+    [HubMethodName("setClientNoise")]
+    public Task<ClientNoiseChangeDto> SetClientNoiseAsync(string ip, NoiseTier? tier)
+    {
+        return clientsService.SetNoiseAsync(ip, tier, Context.ConnectionAborted);
+    }
+
     [HubMethodName("relearnDelays")]
     public Task<ClientDelaysChangeDto> RelearnDelaysAsync()
     {
@@ -118,6 +125,12 @@ public sealed class AdminHub(
     public Task<EntryChangeDto> SetEntryDelayAsync(long[] ids, int? milliseconds)
     {
         return entriesService.SetResponseDelayAsync(ids, milliseconds, Context.ConnectionAborted);
+    }
+
+    [HubMethodName("setEntryNoise")]
+    public Task<EntryChangeDto> SetEntryNoiseAsync(long[] ids, NoiseTier? tier)
+    {
+        return entriesService.SetNoiseAsync(ids, tier, Context.ConnectionAborted);
     }
 
     [HubMethodName("report")]
@@ -159,7 +172,8 @@ public sealed class AdminHub(
                 ResponseDelayMilliseconds = form.ResponseDelayMilliseconds,
                 AutoDelayEnabled = form.AutoDelayEnabled,
                 AutoDelayMinMilliseconds = form.AutoDelayMinMilliseconds,
-                AutoDelayMaxMilliseconds = form.AutoDelayMaxMilliseconds
+                AutoDelayMaxMilliseconds = form.AutoDelayMaxMilliseconds,
+                NoiseEnabled = form.NoiseEnabled
             },
             Context.ConnectionAborted);
     }

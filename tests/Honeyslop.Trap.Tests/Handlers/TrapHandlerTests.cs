@@ -48,6 +48,170 @@ public sealed class TrapHandlerTests
     }
 
     [TestMethod]
+    public async Task HandleAsync_NoisyClient_GetsTheFileOfItsTierInsteadOfAnAnswer()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier2);
+        var context = Request("GET", "/.env");
+
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.AreEqual("gzip", context.Response.Headers.ContentEncoding.ToString());
+        Assert.AreEqual(noise.Content(NoiseTier.Tier2).Length, context.Response.ContentLength);
+        CollectionAssert.AreEqual(noise.Content(NoiseTier.Tier2), ((MemoryStream)context.Response.Body).ToArray());
+        Assert.IsTrue(sut.Log.TryRead(out var started));
+        Assert.IsFalse(started!.IsUpdate);
+        Assert.AreEqual(RequestOutcome.Noise, started.Record.Outcome);
+        Assert.IsTrue(sut.Log.TryRead(out var finished));
+        Assert.IsTrue(finished!.IsUpdate);
+        Assert.AreSame(started.Record, finished.Record);
+        Assert.AreEqual((RequestOutcome.Noise, 200), (finished.Record.Outcome, finished.Record.ResponseStatus));
+        Assert.IsNull(finished.Record.EntryId);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_NoisyClientThatHangsUp_StaysNoise()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier1);
+        var context = Request("GET", "/.env");
+        context.RequestAborted = new CancellationToken(true);
+
+        await sut.Handler.HandleAsync(context);
+
+        sut.LoggedRecord();
+        var record = sut.LoggedRecord();
+        Assert.AreEqual((RequestOutcome.Noise, 499), (record.Outcome, record.ResponseStatus));
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_NoisyClientHead_GetsOnlyTheLength()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier3);
+        var context = Request("HEAD", "/");
+
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual(noise.Content(NoiseTier.Tier3).Length, context.Response.ContentLength);
+        Assert.AreEqual(0, context.Response.Body.Length);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_NoiseOffInTheSettings_AnswersAsUsual()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier1);
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            NoiseEnabled = false
+        };
+        var context = Request("GET", "/favicon.ico");
+
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.AreEqual(RequestOutcome.Static, sut.LoggedRecord().Outcome);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_NoiseFileMissing_AnswersAsUsual()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier1);
+        File.Delete(Path.Combine(noise.Directory, "noise1"));
+        var context = Request("GET", "/favicon.ico");
+
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.AreEqual(RequestOutcome.Static, sut.LoggedRecord().Outcome);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_EntryWithNoise_GetsTheFileOfItsTierFromTheStoreAndThenFromTheCache()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, null);
+        var entry = ReadyEntry(7);
+        entry.Noise = NoiseTier.Tier1;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var stored = Request("GET", "/.env");
+        var cached = Request("GET", "/.env");
+        await sut.Handler.HandleAsync(stored);
+        await sut.Handler.HandleAsync(cached);
+
+        CollectionAssert.AreEqual(noise.Content(NoiseTier.Tier1), ((MemoryStream)stored.Response.Body).ToArray());
+        CollectionAssert.AreEqual(noise.Content(NoiseTier.Tier1), ((MemoryStream)cached.Response.Body).ToArray());
+        sut.Repository.Verify(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        sut.LoggedRecord();
+        var record = sut.LoggedRecord();
+        Assert.AreEqual((RequestOutcome.Noise, 7L), (record.Outcome, record.EntryId));
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_PendingEntryWithNoise_GetsNoiseWithoutWaitingForTheGeneration()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, null);
+        var entry = PendingEntry(5);
+        entry.Noise = NoiseTier.Tier2;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var context = Request("GET", "/admin");
+
+        await sut.Handler.HandleAsync(context);
+
+        CollectionAssert.AreEqual(noise.Content(NoiseTier.Tier2), ((MemoryStream)context.Response.Body).ToArray());
+        sut.Repository.Verify(x => x.TouchRequestedAsync(It.IsAny<long>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_ClientNoise_WinsOverTheNoiseOfTheEntry()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, NoiseTier.Tier3);
+        var entry = ReadyEntry(7);
+        entry.Noise = NoiseTier.Tier1;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var context = Request("GET", "/.env");
+
+        await sut.Handler.HandleAsync(context);
+
+        CollectionAssert.AreEqual(noise.Content(NoiseTier.Tier3), ((MemoryStream)context.Response.Body).ToArray());
+        sut.Repository.Verify(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task HandleAsync_EntryNoiseWhileNoiseIsOff_ServesTheResponse()
+    {
+        using var noise = new NoiseFiles();
+        using var sut = NoisySut(noise, null);
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            NoiseEnabled = false
+        };
+        var entry = ReadyEntry(7);
+        entry.Noise = NoiseTier.Tier1;
+        sut.Repository
+            .Setup(x => x.GetByKeyHashOrDefaultAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var context = Request("GET", "/.env");
+
+        await sut.Handler.HandleAsync(context);
+
+        Assert.AreEqual("APP_KEY=base64:fake", Body(context));
+        Assert.AreEqual(RequestOutcome.Hit, sut.LoggedRecord().Outcome);
+    }
+
+    [TestMethod]
     public async Task HandleAsync_AnyRequest_IsLoggedWithHeadersButWithoutCookieValues()
     {
         using var sut = new Sut();
@@ -189,9 +353,9 @@ public sealed class TrapHandlerTests
         {
             AutoDelayEnabled = true
         };
-        sut.ClientDelays
+        sut.ClientSettings
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PersonalDelay(null, TimeSpan.FromMilliseconds(3_250)));
+            .ReturnsAsync(new PersonalSettings(null, TimeSpan.FromMilliseconds(3_250), null));
         var entry = ReadyEntry(7);
         entry.ResponseDelayMilliseconds = 60_000;
         sut.Repository
@@ -239,9 +403,9 @@ public sealed class TrapHandlerTests
         {
             AutoDelayEnabled = true
         };
-        sut.ClientDelays
+        sut.ClientSettings
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PersonalDelay(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20)));
+            .ReturnsAsync(new PersonalSettings(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20), null));
         var entry = ReadyEntry(7);
         entry.ResponseBody = "ok!";
         sut.Repository
@@ -263,9 +427,9 @@ public sealed class TrapHandlerTests
     {
         var time = new DelayRecorder();
         using var sut = new Sut(time);
-        sut.ClientDelays
+        sut.ClientSettings
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PersonalDelay(null, TimeSpan.FromSeconds(20)));
+            .ReturnsAsync(new PersonalSettings(null, TimeSpan.FromSeconds(20), null));
         var entry = ReadyEntry(7);
         entry.ResponseDelayMilliseconds = 1_500;
         sut.Repository
@@ -291,9 +455,9 @@ public sealed class TrapHandlerTests
         {
             ResponseDelayMilliseconds = 10_000
         };
-        sut.ClientDelays
+        sut.ClientSettings
             .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PersonalDelay(TimeSpan.FromMilliseconds(750), null));
+            .ReturnsAsync(new PersonalSettings(TimeSpan.FromMilliseconds(750), null, null));
         var entry = ReadyEntry(7);
         entry.ResponseDelayMilliseconds = 3_250;
         sut.Repository
@@ -591,9 +755,44 @@ public sealed class TrapHandlerTests
         return context;
     }
 
+    private static Sut NoisySut(NoiseFiles noise, NoiseTier? tier)
+    {
+        var sut = new Sut(configure: x => x.NoiseDirectory = noise.Directory);
+        sut.CurrentSettings = sut.CurrentSettings with
+        {
+            NoiseEnabled = true
+        };
+        sut.ClientSettings
+            .Setup(x => x.GetAsync("203.0.113.7", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PersonalSettings(null, null, tier));
+        return sut;
+    }
+
     private static string Body(HttpContext context)
     {
         return Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray());
+    }
+
+    private sealed class NoiseFiles : IDisposable
+    {
+        public NoiseFiles()
+        {
+            System.IO.Directory.CreateDirectory(Directory);
+            foreach (var tier in Enum.GetValues<NoiseTier>())
+                File.WriteAllBytes(Path.Combine(Directory, $"noise{(int)tier}"), Content(tier));
+        }
+
+        public string Directory { get; } = Path.Combine(Path.GetTempPath(), "honeyslop-noise-" + Guid.NewGuid().ToString("N"));
+
+        public void Dispose()
+        {
+            System.IO.Directory.Delete(Directory, true);
+        }
+
+        public byte[] Content(NoiseTier tier)
+        {
+            return [.. Enumerable.Range(0, 100_000 * (int)tier).Select(x => (byte)(x * (int)tier))];
+        }
     }
 
     private sealed class DelayRecorder : TimeProvider
@@ -665,7 +864,7 @@ public sealed class TrapHandlerTests
                 Watcher,
                 Hits,
                 Settings.Object,
-                ClientDelays.Object,
+                ClientSettings.Object,
                 Log,
                 globalCancellationTokenSource.Object,
                 options,
@@ -675,7 +874,7 @@ public sealed class TrapHandlerTests
 
         public Mock<IEntryRepository> Repository { get; } = CreateRepository();
         public Mock<ISettingsProvider> Settings { get; } = new();
-        public Mock<IClientDelays> ClientDelays { get; } = new();
+        public Mock<IClientSettings> ClientSettings { get; } = new();
 
         public HoneyslopSettings CurrentSettings { get; set; } = HoneyslopSettings.Default with
         {

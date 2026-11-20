@@ -14,4 +14,5 @@ export interface HoneyslopSettingsType {
     autoDelayEnabled: boolean;
     autoDelayMinMilliseconds: number;
     autoDelayMaxMilliseconds: number;
+    noiseEnabled: boolean;
 }

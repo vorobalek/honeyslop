@@ -32,6 +32,7 @@ internal sealed class ViewBuilder(
                 details.CurrentId,
                 details.Output,
                 details.DefaultResponseDelayMilliseconds,
+                details.NoiseEnabled,
                 details.AsOf)
             : null;
     }

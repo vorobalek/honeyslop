@@ -32,7 +32,8 @@ public sealed class SettingsRepositoryTests
             ResponseDelayMilliseconds = 1500,
             AutoDelayEnabled = true,
             AutoDelayMinMilliseconds = 500,
-            AutoDelayMaxMilliseconds = 45_000
+            AutoDelayMaxMilliseconds = 45_000,
+            NoiseEnabled = true
         };
         await repository.SaveAsync(saved, DateTimeOffset.UtcNow, CancellationToken.None);
         await repository.SaveAsync(saved with

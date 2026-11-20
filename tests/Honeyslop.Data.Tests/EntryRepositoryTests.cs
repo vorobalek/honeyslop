@@ -574,6 +574,28 @@ public sealed class EntryRepositoryTests
     }
 
     [TestMethod]
+    public async Task SetNoiseAsync_ChangesOnlyEntriesThatAreServed()
+    {
+        var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));
+        var pending = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32)));
+        var expired = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Expired));
+
+        long[] changed;
+        await using (var scope = PostgresDatabase.CreateScope())
+        {
+            changed = await scope.Repository().SetNoiseAsync([ready.Id, pending.Id, expired.Id], NoiseTier.Tier2, DateTimeOffset.UtcNow, CancellationToken.None);
+        }
+
+        CollectionAssert.AreEqual(new[]
+        {
+            ready.Id, pending.Id
+        }, changed);
+        Assert.AreEqual(NoiseTier.Tier2, (await GetAsync(ready.Id)).Noise);
+        Assert.AreEqual(NoiseTier.Tier2, (await GetAsync(pending.Id)).Noise);
+        Assert.IsNull((await GetAsync(expired.Id)).Noise);
+    }
+
+    [TestMethod]
     public async Task GetChangeableAsync_LeavesOutExpiredEntriesWhosePathHasANewerOne()
     {
         var ready = await AddAsync(PendingEntry(RandomNumberGenerator.GetBytes(32), EntryStatus.Ready));

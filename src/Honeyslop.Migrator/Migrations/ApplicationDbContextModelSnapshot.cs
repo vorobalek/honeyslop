@@ -261,6 +261,32 @@ namespace Honeyslop.Migrator.Migrations
                     b.ToTable("client_delay", "public");
                 });
 
+            modelBuilder.Entity("Honeyslop.Data.Entities.ClientNoise", b =>
+                {
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_ip");
+
+                    b.Property<string>("ChangedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("changed_by");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer")
+                        .HasColumnName("tier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ClientIp")
+                        .HasName("pk_client_noise");
+
+                    b.ToTable("client_noise", "public");
+                });
+
             modelBuilder.Entity("Honeyslop.Data.Entities.ClientProbe", b =>
                 {
                     b.Property<string>("ClientIp")
@@ -499,6 +525,10 @@ namespace Honeyslop.Migrator.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("model");
+
+                    b.Property<int?>("Noise")
+                        .HasColumnType("integer")
+                        .HasColumnName("noise");
 
                     b.Property<int?>("PromptTokens")
                         .HasColumnType("integer")

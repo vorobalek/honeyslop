@@ -1,5 +1,6 @@
 using System.Text;
 using Honeyslop.Data.Entities;
+using Honeyslop.Data.Enums;
 
 namespace Honeyslop.Trap.Responses;
 
@@ -8,7 +9,8 @@ public sealed record CachedResponse(
     int Status,
     IReadOnlyList<ResponseHeader> Headers,
     byte[] Body,
-    TimeSpan? Delay = null)
+    TimeSpan? Delay = null,
+    NoiseTier? Noise = null)
 {
     public static CachedResponse From(Entry entry)
     {
@@ -17,7 +19,8 @@ public sealed record CachedResponse(
             entry.ResponseStatus ?? StatusCodes.Status200OK,
             entry.ResponseHeaders,
             Encoding.UTF8.GetBytes(entry.ResponseBody ?? string.Empty),
-            DelayOf(entry));
+            DelayOf(entry),
+            entry.Noise);
     }
 
     public static TimeSpan? DelayOf(Entry entry)

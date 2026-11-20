@@ -64,7 +64,7 @@ public sealed class SharedDataProtectionTests
         public IReadOnlyList<DataProtectionKey> GetAll()
         {
             if (!_missNextRead)
-                return [..Keys];
+                return [.. Keys];
             _missNextRead = false;
             return [];
         }

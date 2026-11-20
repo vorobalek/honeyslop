@@ -15,4 +15,5 @@ public sealed record SettingsFormDto(
     int? ResponseDelayMilliseconds,
     bool AutoDelayEnabled,
     int AutoDelayMinMilliseconds,
-    int AutoDelayMaxMilliseconds);
+    int AutoDelayMaxMilliseconds,
+    bool NoiseEnabled);

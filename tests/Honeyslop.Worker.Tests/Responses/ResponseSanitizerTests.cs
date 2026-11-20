@@ -233,8 +233,20 @@ public sealed class ResponseSanitizerTests
     [TestMethod]
     public void Sanitize_Server_IsTheOneTheProfileNames()
     {
-        var boa = _sanitizer.Sanitize(new GeneratedResponse(200, [new ResponseHeader { Name = "Server", Value = "phpMyAdmin 4.9.12" }], "ok"), Host, new RequestProfile(ResponseKind.App, "router", "Boa/0.94.14rc21"), true);
-        var none = _sanitizer.Sanitize(new GeneratedResponse(200, [new ResponseHeader { Name = "Server", Value = "Spring Boot Actuator/2.7.12" }], "{}"), Host, new RequestProfile(ResponseKind.Api, "Spring Boot Actuator", string.Empty), true);
+        var boa = _sanitizer.Sanitize(new GeneratedResponse(200, [
+            new ResponseHeader
+            {
+                Name = "Server",
+                Value = "phpMyAdmin 4.9.12"
+            }
+        ], "ok"), Host, new RequestProfile(ResponseKind.App, "router", "Boa/0.94.14rc21"), true);
+        var none = _sanitizer.Sanitize(new GeneratedResponse(200, [
+            new ResponseHeader
+            {
+                Name = "Server",
+                Value = "Spring Boot Actuator/2.7.12"
+            }
+        ], "{}"), Host, new RequestProfile(ResponseKind.Api, "Spring Boot Actuator", string.Empty), true);
 
         Assert.AreEqual("Boa/0.94.14rc21", boa.Headers.Single(x => x.Name == "Server").Value);
         Assert.IsFalse(none.Headers.Any(x => x.Name.Equals("Server", StringComparison.OrdinalIgnoreCase)));
@@ -263,7 +275,7 @@ public sealed class ResponseSanitizerTests
             new GeneratedResponse(
                 status,
                 [
-                    ..headers.Select(x => new ResponseHeader
+                    .. headers.Select(x => new ResponseHeader
                     {
                         Name = x.Name,
                         Value = x.Value

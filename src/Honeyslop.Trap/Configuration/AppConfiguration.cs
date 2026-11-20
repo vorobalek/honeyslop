@@ -18,4 +18,7 @@ public static class AppConfiguration
 
     public static readonly string TrustedNetworks = "TRUSTED_NETWORKS"
         .GetEnvironmentValueWithFallback("10.0.0.0/8");
+
+    public static readonly string NoiseDirectory = "NOISE_DIRECTORY"
+        .GetEnvironmentValueWithFallback(Path.Combine(AppContext.BaseDirectory, "noise"));
 }

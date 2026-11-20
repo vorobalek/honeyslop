@@ -34,6 +34,7 @@ export function readSettingsForm(form: HTMLFormElement): SettingsFormType {
         autoDelayEnabled: data.has('AutoDelayEnabled'),
         autoDelayMinMilliseconds: Number(data.get('AutoDelayMin')),
         autoDelayMaxMilliseconds: Number(data.get('AutoDelayMax')),
+        noiseEnabled: data.has('NoiseEnabled'),
     };
 }
 

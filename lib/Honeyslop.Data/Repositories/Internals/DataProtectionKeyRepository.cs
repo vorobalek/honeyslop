@@ -10,7 +10,7 @@ internal sealed class DataProtectionKeyRepository(ApplicationDbContext dbContext
     {
         return
         [
-            ..dbContext
+            .. dbContext
                 .DataProtectionKeys
                 .AsNoTracking()
                 .OrderBy(x => x.Id)

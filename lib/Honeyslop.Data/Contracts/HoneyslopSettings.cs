@@ -19,6 +19,7 @@ public sealed record HoneyslopSettings
     public bool AutoDelayEnabled { get; init; }
     public int AutoDelayMinMilliseconds { get; init; }
     public int AutoDelayMaxMilliseconds { get; init; } = 30_000;
+    public bool NoiseEnabled { get; init; }
 
     public TimeSpan HeartbeatInterval => ClaimTimeout / 4 > TimeSpan.FromSeconds(5)
         ? ClaimTimeout / 4
