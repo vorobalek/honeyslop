@@ -16,6 +16,7 @@ public sealed class RequestProfilerTests
     [DataRow("blog.test", "/wp-content/plugins/hellopress/wp_filemanager.php", ResponseKind.App, "WordPress plugin hellopress", "{web}")]
     [DataRow("blog.test", "/wp-admin/install.php", ResponseKind.App, "WordPress installer, first step", "{web}")]
     [DataRow("ci.test", "/manager/html", ResponseKind.App, "Apache Tomcat Manager", "Apache-Coyote/1.1")]
+    [DataRow("85.10.202.87", "/ews/exchange.asmx", ResponseKind.Api, "Microsoft Exchange Web Services", "Microsoft-IIS/8.5")]
     [DataRow("shop.test", "/admin", ResponseKind.App, "the login page of the website shop.test, served by {web}", "{web}")]
     [DataRow("api.test", "/actuator/env", ResponseKind.Api, "Spring Boot Actuator", "")]
     [DataRow("203.0.113.7", "/v2/_catalog", ResponseKind.Api, "Docker Registry HTTP API v2", "")]

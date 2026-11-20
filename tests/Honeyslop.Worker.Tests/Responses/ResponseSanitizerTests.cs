@@ -180,7 +180,7 @@ public sealed class ResponseSanitizerTests
     {
         var response = _sanitizer.Sanitize(new GeneratedResponse(200, [], "admin@northwind.test from 203.0.113.9"), "85.10.202.87", SitePage, true);
 
-        Assert.AreEqual("admin@localdomain from 85.10.202.87", response.Body);
+        Assert.AreEqual("admin@localhost from 85.10.202.87", response.Body);
     }
 
     [TestMethod]

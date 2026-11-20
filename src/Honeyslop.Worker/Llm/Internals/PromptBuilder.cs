@@ -30,7 +30,7 @@ internal sealed class PromptBuilder : IPromptBuilder
         [ResponseKind.Site] = "Reply with a complete HTML page with inline CSS that fits the site: its name, navigation and content.",
         [ResponseKind.App] = "Reply with the page this software shows at that path, as complete HTML with inline CSS and its real title, product name and version.",
         [ResponseKind.Device] = "Reply in the format this device's interface uses, with its model, firmware version and serial number.",
-        [ResponseKind.Api] = "Reply with the JSON this API returns, with realistic fields and values.",
+        [ResponseKind.Api] = "Reply with what this API returns, in its own format, with realistic fields and values.",
         [ResponseKind.File] = "Reply with the full content of the file in its real format.",
         [ResponseKind.Exploit] = "Reply with the response described in \"Answer as\"."
     };

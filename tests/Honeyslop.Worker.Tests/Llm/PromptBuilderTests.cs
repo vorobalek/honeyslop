@@ -28,7 +28,7 @@ public sealed class PromptBuilderTests
             "\n" +
             """{"login":"admin"}""",
             prompt.User);
-        StringAssert.Contains(prompt.System, "Reply with the JSON this API returns");
+        StringAssert.Contains(prompt.System, "Reply with what this API returns, in its own format");
         StringAssert.Contains(prompt.System, "Reply with JSON: {\"status\"");
     }
 
@@ -65,7 +65,7 @@ public sealed class PromptBuilderTests
         StringAssert.StartsWith(prompt.System, "You are a web server.");
         StringAssert.Contains(prompt.System, "- " + rule);
         Assert.DoesNotContain("Example", prompt.System);
-        foreach (var value in new[] { "nginx", "Apache", "IIS", "AKIA", "sk_live", "such as", "e.g.", "XML", "form fields", "vulnerab", "exploit", "unpatched", "scanner", "fake", "Server header" })
+        foreach (var value in new[] { "nginx", "Apache", "IIS", "AKIA", "sk_live", "such as", "e.g.", "XML", "JSON this", "form fields", "vulnerab", "exploit", "unpatched", "scanner", "fake", "Server header" })
             Assert.DoesNotContain(value, prompt.System);
         Assert.DoesNotContain("{kind}", prompt.System);
     }

@@ -93,7 +93,7 @@ internal sealed partial class ResponseSanitizer : IResponseSanitizer
         var onIp = IPAddress.TryParse(own, out _);
         if (own.Length > 0)
         {
-            body = ReservedDomainRegex().Replace(body, onIp ? "localdomain" : own);
+            body = ReservedDomainRegex().Replace(body, onIp ? "localhost" : own);
             if (onIp)
                 body = DocumentationAddressRegex().Replace(body, own);
         }

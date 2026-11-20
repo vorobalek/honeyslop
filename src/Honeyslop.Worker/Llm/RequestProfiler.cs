@@ -63,6 +63,7 @@ public static partial class RequestProfiler
         (Path(@"^/(jenkins|script$|scripttext$)"), ResponseKind.App, "Jenkins", _ => "Jetty(9.4.z-SNAPSHOT)"),
         (Path(@"^/(owa|ecp)(/|$)"), ResponseKind.App, "Microsoft Exchange Outlook Web App", _ => "Microsoft-IIS/8.5"),
         (Path(@"^/autodiscover/"), ResponseKind.Api, "Microsoft Exchange Autodiscover", _ => "Microsoft-IIS/8.5"),
+        (Path(@"^/ews/"), ResponseKind.Api, "Microsoft Exchange Web Services", _ => "Microsoft-IIS/8.5"),
         (Path(@"^/remote/(login|fgt_lang)"), ResponseKind.App, "FortiGate SSL VPN portal", _ => "xxxxxxxx-xxxxx"),
         (Path(@"^/\+cscoe\+/"), ResponseKind.App, "Cisco ASA AnyConnect portal", _ => string.Empty),
         (Path(@"^/dana-na/"), ResponseKind.App, "Pulse Secure VPN portal", _ => string.Empty),
